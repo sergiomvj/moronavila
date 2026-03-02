@@ -1,0 +1,5 @@
+{
+  "name": "VPR Manager",
+  "description": "Sistema completo para gestão de repúblicas estudantis, incluindo controle de cômodos, moradores, pagamentos, manutenção e convivência.",
+  "requestFramePermissions": []
+}
