@@ -238,6 +238,13 @@ export async function signOut() {
     if (error) throw error;
 }
 
+export async function resetPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+    });
+    if (error) throw error;
+}
+
 export async function fetchCurrentResident(authId: string): Promise<Resident | null> {
     const { data, error } = await supabase.from('residents').select('*').eq('auth_id', authId).single();
     if (error) return null;

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Home, LogIn, UserPlus } from 'lucide-react';
-import { signIn, signUp } from '../lib/database';
+import { signIn, signUp, resetPassword } from '../lib/database';
 
 export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
     const [isLogin, setIsLogin] = useState(true);
+    const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
@@ -18,7 +19,11 @@ export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
         setError('');
         setSuccessMessage('');
         try {
-            if (isLogin) {
+            if (isForgotPassword) {
+                await resetPassword(email);
+                setSuccessMessage('Instruções de recuperação de senha foram enviadas para o seu e-mail!');
+                setIsForgotPassword(false);
+            } else if (isLogin) {
                 const { user } = await signIn(email, password);
                 if (user) {
                     onLogin(user.id);
@@ -51,14 +56,14 @@ export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
 
                 <div className="flex border-b border-slate-100">
                     <button
-                        className={`flex-1 py-4 text-sm font-bold transition-colors ${isLogin ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        onClick={() => { setIsLogin(true); setError(''); setSuccessMessage(''); }}
+                        className={`flex-1 py-4 text-sm font-bold transition-colors ${isLogin && !isForgotPassword ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => { setIsLogin(true); setIsForgotPassword(false); setError(''); setSuccessMessage(''); }}
                     >
                         Entrar
                     </button>
                     <button
-                        className={`flex-1 py-4 text-sm font-bold transition-colors ${!isLogin ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        onClick={() => { setIsLogin(false); setError(''); setSuccessMessage(''); }}
+                        className={`flex-1 py-4 text-sm font-bold transition-colors ${!isLogin && !isForgotPassword ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => { setIsLogin(false); setIsForgotPassword(false); setError(''); setSuccessMessage(''); }}
                     >
                         Cadastrar
                     </button>
@@ -66,13 +71,13 @@ export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
 
                 <div className="p-8">
                     <h2 className="text-lg font-bold text-slate-900 mb-6">
-                        {isLogin ? 'Acesse sua conta' : 'Crie sua nova conta'}
+                        {isForgotPassword ? 'Recuperar senha' : (isLogin ? 'Acesse sua conta' : 'Crie sua nova conta')}
                     </h2>
                     {error && <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm mb-4">{error}</div>}
                     {successMessage && <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm mb-4">{successMessage}</div>}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {!isLogin && (
+                        {!isLogin && !isForgotPassword && (
                             <>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Nome Completo</label>
@@ -100,21 +105,43 @@ export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1">Senha</label>
-                            <input
-                                type="password" required minLength={6}
-                                value={password} onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                            />
-                        </div>
+                        {!isForgotPassword && (
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Senha</label>
+                                <input
+                                    type="password" required minLength={6}
+                                    value={password} onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                                />
+                                {isLogin && (
+                                    <div className="flex justify-end mt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setIsForgotPassword(true); setError(''); setSuccessMessage(''); }}
+                                            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                                        >
+                                            Esqueci minha senha
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <button
                             type="submit" disabled={loading}
                             className="w-full bg-indigo-600 text-white font-bold rounded-xl py-3 flex items-center justify-center gap-2 hover:bg-indigo-700 transition disabled:opacity-50 mt-6"
                         >
-                            {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
-                            {loading ? (isLogin ? 'Entrando...' : 'Cadastrando...') : (isLogin ? 'Entrar' : 'Cadastrar')}
+                            {isForgotPassword ? null : (isLogin ? <LogIn size={20} /> : <UserPlus size={20} />)}
+                            {loading ? 'Aguarde...' : (isForgotPassword ? 'Enviar e-mail' : (isLogin ? 'Entrar' : 'Cadastrar'))}
                         </button>
+                        {isForgotPassword && (
+                            <button
+                                type="button"
+                                onClick={() => { setIsForgotPassword(false); setError(''); setSuccessMessage(''); }}
+                                className="w-full bg-slate-100 text-slate-700 font-bold rounded-xl py-3 hover:bg-slate-200 transition mt-2 border border-slate-200"
+                            >
+                                Voltar ao login
+                            </button>
+                        )}
                     </form>
                 </div>
             </div>
