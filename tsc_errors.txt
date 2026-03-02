@@ -1,0 +1,37 @@
+﻿src/App.tsx(6,46): error TS2724: '"./lib/database"' has no exported member named 'fetchMaintenanceRequests'. Did you mean 'fetchMaintenance'?
+src/App.tsx(89,44): error TS2353: Object literal may only specify known properties, and 'status' does not exist in type 'Resident'.
+src/lib/supabase.ts(3,33): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/lib/supabase.ts(4,37): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/mockData.ts(4,85): error TS2561: Object literal may only specify known properties, but 'entryDate' does not exist in type 'Resident'. Did you mean to write 'entry_date'?
+src/mockData.ts(5,90): error TS2561: Object literal may only specify known properties, but 'entryDate' does not exist in type 'Resident'. Did you mean to write 'entry_date'?
+src/mockData.ts(6,88): error TS2561: Object literal may only specify known properties, but 'entryDate' does not exist in type 'Resident'. Did you mean to write 'entry_date'?
+src/mockData.ts(7,93): error TS2561: Object literal may only specify known properties, but 'entryDate' does not exist in type 'Resident'. Did you mean to write 'entry_date'?
+src/mockData.ts(16,5): error TS2561: Object literal may only specify known properties, but 'residentIds' does not exist in type 'Room'. Did you mean to write 'residents'?
+src/mockData.ts(33,5): error TS2561: Object literal may only specify known properties, but 'residentIds' does not exist in type 'Room'. Did you mean to write 'residents'?
+src/mockData.ts(48,5): error TS2561: Object literal may only specify known properties, but 'residentIds' does not exist in type 'Room'. Did you mean to write 'residents'?
+src/mockData.ts(62,15): error TS2561: Object literal may only specify known properties, but 'residentId' does not exist in type 'Payment'. Did you mean to write 'resident_id'?
+src/mockData.ts(63,15): error TS2561: Object literal may only specify known properties, but 'residentId' does not exist in type 'Payment'. Did you mean to write 'resident_id'?
+src/mockData.ts(64,15): error TS2561: Object literal may only specify known properties, but 'residentId' does not exist in type 'Payment'. Did you mean to write 'resident_id'?
+src/mockData.ts(68,110): error TS2561: Object literal may only specify known properties, but 'roomId' does not exist in type 'MaintenanceRequest'. Did you mean to write 'room_id'?
+src/mockData.ts(69,87): error TS2561: Object literal may only specify known properties, but 'roomId' does not exist in type 'MaintenanceRequest'. Did you mean to write 'room_id'?
+src/mockData.ts(73,15): error TS2561: Object literal may only specify known properties, but 'residentId' does not exist in type 'Complaint'. Did you mean to write 'resident_id'?
+src/mockData.ts(82,5): error TS2561: Object literal may only specify known properties, but 'authorId' does not exist in type 'Notice'. Did you mean to write 'author_id'?
+src/mockData.ts(93,5): error TS2561: Object literal may only specify known properties, but 'authorId' does not exist in type 'Notice'. Did you mean to write 'author_id'?
+src/mockData.ts(105,5): error TS2561: Object literal may only specify known properties, but 'startTime' does not exist in type 'CalendarEvent'. Did you mean to write 'start_time'?
+src/mockData.ts(114,5): error TS2561: Object literal may only specify known properties, but 'startTime' does not exist in type 'CalendarEvent'. Did you mean to write 'start_time'?
+src/views/CalendarView.tsx(38,121): error TS2551: Property 'start_date' does not exist on type 'CalendarEvent'. Did you mean 'start_time'?
+src/views/CalendarView.tsx(39,112): error TS2551: Property 'start_date' does not exist on type 'CalendarEvent'. Did you mean 'start_time'?
+src/views/CalendarView.tsx(48,61): error TS2551: Property 'start_date' does not exist on type 'CalendarEvent'. Did you mean 'start_time'?
+src/views/CalendarView.tsx(50,48): error TS2339: Property 'location' does not exist on type 'CalendarEvent'.
+src/views/CalendarView.tsx(53,56): error TS2339: Property 'location' does not exist on type 'CalendarEvent'.
+src/views/ComplaintsView.tsx(57,48): error TS2339: Property 'status' does not exist on type 'Complaint'.
+src/views/ComplaintsView.tsx(61,51): error TS2339: Property 'status' does not exist on type 'Complaint'.
+src/views/MaintenanceView.tsx(4,10): error TS2724: '"../lib/database"' has no exported member named 'updateMaintenanceRequest'. Did you mean 'createMaintenanceRequest'?
+src/views/NoticesView.tsx(28,72): error TS2551: Property 'created_by' does not exist on type 'Notice'. Did you mean 'created_at'?
+src/views/NoticesView.tsx(31,37): error TS2339: Property 'priority' does not exist on type 'Notice'.
+src/views/NoticesView.tsx(46,49): error TS2339: Property 'is_pinned' does not exist on type 'Notice'.
+src/views/NoticesView.tsx(55,37): error TS2339: Property 'is_general' does not exist on type 'Notice'.
+src/views/PaymentsView.tsx(4,10): error TS2305: Module '"../lib/database"' has no exported member 'updatePayment'.
+src/views/PaymentsView.tsx(66,89): error TS2339: Property 'month' does not exist on type 'Payment'.
+src/views/ResidentsView.tsx(95,125): error TS2339: Property 'status' does not exist on type 'Resident'.
+src/views/ResidentsView.tsx(97,55): error TS2339: Property 'status' does not exist on type 'Resident'.

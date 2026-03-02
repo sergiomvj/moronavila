@@ -26,26 +26,38 @@ export enum UserRole {
 
 export interface Furniture {
   id: string;
+  room_id?: string;
   name: string;
   description?: string;
   condition: 'Novo' | 'Bom' | 'Regular' | 'Ruim';
-  purchaseDate?: string;
+  purchase_date?: string;
+  serial_number?: string;
 }
 
 export interface Resident {
   id: string;
+  auth_id?: string;
   name: string;
   email: string;
   phone: string;
-  entryDate: string;
-  roomId?: string;
+  birth_date?: string;
+  entry_date: string;
+  origin_address?: string;
+  work_address?: string;
+  room_id?: string;
   role: UserRole;
+  status: string;
+  mac_address?: string;
+  internet_active: boolean;
+  internet_renewal_date?: string;
 }
 
 export interface RoomMedia {
   id: string;
+  room_id?: string;
   url: string;
   type: 'image' | 'video';
+  storage_path?: string;
 }
 
 export interface Room {
@@ -54,44 +66,50 @@ export interface Room {
   type: RoomType;
   capacity: number;
   furniture: Furniture[];
-  residentIds: string[];
+  residents?: Resident[];
   media: RoomMedia[];
   description?: string;
 }
 
 export interface Payment {
   id: string;
-  residentId: string;
+  resident_id: string;
   amount: number;
-  dueDate: string;
+  due_date: string;
+  payment_date?: string;
   status: PaymentStatus;
   description: string;
+  month: string;
 }
 
 export interface MaintenanceRequest {
   id: string;
   title: string;
   description: string;
-  roomId: string;
+  room_id: string;
+  requested_by?: string;
   status: MaintenanceStatus;
-  createdAt: string;
+  created_at: string;
   cost?: number;
+  photo_url?: string;
 }
 
 export interface Complaint {
   id: string;
-  residentId: string;
+  resident_id: string;
   title: string;
   description: string;
-  createdAt: string;
-  isAnonymous: boolean;
+  created_at: string;
+  is_anonymous: boolean;
+  status: string;
 }
 
-export interface Comment {
+export interface NoticeComment {
   id: string;
-  residentId: string;
+  notice_id: string;
+  resident_id: string;
   text: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface Notice {
@@ -99,9 +117,11 @@ export interface Notice {
   title: string;
   content: string;
   category: 'Importante' | 'Regra' | 'Evento' | 'Geral';
-  authorId: string;
-  createdAt: string;
-  comments: Comment[];
+  author_id: string;
+  created_at: string;
+  is_pinned: boolean;
+  is_general: boolean;
+  notice_comments?: NoticeComment[];
 }
 
 export interface CalendarEvent {
@@ -109,8 +129,9 @@ export interface CalendarEvent {
   title: string;
   description?: string;
   date: string;
-  startTime?: string;
-  endTime?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
   type: 'Limpeza' | 'Reunião' | 'Festa' | 'Manutenção' | 'Outro';
   residentIds: string[];
 }
