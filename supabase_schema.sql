@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ── 1. ROOMS ──────────────────────────────────────────────────────────
-CREATE TABLE rooms (
+CREATE TABLE IF NOT EXISTS rooms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     capacity INT NOT NULL DEFAULT 1,
@@ -15,7 +15,7 @@ CREATE TABLE rooms (
 );
 
 -- ── 2. RESIDENTS ────────────────────────────────────────────────────────
-CREATE TABLE residents (
+CREATE TABLE IF NOT EXISTS residents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     auth_id UUID UNIQUE, -- Link para o usuário autenticado nativo do auth.users
     name TEXT NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE residents (
 );
 
 -- ── 3. FURNITURE ─────────────────────────────────────────────────────
-CREATE TABLE furniture (
+CREATE TABLE IF NOT EXISTS furniture (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE furniture (
 );
 
 -- ── 4. ROOM MEDIA ────────────────────────────────────────────────────
-CREATE TABLE room_media (
+CREATE TABLE IF NOT EXISTS room_media (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE room_media (
 );
 
 -- ── 5. PAYMENTS ──────────────────────────────────────────────────────
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     resident_id UUID REFERENCES residents(id) ON DELETE SET NULL,
     month TEXT NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE payments (
 );
 
 -- ── 6. MAINTENANCE REQUESTS ───────────────────────────────────────────
-CREATE TABLE maintenance_requests (
+CREATE TABLE IF NOT EXISTS maintenance_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     description TEXT NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE maintenance_requests (
 );
 
 -- ── 7. COMPLAINTS ─────────────────────────────────────────────────────
-CREATE TABLE complaints (
+CREATE TABLE IF NOT EXISTS complaints (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     resident_id UUID REFERENCES residents(id) ON DELETE SET NULL,
     title TEXT NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE complaints (
 );
 
 -- ── 8. NOTICES ────────────────────────────────────────────────────────
-CREATE TABLE notices (
+CREATE TABLE IF NOT EXISTS notices (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE notices (
 );
 
 -- ── 9. NOTICE COMMENTS ────────────────────────────────────────────────
-CREATE TABLE notice_comments (
+CREATE TABLE IF NOT EXISTS notice_comments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     notice_id UUID REFERENCES notices(id) ON DELETE CASCADE,
     resident_id UUID REFERENCES residents(id) ON DELETE CASCADE,
@@ -119,7 +119,7 @@ CREATE TABLE notice_comments (
 );
 
 -- ── 10. CALENDAR EVENTS ───────────────────────────────────────────────
-CREATE TABLE calendar_events (
+CREATE TABLE IF NOT EXISTS calendar_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     date DATE NOT NULL,
@@ -130,14 +130,14 @@ CREATE TABLE calendar_events (
 );
 
 -- ── 11. CALENDAR EVENT RESIDENTS (M-N rel) ────────────────────────────
-CREATE TABLE calendar_event_residents (
+CREATE TABLE IF NOT EXISTS calendar_event_residents (
     event_id UUID REFERENCES calendar_events(id) ON DELETE CASCADE,
     resident_id UUID REFERENCES residents(id) ON DELETE CASCADE,
     PRIMARY KEY (event_id, resident_id)
 );
 
 -- ── 12. LAUNDRY SCHEDULES ─────────────────────────────────────────────
-CREATE TABLE laundry_schedules (
+CREATE TABLE IF NOT EXISTS laundry_schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     resident_id UUID REFERENCES residents(id) ON DELETE CASCADE NOT NULL,
     date DATE NOT NULL,
@@ -164,19 +164,44 @@ ALTER TABLE calendar_event_residents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE laundry_schedules ENABLE ROW LEVEL SECURITY;
 
 -- Liberando acesso total para simplificar neste primeiro momento:
+DROP POLICY IF EXISTS "Public Access" ON rooms;
 CREATE POLICY "Public Access" ON rooms FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON residents;
 CREATE POLICY "Public Access" ON residents FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON furniture;
 CREATE POLICY "Public Access" ON furniture FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON room_media;
 CREATE POLICY "Public Access" ON room_media FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON payments;
 CREATE POLICY "Public Access" ON payments FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON maintenance_requests;
 CREATE POLICY "Public Access" ON maintenance_requests FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON complaints;
 CREATE POLICY "Public Access" ON complaints FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON notices;
 CREATE POLICY "Public Access" ON notices FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON notice_comments;
 CREATE POLICY "Public Access" ON notice_comments FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON calendar_events;
 CREATE POLICY "Public Access" ON calendar_events FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON calendar_event_residents;
 CREATE POLICY "Public Access" ON calendar_event_residents FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public Access" ON laundry_schedules;
 CREATE POLICY "Public Access" ON laundry_schedules FOR ALL USING (true);
 
 -- Criar buckets de storage caso ainda não existam:
 insert into storage.buckets (id, name, public) values ('room-media', 'room-media', true) on conflict do nothing;
+
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 create policy "Public Access" on storage.objects for all using ( bucket_id = 'room-media' );

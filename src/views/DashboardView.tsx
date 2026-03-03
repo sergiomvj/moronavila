@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Users, CreditCard, Wrench, LayoutDashboard, CheckCircle2, AlertCircle, Wifi, Droplets, Plus, MessageSquare, X } from 'lucide-react';
-import { Payment, MaintenanceRequest, Resident, Room, PaymentStatus, MaintenanceStatus, LaundrySchedule, UserRole } from '../types';
-import { createMaintenance, createComplaint } from '../lib/database';
+import { Payment, MaintenanceRequest, Resident, Room, PaymentStatus, MaintenanceStatus, LaundrySchedule, UserRole, RoomType } from '../types';
+import { createMaintenanceRequest, createComplaint } from '../lib/database';
 
 interface DashboardViewProps {
     payments: Payment[];
@@ -34,7 +34,7 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
     // Form states
     const [repairTitle, setRepairTitle] = useState('');
     const [repairDesc, setRepairDesc] = useState('');
-    const [repairRoom, setRepairRoom] = useState(currentUser.roomId || '');
+    const [repairRoom, setRepairRoom] = useState(currentUser.room_id || '');
     const [complaintTitle, setComplaintTitle] = useState('');
     const [complaintDesc, setComplaintDesc] = useState('');
     const [complaintAnon, setComplaintAnon] = useState(false);
@@ -42,7 +42,7 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
 
     const stats = useMemo(() => {
         const myPayments = payments.filter(p => isAdmin || p.resident_id === currentUser.id);
-        const myMaintenance = maintenance.filter(m => isAdmin || m.room_id === currentUser.roomId);
+        const myMaintenance = maintenance.filter(m => isAdmin || m.room_id === currentUser.room_id);
 
         const totalPayments = myPayments.reduce((acc, p) => acc + Number(p.amount), 0);
         const pendingPayments = myPayments.filter(p => p.status !== PaymentStatus.PAID).length;
@@ -71,11 +71,10 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            await createMaintenance({
+            await createMaintenanceRequest({
                 room_id: repairRoom,
                 title: repairTitle,
-                description: repairDesc,
-                status: MaintenanceStatus.OPEN
+                description: repairDesc
             });
             setShowRepairModal(false);
             setRepairTitle('');
@@ -203,7 +202,7 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
                     </div>
                     <div className="space-y-4">
                         {maintenance
-                            .filter(m => isAdmin || m.room_id === currentUser.roomId)
+                            .filter(m => isAdmin || m.room_id === currentUser.room_id)
                             .slice(0, 3)
                             .map(m => (
                                 <div key={m.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
@@ -241,7 +240,7 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
                                     <option value="">Selecione um cômodo</option>
                                     {isAdmin ? rooms.map(r => (
                                         <option key={r.id} value={r.id}>{r.name}</option>
-                                    )) : rooms.filter(r => r.id === currentUser.roomId || r.type === 'kitchen' || r.type === 'bathroom' || r.type === 'laundry' || r.type === 'living_room').map(r => (
+                                    )) : rooms.filter(r => r.id === currentUser.room_id || r.type === RoomType.KITCHEN || r.type === RoomType.BATHROOM || r.type === RoomType.LAUNDRY || r.type === RoomType.LIVING_ROOM).map(r => (
                                         <option key={r.id} value={r.id}>{r.name}</option>
                                     ))}
                                 </select>

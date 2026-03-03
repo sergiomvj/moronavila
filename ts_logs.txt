@@ -1,0 +1,9 @@
+src/views/DashboardView.tsx(4,10): error TS2305: Module '"../lib/database"' has no exported member 'createMaintenance'.
+src/views/DashboardView.tsx(37,62): error TS2551: Property 'roomId' does not exist on type 'Resident'. Did you mean 'room_id'?
+src/views/DashboardView.tsx(45,92): error TS2551: Property 'roomId' does not exist on type 'Resident'. Did you mean 'room_id'?
+src/views/DashboardView.tsx(206,79): error TS2551: Property 'roomId' does not exist on type 'Resident'. Did you mean 'room_id'?
+src/views/DashboardView.tsx(244,81): error TS2551: Property 'roomId' does not exist on type 'Resident'. Did you mean 'room_id'?
+src/views/DashboardView.tsx(244,91): error TS2367: This comparison appears to be unintentional because the types 'RoomType' and '"kitchen"' have no overlap.
+src/views/DashboardView.tsx(244,115): error TS2367: This comparison appears to be unintentional because the types 'RoomType' and '"bathroom"' have no overlap.
+src/views/DashboardView.tsx(244,140): error TS2367: This comparison appears to be unintentional because the types 'RoomType' and '"laundry"' have no overlap.
+src/views/DashboardView.tsx(244,164): error TS2367: This comparison appears to be unintentional because the types 'RoomType' and '"living_room"' have no overlap.
