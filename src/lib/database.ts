@@ -245,6 +245,11 @@ export async function resetPassword(email: string) {
     if (error) throw error;
 }
 
+export async function updatePassword(password: string) {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+}
+
 export async function fetchCurrentResident(authId: string): Promise<Resident | null> {
     const { data, error } = await supabase.from('residents').select('*').eq('auth_id', authId).single();
     if (error) return null;

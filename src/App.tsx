@@ -138,6 +138,7 @@ function App() {
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       onLogout={() => { setSession(null); setCurrentUser(null); }}
+      onRefresh={() => loadAllData(session.user.id)}
     >
       {errorMsg && (
         <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-3">

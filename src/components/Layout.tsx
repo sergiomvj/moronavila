@@ -7,13 +7,14 @@ import {
 } from 'lucide-react';
 import { UserRole, Resident } from '../types';
 import { signOut } from '../lib/database';
+import { ProfileModal } from './ProfileModal';
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) => (
     <button
         onClick={onClick}
         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${active
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
             }`}
     >
         <Icon size={20} />
@@ -26,11 +27,13 @@ interface LayoutProps {
     activeTab: string;
     setActiveTab: (tab: string) => void;
     onLogout: () => void;
+    onRefresh: () => void;
     children: React.ReactNode;
 }
 
-export function Layout({ currentUser, activeTab, setActiveTab, onLogout, children }: LayoutProps) {
+export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefresh, children }: LayoutProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const isAdmin = currentUser.role === UserRole.ADMIN;
 
     const handleLogout = async () => {
@@ -69,18 +72,23 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, childre
                 </nav>
 
                 <div className="absolute bottom-8 left-0 w-full px-6 space-y-4">
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">Usuário</p>
+                    <button
+                        onClick={() => setIsProfileModalOpen(true)}
+                        className="w-full bg-slate-50 hover:bg-slate-100 p-4 rounded-2xl border border-slate-100 transition-colors text-left group"
+                    >
+                        <p className="text-xs text-slate-400 group-hover:text-indigo-600 transition-colors font-bold uppercase tracking-widest mb-2 flex items-center justify-between">
+                            Meu Perfil
+                        </p>
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
                                 {currentUser.name.charAt(0)}
                             </div>
                             <div className="flex-1 overflow-hidden">
                                 <p className="text-sm font-bold text-slate-900 truncate">{currentUser.name}</p>
-                                <p className="text-[10px] text-slate-500 truncate">{currentUser.role}</p>
+                                <p className="text-[10px] text-slate-500 truncate">{currentUser.role === UserRole.ADMIN ? 'Administrador' : 'Morador'}</p>
                             </div>
                         </div>
-                    </div>
+                    </button>
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-2 px-4 py-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors text-sm font-bold"
@@ -117,15 +125,15 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, childre
                             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
                         </button>
                         <div className="h-8 w-[1px] bg-slate-100 mx-2"></div>
-                        <div className="flex items-center gap-3">
+                        <button onClick={() => setIsProfileModalOpen(true)} className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-bold text-slate-900">{currentUser.name}</p>
-                                <p className="text-[10px] text-slate-500 font-medium">{currentUser.role}</p>
+                                <p className="text-[10px] text-slate-500 font-medium">{currentUser.role === UserRole.ADMIN ? 'Admin' : 'Morador'}</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg uppercase border border-indigo-200">
                                 {currentUser.name.charAt(0)}
                             </div>
-                        </div>
+                        </button>
                     </div>
                 </header>
 
@@ -133,6 +141,14 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, childre
                     {children}
                 </div>
             </main>
+
+            {isProfileModalOpen && (
+                <ProfileModal
+                    currentUser={currentUser}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    onUpdate={onRefresh}
+                />
+            )}
         </div>
     );
 }

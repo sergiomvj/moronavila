@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Bed, ArrowLeft, Plus, ImageIcon, Film, AlertCircle, ChevronRight, X } from 'lucide-react';
+import { Bed, ArrowLeft, Plus, ImageIcon, Film, AlertCircle, ChevronRight, X, Edit2, Trash2, ArrowRightLeft } from 'lucide-react';
 import { Room, Resident, MaintenanceRequest, MaintenanceStatus, Furniture, RoomMedia } from '../types';
-import { uploadRoomMedia, createMaintenanceRequest } from '../lib/database';
+import { uploadRoomMedia, createMaintenanceRequest, deleteFurniture, updateFurniture } from '../lib/database';
 
 interface RoomsViewProps {
     rooms: Room[];
@@ -22,6 +22,9 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [selectedFurniture, setSelectedFurniture] = useState<Furniture | null>(null);
+    const [editingFurniture, setEditingFurniture] = useState<Furniture | null>(null);
+    const [transferringFurniture, setTransferringFurniture] = useState<Furniture | null>(null);
+    const [transferTargetRoomId, setTransferTargetRoomId] = useState<string>('');
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
     const handleMaintenanceSubmit = async (e: React.FormEvent) => {
@@ -60,6 +63,58 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
         }
     };
 
+    const handleDeleteFurniture = async (e: React.MouseEvent, f: Furniture) => {
+        e.stopPropagation();
+        if (window.confirm(`Tem certeza que deseja excluir o móvel "${f.name}"?`)) {
+            try {
+                await deleteFurniture(f.id);
+                if (selectedFurniture?.id === f.id) setSelectedFurniture(null);
+                onRefresh();
+            } catch (err) {
+                alert('Erro ao excluir móvel.');
+            }
+        }
+    };
+
+    const handleEditFurnitureSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingFurniture) return;
+        setIsSubmitting(true);
+        try {
+            await updateFurniture(editingFurniture.id, {
+                name: editingFurniture.name,
+                description: editingFurniture.description,
+                condition: editingFurniture.condition,
+                purchase_date: editingFurniture.purchase_date,
+                serial_number: editingFurniture.serial_number
+            });
+            setEditingFurniture(null);
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao editar móvel.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleTransferFurnitureSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!transferringFurniture || !transferTargetRoomId) return;
+        setIsSubmitting(true);
+        try {
+            await updateFurniture(transferringFurniture.id, {
+                room_id: transferTargetRoomId
+            });
+            setTransferringFurniture(null);
+            setTransferTargetRoomId('');
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao transferir móvel.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (selectedRoomId) {
         const room = rooms.find(r => r.id === selectedRoomId);
         if (!room) return null;
@@ -92,13 +147,40 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                             <div
                                                 key={f.id}
                                                 onClick={() => setSelectedFurniture(f)}
-                                                className="p-4 rounded-2xl bg-slate-50 border border-slate-100 cursor-pointer hover:border-indigo-300 transition-colors"
+                                                className="p-4 rounded-2xl bg-slate-50 border border-slate-100 cursor-pointer hover:border-indigo-300 transition-colors relative group"
                                             >
-                                                <div className="flex items-center justify-between mb-2">
+                                                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {isAdmin && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); setEditingFurniture(f); }}
+                                                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200"
+                                                                title="Editar"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); setTransferringFurniture(f); setTransferTargetRoomId(''); }}
+                                                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200"
+                                                                title="Transferir"
+                                                            >
+                                                                <ArrowRightLeft size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => handleDeleteFurniture(e, f)}
+                                                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-rose-200"
+                                                                title="Excluir"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between mb-2 pr-24">
                                                     <span className="font-bold text-slate-900">{f.name}</span>
                                                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${f.condition === 'Novo' ? 'bg-emerald-100 text-emerald-700' :
-                                                            f.condition === 'Bom' ? 'bg-blue-100 text-blue-700' :
-                                                                f.condition === 'Regular' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                                                        f.condition === 'Bom' ? 'bg-blue-100 text-blue-700' :
+                                                            f.condition === 'Regular' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
                                                         }`}>
                                                         {f.condition}
                                                     </span>
@@ -250,6 +332,91 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                     <p className="font-medium text-slate-900">{selectedFurniture.serial_number || '-'}</p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                )}
+                {/* Editing Furniture Modal */}
+                {editingFurniture && (
+                    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Editar Móvel</h3>
+                                <button onClick={() => setEditingFurniture(null)} className="text-slate-400 hover:text-slate-700">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleEditFurnitureSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Nome</label>
+                                    <input type="text" required value={editingFurniture.name} onChange={e => setEditingFurniture({ ...editingFurniture, name: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
+                                    <input type="text" value={editingFurniture.description || ''} onChange={e => setEditingFurniture({ ...editingFurniture, description: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Condição</label>
+                                    <select value={editingFurniture.condition} onChange={e => setEditingFurniture({ ...editingFurniture, condition: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 bg-white">
+                                        <option value="Novo">Novo</option>
+                                        <option value="Bom">Bom</option>
+                                        <option value="Regular">Regular</option>
+                                        <option value="Péssimo">Péssimo</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Data de Compra</label>
+                                    <input type="date" value={editingFurniture.purchase_date || ''} onChange={e => setEditingFurniture({ ...editingFurniture, purchase_date: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Nº Série / NF</label>
+                                    <input type="text" value={editingFurniture.serial_number || ''} onChange={e => setEditingFurniture({ ...editingFurniture, serial_number: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button type="button" onClick={() => setEditingFurniture(null)} className="px-6 py-3 font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                                    <button type="submit" disabled={isSubmitting} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700">
+                                        {isSubmitting ? 'Salvando...' : 'Salvar Móvel'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Transferring Furniture Modal */}
+                {transferringFurniture && (
+                    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Transferir Móvel</h3>
+                                <button onClick={() => setTransferringFurniture(null)} className="text-slate-400 hover:text-slate-700">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleTransferFurnitureSubmit} className="space-y-4">
+                                <p className="text-sm text-slate-600">
+                                    Mover <span className="font-bold text-slate-900">{transferringFurniture.name}</span> para outro cômodo:
+                                </p>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Cômodo de Destino</label>
+                                    <select
+                                        required
+                                        value={transferTargetRoomId}
+                                        onChange={e => setTransferTargetRoomId(e.target.value)}
+                                        className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 bg-white"
+                                    >
+                                        <option value="" disabled>Selecione um cômodo</option>
+                                        {rooms.filter(r => r.id !== room.id).map(r => (
+                                            <option key={r.id} value={r.id}>{r.name} ({r.type})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button type="button" onClick={() => setTransferringFurniture(null)} className="px-4 py-2 font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                                    <button type="submit" disabled={isSubmitting || !transferTargetRoomId} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50">
+                                        {isSubmitting ? 'Movendo...' : 'Transferir'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 )}
