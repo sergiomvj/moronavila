@@ -3,7 +3,7 @@ import {
     LayoutDashboard, Bed, Users, CreditCard,
     Wrench, MessageSquare, Wifi, Megaphone,
     Calendar as CalendarIcon, LogOut, Home,
-    Search, AlertCircle, Menu, X, Trello
+    Search, AlertCircle, Menu, X, Trello, Droplets
 } from 'lucide-react';
 import { UserRole, Resident } from '../types';
 import { signOut } from '../lib/database';
@@ -59,14 +59,13 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
                     <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
                     <SidebarItem icon={Megaphone} label="Mural" active={activeTab === 'notices'} onClick={() => setActiveTab('notices')} />
                     <SidebarItem icon={CalendarIcon} label="Calendário" active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} />
-                    <SidebarItem icon={Bed} label="Cômodos" active={activeTab === 'rooms'} onClick={() => setActiveTab('rooms')} />
+                    <SidebarItem icon={Bed} label={isAdmin ? "Cômodos" : "Meu Quarto"} active={activeTab === 'rooms'} onClick={() => setActiveTab('rooms')} />
                     {isAdmin && (
-                        <>
-                            <SidebarItem icon={Users} label="Moradores" active={activeTab === 'residents'} onClick={() => setActiveTab('residents')} />
-                            <SidebarItem icon={CreditCard} label="Financeiro" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
-                        </>
+                        <SidebarItem icon={Users} label="Moradores" active={activeTab === 'residents'} onClick={() => setActiveTab('residents')} />
                     )}
-                    <SidebarItem icon={Trello} label="Kanban Reparos" active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} />
+                    <SidebarItem icon={CreditCard} label="Financeiro" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
+                    <SidebarItem icon={Droplets} label="Lavanderia" active={activeTab === 'laundry'} onClick={() => setActiveTab('laundry')} />
+                    <SidebarItem icon={Trello} label={isAdmin ? "Kanban Reparos" : "Reparos"} active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} />
                     <SidebarItem icon={Wifi} label="Internet" active={activeTab === 'internet'} onClick={() => setActiveTab('internet')} />
                     <SidebarItem icon={MessageSquare} label="Reclamações" active={activeTab === 'complaints'} onClick={() => setActiveTab('complaints')} />
                 </nav>

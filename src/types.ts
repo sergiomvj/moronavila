@@ -104,6 +104,16 @@ export interface Complaint {
   status: string;
 }
 
+export interface LaundrySchedule {
+  id: string;
+  resident_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: 'Agendado' | 'Concluído' | 'Cancelado';
+  created_at?: string;
+}
+
 export interface NoticeComment {
   id: string;
   notice_id: string;

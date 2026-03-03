@@ -4,12 +4,12 @@ import { ShieldAlert, Loader2 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import {
   fetchResidents, fetchRooms, fetchPayments, fetchMaintenance,
-  fetchComplaints, fetchNotices, fetchCalendarEvents
+  fetchComplaints, fetchNotices, fetchCalendarEvents, fetchLaundrySchedules
 } from './lib/database';
 
 import {
   Resident, Room, Payment, MaintenanceRequest,
-  Complaint, Notice, CalendarEvent, UserRole
+  Complaint, Notice, CalendarEvent, UserRole, LaundrySchedule
 } from './types';
 
 import { Login } from './components/Login';
@@ -24,6 +24,7 @@ import { InternetView } from './views/InternetView';
 import { ComplaintsView } from './views/ComplaintsView';
 import { NoticesView } from './views/NoticesView';
 import { CalendarView } from './views/CalendarView';
+import { LaundryView } from './views/LaundryView';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -40,6 +41,7 @@ function App() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [laundrySchedules, setLaundrySchedules] = useState<LaundrySchedule[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -111,6 +113,7 @@ function App() {
       setComplaints(await fetchComplaints());
       setNotices(await fetchNotices());
       setEvents(await fetchCalendarEvents());
+      setLaundrySchedules(await fetchLaundrySchedules());
       setResidents(await fetchResidents()); // Atualizar moradores também
     } catch (e) {
       console.error(e);
@@ -158,6 +161,8 @@ function App() {
             <DashboardView
               payments={payments} maintenance={maintenance}
               residents={residents} rooms={rooms}
+              laundrySchedules={laundrySchedules}
+              currentUser={currentUser}
               setActiveTab={setActiveTab}
             />
           )}
@@ -199,7 +204,7 @@ function App() {
           {activeTab === 'complaints' && (
             <ComplaintsView
               complaints={complaints} residents={residents}
-              isAdmin={isAdmin} currentUser={currentUser}
+              isAdmin={isAdmin} currentUser={currentUser} onRefresh={refreshData}
             />
           )}
 
@@ -209,6 +214,10 @@ function App() {
 
           {activeTab === 'calendar' && (
             <CalendarView events={events} isAdmin={isAdmin} />
+          )}
+
+          {activeTab === 'laundry' && (
+            <LaundryView schedules={laundrySchedules} residents={residents} currentUser={currentUser} isAdmin={isAdmin} onRefresh={refreshData} />
           )}
         </>
       )}

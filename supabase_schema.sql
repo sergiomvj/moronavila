@@ -136,6 +136,16 @@ CREATE TABLE calendar_event_residents (
     PRIMARY KEY (event_id, resident_id)
 );
 
+-- ── 12. LAUNDRY SCHEDULES ─────────────────────────────────────────────
+CREATE TABLE laundry_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    resident_id UUID REFERENCES residents(id) ON DELETE CASCADE NOT NULL,
+    date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Agendado' CHECK (status IN ('Agendado', 'Concluído', 'Cancelado')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
 
 -- ── CONFIGURANDO SEGURANÇA (RLS BÁSICO) ───────────────────────────────
 -- Obs: Em ambiente normal você ajustaria as políticas de segurança.
@@ -151,6 +161,7 @@ ALTER TABLE notices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notice_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calendar_event_residents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laundry_schedules ENABLE ROW LEVEL SECURITY;
 
 -- Liberando acesso total para simplificar neste primeiro momento:
 CREATE POLICY "Public Access" ON rooms FOR ALL USING (true);
@@ -164,6 +175,7 @@ CREATE POLICY "Public Access" ON notices FOR ALL USING (true);
 CREATE POLICY "Public Access" ON notice_comments FOR ALL USING (true);
 CREATE POLICY "Public Access" ON calendar_events FOR ALL USING (true);
 CREATE POLICY "Public Access" ON calendar_event_residents FOR ALL USING (true);
+CREATE POLICY "Public Access" ON laundry_schedules FOR ALL USING (true);
 
 -- Criar buckets de storage caso ainda não existam:
 insert into storage.buckets (id, name, public) values ('room-media', 'room-media', true) on conflict do nothing;

@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import {
     Resident, Room, Payment, MaintenanceRequest,
     Complaint, Notice, NoticeComment, CalendarEvent,
-    Furniture, RoomMedia, PaymentStatus, UserRole
+    Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule
 } from '../types';
 
 // ── RESIDENTS ──────────────────────────────────────────────────────────────────
@@ -264,4 +264,30 @@ function toSnake(obj: Record<string, any>): Record<string, any> {
         result[snakeKey] = obj[key];
     }
     return result;
+}
+
+// ── LAUNDRY SCHEDULES ──────────────────────────────────────────────────────────
+export async function fetchLaundrySchedules(): Promise<LaundrySchedule[]> {
+    const { data, error } = await supabase.from('laundry_schedules').select('*').order('date', { ascending: true });
+    if (error) throw error;
+    return (data || []) as LaundrySchedule[];
+}
+
+export async function createLaundrySchedule(item: Omit<LaundrySchedule, 'id' | 'created_at'>): Promise<LaundrySchedule> {
+    const payload = toSnake(item);
+    const { data, error } = await supabase.from('laundry_schedules').insert(payload).select().single();
+    if (error) throw error;
+    return data as LaundrySchedule;
+}
+
+export async function updateLaundrySchedule(id: string, updates: Partial<LaundrySchedule>): Promise<LaundrySchedule> {
+    const payload = toSnake(updates);
+    const { data, error } = await supabase.from('laundry_schedules').update(payload).eq('id', id).select().single();
+    if (error) throw error;
+    return data as LaundrySchedule;
+}
+
+export async function deleteLaundrySchedule(id: string): Promise<void> {
+    const { error } = await supabase.from('laundry_schedules').delete().eq('id', id);
+    if (error) throw error;
 }

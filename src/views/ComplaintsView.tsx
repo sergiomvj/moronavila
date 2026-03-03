@@ -1,17 +1,47 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { Complaint, Resident } from '../types';
+import { createComplaint } from '../lib/database';
 
 interface ComplaintsViewProps {
     complaints: Complaint[];
     residents: Resident[];
     isAdmin: boolean;
     currentUser: Resident;
-    // onRefresh: () => void;
+    onRefresh: () => void;
 }
 
-export function ComplaintsView({ complaints, residents, isAdmin, currentUser }: ComplaintsViewProps) {
+export function ComplaintsView({ complaints, residents, isAdmin, currentUser, onRefresh }: ComplaintsViewProps) {
+    const [showComplaintModal, setShowComplaintModal] = useState(false);
+    const [complaintTitle, setComplaintTitle] = useState('');
+    const [complaintDesc, setComplaintDesc] = useState('');
+    const [isAnonymous, setIsAnonymous] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const visibleComplaints = isAdmin ? complaints : complaints.filter(c => c.resident_id === currentUser.id);
+
+    const handleCreateComplaint = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            await createComplaint({
+                resident_id: currentUser.id,
+                title: complaintTitle,
+                description: complaintDesc,
+                is_anonymous: isAnonymous
+            });
+            setShowComplaintModal(false);
+            setComplaintTitle('');
+            setComplaintDesc('');
+            setIsAnonymous(false);
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao registrar reclamação.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     return (
         <div className="space-y-6">
@@ -21,7 +51,10 @@ export function ComplaintsView({ complaints, residents, isAdmin, currentUser }: 
                     <p className="text-slate-500 text-sm">Canal de comunicação direta com a administração</p>
                 </div>
                 {!isAdmin && (
-                    <button className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors">
+                    <button
+                        onClick={() => setShowComplaintModal(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors"
+                    >
                         Nova Reclamação
                     </button>
                 )}
@@ -81,6 +114,72 @@ export function ComplaintsView({ complaints, residents, isAdmin, currentUser }: 
                     )}
                 </div>
             </div>
+
+            {/* Nova Reclamação Modal */}
+            {showComplaintModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-lg">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Nova Reclamação / Sugestão</h3>
+                            <button onClick={() => setShowComplaintModal(false)} className="text-slate-400 hover:text-slate-700">
+                                {/* Pode usar X aqui importado ou só texto */}
+                                <span className="text-xl leading-none">&times;</span>
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateComplaint} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Assunto</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={complaintTitle}
+                                    onChange={e => setComplaintTitle(e.target.value)}
+                                    placeholder="Ex: Barulho no corredor, lâmpada queimada..."
+                                    className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
+                                <textarea
+                                    required
+                                    rows={4}
+                                    value={complaintDesc}
+                                    onChange={e => setComplaintDesc(e.target.value)}
+                                    placeholder="Descreva o problema ou sugestão em detalhes..."
+                                    className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 mt-4">
+                                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={isAnonymous}
+                                        onChange={(e) => setIsAnonymous(e.target.checked)}
+                                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                    />
+                                    Enviar de forma anônima?
+                                </label>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowComplaintModal(false)}
+                                    className="px-6 py-3 font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                                >
+                                    {isSubmitting ? 'Enviando...' : 'Enviar Reclamação'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
