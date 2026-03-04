@@ -115,7 +115,7 @@ export async function uploadRoomMedia(
     roomId: string, file: File
 ): Promise<RoomMedia> {
     const ext = file.name.split('.').pop();
-    const path = `rooms / ${roomId}/${Date.now()}.${ext}`;
+    const path = `rooms/${roomId}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from('room-media').upload(path, file);
     if (uploadError) throw uploadError;
     const { data: urlData } = supabase.storage.from('room-media').getPublicUrl(path);
@@ -314,12 +314,12 @@ export async function uploadProfilePhoto(residentId: string, file: File): Promis
     const filePath = `profiles/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-        .from('room_media') // Usando o bucket existente para simplificar
+        .from('room-media') // Usando o bucket existente para simplificar
         .upload(filePath, file);
 
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage.from('room_media').getPublicUrl(filePath);
+    const { data } = supabase.storage.from('room-media').getPublicUrl(filePath);
     return data.publicUrl;
 }
 
