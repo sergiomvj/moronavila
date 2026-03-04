@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import {
     Resident, Room, Payment, MaintenanceRequest,
     Complaint, Notice, NoticeComment, CalendarEvent,
-    Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule
+    Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule, Device
 } from '../types';
 
 // ── RESIDENTS ──────────────────────────────────────────────────────────────────
@@ -86,12 +86,36 @@ export async function deleteFurniture(id: string): Promise<void> {
     if (error) throw error;
 }
 
+
+// ── DEVICES ────────────────────────────────────────────────────────────────
+export async function fetchDevices(): Promise<Device[]> {
+    const { data: devices, error } = await supabase.from('devices').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return devices as Device[];
+}
+
+export async function createDevice(device: Omit<Device, 'id' | 'created_at'>): Promise<Device> {
+    const { data, error } = await supabase.from('devices').insert([toSnake(device)]).select().single();
+    if (error) throw error;
+    return data as Device;
+}
+
+export async function updateDevice(id: string, updates: Partial<Device>) {
+    const { error } = await supabase.from('devices').update(toSnake(updates)).eq('id', id);
+    if (error) throw error;
+}
+
+export async function deleteDevice(id: string) {
+    const { error } = await supabase.from('devices').delete().eq('id', id);
+    if (error) throw error;
+}
+
 // ── ROOM MEDIA ─────────────────────────────────────────────────────────────────
 export async function uploadRoomMedia(
     roomId: string, file: File
 ): Promise<RoomMedia> {
     const ext = file.name.split('.').pop();
-    const path = `rooms/${roomId}/${Date.now()}.${ext}`;
+    const path = `rooms / ${roomId}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from('room-media').upload(path, file);
     if (uploadError) throw uploadError;
     const { data: urlData } = supabase.storage.from('room-media').getPublicUrl(path);
@@ -233,6 +257,34 @@ export async function signUp(email: string, password: string, name: string, phon
     return authData;
 }
 
+export async function signUpAdmin(email: string, password: string, name: string, phone: string) {
+    const { createClient } = await import('@supabase/supabase-js');
+    const tempClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+    const { data: authData, error: authError } = await tempClient.auth.signUp({
+        email,
+        password,
+    });
+    if (authError) throw authError;
+
+    if (authData.user) {
+        await createResident({
+            auth_id: authData.user.id,
+            name,
+            email,
+            phone,
+            role: UserRole.ADMIN,
+            status: 'Ativo',
+            entry_date: new Date().toISOString().split('T')[0],
+            internet_active: false
+        });
+    }
+    return authData;
+}
+
 export async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -254,6 +306,21 @@ export async function fetchCurrentResident(authId: string): Promise<Resident | n
     const { data, error } = await supabase.from('residents').select('*').eq('auth_id', authId).single();
     if (error) return null;
     return data as Resident;
+}
+
+export async function uploadProfilePhoto(residentId: string, file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${residentId}-${Math.random()}.${fileExt}`;
+    const filePath = `profiles/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('room_media') // Usando o bucket existente para simplificar
+        .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from('room_media').getPublicUrl(filePath);
+    return data.publicUrl;
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────────────────

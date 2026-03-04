@@ -44,12 +44,26 @@ export interface Resident {
   entry_date: string;
   origin_address?: string;
   work_address?: string;
+  photo_url?: string;
+  instagram?: string;
   room_id?: string;
   role: UserRole;
   status: string;
   mac_address?: string;
   internet_active: boolean;
   internet_renewal_date?: string;
+}
+
+export interface Device {
+  id: string;
+  resident_id: string;
+  device_type: 'Celular' | 'Computador' | 'Outro';
+  mac_address: string;
+  ip_address?: string;
+  connected_time?: string;
+  bandwidth_usage?: number;
+  status: 'Pendente' | 'Ativo' | 'Bloqueado';
+  created_at: string;
 }
 
 export interface RoomMedia {

@@ -42,6 +42,7 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
 
     const stats = useMemo(() => {
         const myPayments = payments.filter(p => isAdmin || p.resident_id === currentUser.id);
+
         const myMaintenance = maintenance.filter(m => isAdmin || m.room_id === currentUser.room_id);
 
         const totalPayments = myPayments.reduce((acc, p) => acc + Number(p.amount), 0);
@@ -113,6 +114,21 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
 
     return (
         <div className="space-y-8">
+            {/* Welcome Banner */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <h2 className="text-3xl font-bold mb-2">Bem-vindo(a), {currentUser.name.split(' ')[0]}! 👋</h2>
+                    <p className="text-indigo-100 max-w-2xl text-sm sm:text-base">
+                        {isAdmin
+                            ? 'Aqui você tem o controle total da sua República. Acompanhe os pagamentos, aprove ou cadastre novos moradores e controle a infraestrutura do VPR.'
+                            : 'Fique por dentro das novidades da casa, confira seus boletos do mês e acompanhe o andamento das suas solicitações de reparo.'}
+                    </p>
+                </div>
+                {/* Decorative background circle */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+            </div>
+
+            <h2 className="text-2xl font-bold text-slate-800 -mb-2">Visão Geral</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {isAdmin ? (
                     <>
@@ -152,6 +168,7 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
                             value={currentUser.internet_active ? 'Habilitada' : 'Bloqueada'}
                             icon={Wifi}
                             colorClass={currentUser.internet_active ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}
+                            onClick={() => setActiveTab('internet')}
                         />
                         <StatCard
                             label="Meus Agendamentos de Hoje"

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     LayoutDashboard, Bed, Users, CreditCard,
     Wrench, MessageSquare, Wifi, Megaphone,
-    Calendar as CalendarIcon, LogOut, Home,
+    Calendar as CalendarIcon, LogOut, Home, Music,
     Search, AlertCircle, Menu, X, Trello, Droplets
 } from 'lucide-react';
 import { UserRole, Resident } from '../types';
@@ -50,9 +50,9 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
             >
                 <div className="p-6 flex items-center gap-3 mb-8">
                     <div className="bg-indigo-600 p-2 rounded-xl text-white">
-                        <Home size={24} />
+                        <Music size={24} />
                     </div>
-                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">VPR-<span className="text-indigo-600">Manager</span></h1>
+                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">Morona<span className="text-indigo-600">Vila</span></h1>
                 </div>
 
                 <nav className="px-4 space-y-1">
@@ -66,8 +66,12 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
                     <SidebarItem icon={CreditCard} label="Financeiro" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
                     <SidebarItem icon={Droplets} label="Lavanderia" active={activeTab === 'laundry'} onClick={() => setActiveTab('laundry')} />
                     <SidebarItem icon={Trello} label={isAdmin ? "Kanban Reparos" : "Reparos"} active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} />
-                    <SidebarItem icon={Wifi} label="Internet" active={activeTab === 'internet'} onClick={() => setActiveTab('internet')} />
-                    <SidebarItem icon={MessageSquare} label="Reclamações" active={activeTab === 'complaints'} onClick={() => setActiveTab('complaints')} />
+                    {isAdmin && (
+                        <>
+                            <SidebarItem icon={Wifi} label="Internet" active={activeTab === 'internet'} onClick={() => setActiveTab('internet')} />
+                            <SidebarItem icon={MessageSquare} label="Reclamações" active={activeTab === 'complaints'} onClick={() => setActiveTab('complaints')} />
+                        </>
+                    )}
                 </nav>
 
                 <div className="absolute bottom-8 left-0 w-full px-6 space-y-4">

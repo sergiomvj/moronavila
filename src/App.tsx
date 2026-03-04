@@ -4,7 +4,7 @@ import { ShieldAlert, Loader2 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import {
   fetchResidents, fetchRooms, fetchPayments, fetchMaintenance,
-  fetchComplaints, fetchNotices, fetchCalendarEvents, fetchLaundrySchedules
+  fetchComplaints, fetchNotices, fetchCalendarEvents, fetchLaundrySchedules, fetchDevices
 } from './lib/database';
 
 import {
@@ -42,6 +42,7 @@ function App() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [laundrySchedules, setLaundrySchedules] = useState<LaundrySchedule[]>([]);
+  const [devices, setDevices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -78,7 +79,7 @@ function App() {
       const pResidents = await fetchResidents();
       setResidents(pResidents);
 
-      const user = pResidents.find(r => r.id === userId);
+      const user = pResidents.find(r => r.auth_id === userId);
       if (user) {
         setCurrentUser(user);
       } else {
@@ -114,6 +115,7 @@ function App() {
       setNotices(await fetchNotices());
       setEvents(await fetchCalendarEvents());
       setLaundrySchedules(await fetchLaundrySchedules());
+      setDevices(await fetchDevices());
       setResidents(await fetchResidents()); // Atualizar moradores também
     } catch (e) {
       console.error(e);
@@ -194,12 +196,7 @@ function App() {
               isAdmin={isAdmin} currentUser={currentUser} onRefresh={refreshData}
             />
           )}
-
-          {activeTab === 'internet' && (
-            <InternetView
-              residents={residents} isAdmin={isAdmin}
-            />
-          )}
+          {/* Removido InternetView duplicado */}
 
           {activeTab === 'complaints' && (
             <ComplaintsView
@@ -207,6 +204,7 @@ function App() {
               isAdmin={isAdmin} currentUser={currentUser} onRefresh={refreshData}
             />
           )}
+          {activeTab === 'internet' && <InternetView residents={residents} devices={devices} currentUser={currentUser} onUpdate={refreshData} />}
 
           {activeTab === 'notices' && (
             <NoticesView notices={notices} residents={residents} isAdmin={isAdmin} />

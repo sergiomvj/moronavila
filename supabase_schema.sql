@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS residents (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     phone TEXT,
+    photo_url TEXT,
+    instagram TEXT,
     role TEXT NOT NULL DEFAULT 'Morador', -- Admin / Morador
     status TEXT DEFAULT 'Ativo',
     entry_date DATE,
@@ -36,6 +38,71 @@ CREATE TABLE IF NOT EXISTS residents (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
+
+-- ── 2.1 DEVICES ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS devices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    resident_id UUID REFERENCES residents(id) ON DELETE CASCADE,
+    device_type TEXT NOT NULL CHECK (device_type IN ('Celular', 'Computador', 'Outro')),
+    mac_address TEXT NOT NULL,
+    ip_address TEXT,
+    connected_time TEXT,
+    bandwidth_usage NUMERIC(10,2),
+    status TEXT NOT NULL DEFAULT 'Pendente' CHECK (status IN ('Pendente', 'Ativo', 'Bloqueado')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
+
+ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Devices Visiveis para Admins" ON public.devices
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.residents
+            WHERE residents.auth_id = auth.uid()
+            AND residents.role = 'Administrador'
+        )
+    );
+
+CREATE POLICY "Devices Visuais Proprios" ON public.devices
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.residents
+            WHERE residents.auth_id = auth.uid()
+            AND residents.id = devices.resident_id
+        )
+    );
+
+CREATE POLICY "Criar Proprios Devices" ON public.devices
+    FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.residents
+            WHERE residents.auth_id = auth.uid()
+            AND residents.id = devices.resident_id
+        )
+    );
+
+CREATE POLICY "Atualizar Proprios Devices" ON public.devices
+    FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.residents
+            WHERE residents.auth_id = auth.uid()
+            AND residents.id = devices.resident_id
+        )
+    );
+
+CREATE POLICY "Excluir Proprios Devices" ON public.devices
+    FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.residents
+            WHERE residents.auth_id = auth.uid()
+            AND residents.id = devices.resident_id
+        )
+    );
 
 -- ── 3. FURNITURE ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS furniture (
