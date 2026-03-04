@@ -97,7 +97,14 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-slate-900 text-lg">Meus Dispositivos ({myDevices.length}/2)</h3>
                             {myDevices.length < 2 && !isAdding && (
-                                <button onClick={() => setIsAdding(true)} className="flex items-center gap-1 text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition">
+                                <button onClick={() => {
+                                    const hasMobile = myDevices.some(d => d.device_type === 'Celular');
+                                    setNewDevice({
+                                        ...newDevice,
+                                        device_type: hasMobile ? 'Computador' : 'Celular'
+                                    });
+                                    setIsAdding(true);
+                                }} className="flex items-center gap-1 text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition">
                                     <Plus size={16} /> <span className="hidden sm:inline">Adicionar Dispositivo</span>
                                 </button>
                             )}
@@ -107,9 +114,14 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                             <form onSubmit={handleSaveDevice} className="bg-white p-4 rounded-xl border border-slate-200 mb-4 flex flex-col md:flex-row gap-3">
                                 <div className="flex-1">
                                     <label className="block text-xs font-bold text-slate-500 mb-1">Tipo</label>
-                                    <select value={newDevice.device_type} onChange={(e) => setNewDevice({ ...newDevice, device_type: e.target.value as any })} className="w-full text-sm border-slate-200 rounded-lg p-2 bg-slate-50" required>
-                                        <option value="Celular">Celular</option>
-                                        <option value="Computador">Computador</option>
+                                    <select
+                                        value={newDevice.device_type}
+                                        onChange={(e) => setNewDevice({ ...newDevice, device_type: e.target.value as any })}
+                                        className="w-full text-sm border-slate-200 rounded-lg p-2 bg-slate-50"
+                                        required
+                                    >
+                                        {!myDevices.some(d => d.device_type === 'Celular') && <option value="Celular">Celular (1 un.)</option>}
+                                        {!myDevices.some(d => d.device_type === 'Computador') && <option value="Computador">Computador (1 un.)</option>}
                                         <option value="Outro">Outro</option>
                                     </select>
                                 </div>
