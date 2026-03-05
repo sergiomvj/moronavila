@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi, Plus, ImageIcon } from 'lucide-react';
 import { Resident, UserRole } from '../types';
-import { updateResident, signUpAdmin } from '../lib/database';
+import { updateResident, signUpAdmin, signUpResident, uploadProfilePhoto } from '../lib/database';
 
 interface ResidentsViewProps {
     residents: Resident[];
     isAdmin: boolean;
     currentUser: Resident;
     onRefresh: () => void;
+    initialModal?: 'add-resident' | null;
 }
 
-export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: ResidentsViewProps) {
+export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, initialModal }: ResidentsViewProps) {
+    useEffect(() => {
+        if (initialModal === 'add-resident') {
+            setShowAddModal(true);
+        }
+    }, [initialModal]);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingResident, setEditingResident] = useState<Resident | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +38,8 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
     const [newBirthDate, setNewBirthDate] = useState('');
     const [newEntryDate, setNewEntryDate] = useState(new Date().toISOString().split('T')[0]);
     const [newInstagram, setNewInstagram] = useState('');
+    const [newMacAddress, setNewMacAddress] = useState('');
+    const [newMacAddressPC, setNewMacAddressPC] = useState('');
     const [newPhoto, setNewPhoto] = useState<File | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
@@ -52,11 +60,41 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
         if (!editingResident) return;
         setIsSubmitting(true);
         try {
-            await updateResident(editingResident.id, editingResident);
+            // Upload photo if selected
+            let photoUrl = editingResident.photo_url;
+            if (newPhoto) {
+                photoUrl = await uploadProfilePhoto(editingResident.id, newPhoto);
+            }
+
+            try {
+                await updateResident(editingResident.id, {
+                    ...editingResident,
+                    photo_url: photoUrl
+                });
+            } catch (updateErr) {
+                console.warn('Erro ao salvar campos estendidos, tentando básicos...', updateErr);
+                // Fallback: Tenta salvar EXCLUSIVAMENTE os campos que existem desde a V1 e sem UUIDs inválidos
+                const safePayload: any = {
+                    name: editingResident.name,
+                    phone: editingResident.phone,
+                    birth_date: editingResident.birth_date,
+                    entry_date: editingResident.entry_date,
+                    status: editingResident.status,
+                    internet_active: editingResident.internet_active,
+                };
+                if (editingResident.room_id && editingResident.room_id.trim() !== '') {
+                    safePayload.room_id = editingResident.room_id;
+                }
+                await updateResident(editingResident.id, safePayload);
+                alert('Aviso: Algumas informações novas (Foto/Instagram/MAC/Endereço) não puderam ser salvas, mas o cadastro principal foi atualizado.');
+            }
+
             setEditingResident(null);
+            setNewPhoto(null);
             onRefresh();
-        } catch (err) {
-            alert('Erro ao atualizar morador.');
+        } catch (err: any) {
+            console.error("Erro fatal ao salvar morador:", err);
+            alert('Erro ao atualizar morador: ' + (err?.message || JSON.stringify(err)));
         } finally {
             setIsSubmitting(false);
         }
@@ -100,21 +138,34 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
                 photoUrl = await uploadProfilePhoto(resident.id, newPhoto);
             }
 
-            // 3. Atualizar com Instagram e PhotoUrl
-            await updateResident(resident.id, {
-                instagram: newInstagram,
-                photo_url: photoUrl,
-                birth_date: newBirthDate,
-                entry_date: newEntryDate
-            });
+            // 3. Atualizar com Instagram, MACs e PhotoUrl
+            try {
+                await updateResident(resident.id, {
+                    instagram: newInstagram,
+                    mac_address: newMacAddress,
+                    mac_address_pc: newMacAddressPC,
+                    photo_url: photoUrl,
+                    birth_date: newBirthDate,
+                    entry_date: newEntryDate
+                } as any);
+            } catch (updateErr) {
+                console.warn('Falha ao atualizar campos estendidos, tentando campos básicos...', updateErr);
+                // Fallback: Tenta atualizar apenas campos que garantidamente existem
+                await updateResident(resident.id, {
+                    birth_date: newBirthDate,
+                    entry_date: newEntryDate
+                } as any);
+                alert('Aviso: Cadastro realizado, mas Instagram/MACs não puderam ser salvos (Banco de Dados desatualizado).');
+            }
 
             setShowAddModal(false);
             setNewName(''); setNewEmail(''); setNewPassword(''); setNewPhone('');
-            setNewBirthDate(''); setNewInstagram(''); setNewPhoto(null);
+            setNewBirthDate(''); setNewInstagram(''); setNewMacAddress(''); setNewMacAddressPC(''); setNewPhoto(null);
             alert('Morador cadastrado com sucesso!');
             onRefresh();
         } catch (err: any) {
-            alert(err.message || 'Erro ao cadastrar morador.');
+            console.error("Erro ao criar residente:", err);
+            alert('Erro ao cadastrar morador: ' + (err?.message || JSON.stringify(err)));
         } finally {
             setIsCreating(false);
         }
@@ -406,6 +457,14 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Data de Entrada</label>
                                     <input type="date" value={newEntryDate} onChange={e => setNewEntryDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" required />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (Celular)</label>
+                                    <input type="text" value={newMacAddress} onChange={e => setNewMacAddress(e.target.value)} placeholder="Ex: 00:1B:..." className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20 font-mono" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (Computador)</label>
+                                    <input type="text" value={newMacAddressPC} onChange={e => setNewMacAddressPC(e.target.value)} placeholder="Ex: 00:1B:..." className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20 font-mono" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Foto de Perfil</label>

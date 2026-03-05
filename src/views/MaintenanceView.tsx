@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Wrench, CheckCircle2, Clock } from 'lucide-react';
 import { MaintenanceRequest, Room, Resident, MaintenanceStatus } from '../types';
-import { updateMaintenanceStatus } from '../lib/database';
+import { updateMaintenanceStatus, createMaintenanceRequest } from '../lib/database';
 
 interface MaintenanceViewProps {
     maintenance: MaintenanceRequest[];
@@ -14,6 +14,8 @@ interface MaintenanceViewProps {
 
 export function MaintenanceView({ maintenance, rooms, residents, isAdmin, currentUser, onRefresh }: MaintenanceViewProps) {
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [newRequest, setNewRequest] = useState({ title: '', description: '' });
 
     const visibleMaintenance = isAdmin ? maintenance : maintenance.filter(m => {
         // Moradores veem manutenções do próprio quarto
@@ -33,6 +35,30 @@ export function MaintenanceView({ maintenance, rooms, residents, isAdmin, curren
         }
     };
 
+    const handleCreateRequest = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentUser.room_id) {
+            alert('Você precisa estar vinculado a um quarto para solicitar reparos.');
+            return;
+        }
+        setIsProcessing(true);
+        try {
+            await createMaintenanceRequest({
+                ...newRequest,
+                room_id: currentUser.room_id,
+                requested_by: currentUser.id,
+                status: MaintenanceStatus.OPEN
+            });
+            setShowModal(false);
+            setNewRequest({ title: '', description: '' });
+            onRefresh();
+        } catch (e) {
+            alert('Erro ao criar solicitação de reparo.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -42,7 +68,60 @@ export function MaintenanceView({ maintenance, rooms, residents, isAdmin, curren
                         {isAdmin ? "Kanban / Lista de solicitações de reparo" : "Acompanhe o status das suas solicitações de reparo"}
                     </p>
                 </div>
+                {!isAdmin && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors"
+                    >
+                        Nova Solicitação
+                    </button>
+                )}
             </div>
+
+            {/* Modal de Solicitação (Residente) */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Solicitar Reparo</h3>
+                            <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700">
+                                <span className="text-xl">&times;</span>
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateRequest} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Assunto</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={newRequest.title}
+                                    onChange={e => setNewRequest({ ...newRequest, title: e.target.value })}
+                                    placeholder="Ex: Lâmpada queimada, vazamento..."
+                                    className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
+                                <textarea
+                                    required
+                                    rows={4}
+                                    value={newRequest.description}
+                                    onChange={e => setNewRequest({ ...newRequest, description: e.target.value })}
+                                    placeholder="Descreva o problema em detalhes..."
+                                    className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={isProcessing}
+                                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                            >
+                                {isProcessing ? 'Enviando...' : 'Enviar Solicitação'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {!isAdmin ? (
                 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -53,8 +132,8 @@ export function MaintenanceView({ maintenance, rooms, residents, isAdmin, curren
                                     <div className="flex justify-between items-start mb-2">
                                         <h4 className="font-bold text-slate-900">{m.title}</h4>
                                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${m.status === MaintenanceStatus.OPEN ? 'bg-rose-100 text-rose-700' :
-                                                m.status === MaintenanceStatus.IN_PROGRESS ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-emerald-100 text-emerald-700'
+                                            m.status === MaintenanceStatus.IN_PROGRESS ? 'bg-amber-100 text-amber-700' :
+                                                'bg-emerald-100 text-emerald-700'
                                             }`}>
                                             {m.status}
                                         </span>

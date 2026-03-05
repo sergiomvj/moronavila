@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import {
     Resident, Room, Payment, MaintenanceRequest,
     Complaint, Notice, NoticeComment, CalendarEvent,
-    Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule, Device
+    Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule, Device, MaintenanceStatus
 } from '../types';
 
 // ── RESIDENTS ──────────────────────────────────────────────────────────────────
@@ -20,9 +20,48 @@ export async function createResident(resident: Partial<Resident>): Promise<Resid
 }
 
 export async function updateResident(id: string, updates: Partial<Resident>): Promise<Resident> {
-    const payload = toSnake(updates);
-    const { data, error } = await supabase.from('residents').update(payload).eq('id', id).select().single();
-    if (error) throw error;
+    const rawPayload = toSnake(updates);
+
+    // Whitelist de colunas permitidas no banco de dados (Baseado no schema real)
+    const allowedColumns = [
+        'name', 'phone', 'photo_url', 'instagram', 'role', 'status',
+        'entry_date', 'birth_date', 'cpf', 'document_number',
+        'origin_address', 'work_address', 'room_id', 'mac_address',
+        'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id'
+    ];
+
+    const payload: Record<string, any> = {};
+    allowedColumns.forEach(col => {
+        if (col in rawPayload) {
+            payload[col] = rawPayload[col];
+        }
+    });
+
+    // Certifique-se de que room_id seja null se for string vazia
+    if (payload.room_id === '') {
+        payload.room_id = null;
+    }
+
+    // Se o banco ainda não tiver as colunas novas, o Supabase retornará erro.
+    // O try/catch no frontend lidará com o fallback para o 'mínimo necessário'.
+    console.log('Enviando UPDATE para resident:', id, payload);
+
+    // Tenta atualizar primeiro por ID (PK)
+    let { data, error } = await supabase.from('residents').update(payload).eq('id', id).select().maybeSingle();
+
+    // Se não encontrou por ID, e o ID parece um UUID de autenticação, tenta por auth_id
+    if (!data && !error && id.length > 30) {
+        console.log('Tentando update por auth_id para:', id);
+        const { data: retryData, error: retryError } = await supabase.from('residents').update(payload).eq('auth_id', id).select().maybeSingle();
+        data = retryData;
+        error = retryError;
+    }
+
+    if (error) {
+        console.error('Erro na resposta do Supabase:', error);
+        throw error;
+    }
+    if (!data) throw new Error('Nenhum registro encontrado para atualizar ou permissão negada. (ID: ' + id + ')');
     return data as Resident;
 }
 
@@ -76,7 +115,7 @@ export async function addFurniture(roomId: string, item: Partial<Furniture>): Pr
 }
 
 export async function updateFurniture(id: string, updates: Partial<Furniture>): Promise<Furniture> {
-    const { data, error } = await supabase.from('furniture').update(updates).eq('id', id).select().single();
+    const { data, error } = await supabase.from('furniture').update(updates).eq('id', id).select().maybeSingle();
     if (error) throw error;
     return data as Furniture;
 }
@@ -105,9 +144,13 @@ export async function deleteFurniture(id: string): Promise<void> {
 
 // ── DEVICES ────────────────────────────────────────────────────────────────
 export async function fetchDevices(): Promise<Device[]> {
-    const { data: devices, error } = await supabase.from('devices').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return devices as Device[];
+    try {
+        const { data: devices, error } = await supabase.from('devices').select('*').order('created_at', { ascending: false });
+        if (error) return [];
+        return devices as Device[];
+    } catch (e) {
+        return [];
+    }
 }
 
 export async function createDevice(device: Omit<Device, 'id' | 'created_at'>): Promise<Device> {
@@ -163,7 +206,7 @@ export async function updatePaymentStatus(id: string, status: PaymentStatus, res
     if (status === PaymentStatus.PAID) {
         updates.payment_date = new Date().toISOString().split('T')[0];
     }
-    const { data, error } = await supabase.from('payments').update(updates).eq('id', id).select().single();
+    const { data, error } = await supabase.from('payments').update(updates).eq('id', id).select().maybeSingle();
     if (error) throw error;
     if (status === PaymentStatus.PAID) {
         await renewInternetAccess(residentId);
@@ -185,16 +228,15 @@ export async function fetchMaintenance(): Promise<MaintenanceRequest[]> {
     return (data || []) as MaintenanceRequest[];
 }
 
-export async function createMaintenanceRequest(req: {
-    title: string; description: string; room_id: string; requested_by?: string; photo_url?: string;
-}): Promise<MaintenanceRequest> {
-    const { data, error } = await supabase.from('maintenance_requests').insert(req).select().single();
+export async function createMaintenanceRequest(req: Partial<MaintenanceRequest>): Promise<MaintenanceRequest> {
+    const payload = toSnake(req);
+    const { data, error } = await supabase.from('maintenance_requests').insert(payload).select().single();
     if (error) throw error;
     return data as MaintenanceRequest;
 }
 
-export async function updateMaintenanceStatus(id: string, status: string): Promise<MaintenanceRequest> {
-    const { data, error } = await supabase.from('maintenance_requests').update({ status }).eq('id', id).select().single();
+export async function updateMaintenanceStatus(id: string, status: MaintenanceStatus): Promise<MaintenanceRequest> {
+    const { data, error } = await supabase.from('maintenance_requests').update({ status }).eq('id', id).select().maybeSingle();
     if (error) throw error;
     return data as MaintenanceRequest;
 }
@@ -206,8 +248,15 @@ export async function fetchComplaints(): Promise<Complaint[]> {
     return (data || []) as Complaint[];
 }
 
-export async function createComplaint(complaint: { resident_id: string; title: string; description: string; is_anonymous: boolean }): Promise<Complaint> {
-    const { data, error } = await supabase.from('complaints').insert(complaint).select().single();
+export async function createComplaint(complaint: Partial<Complaint>): Promise<Complaint> {
+    const payload = toSnake(complaint);
+    const { data, error } = await supabase.from('complaints').insert(payload).select().single();
+    if (error) throw error;
+    return data as Complaint;
+}
+
+export async function updateComplaintStatus(id: string, status: string): Promise<Complaint> {
+    const { data, error } = await supabase.from('complaints').update({ status }).eq('id', id).select().maybeSingle();
     if (error) throw error;
     return data as Complaint;
 }
@@ -355,8 +404,27 @@ export async function updatePassword(password: string) {
 }
 
 export async function fetchCurrentResident(authId: string): Promise<Resident | null> {
-    const { data, error } = await supabase.from('residents').select('*').eq('auth_id', authId).single();
-    if (error) return null;
+    const { data, error } = await supabase.from('residents').select('*').eq('auth_id', authId).maybeSingle();
+
+    if (!data || error) {
+        // Tenta buscar pelo e-mail como fallback
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+            const { data: emailData } = await supabase.from('residents')
+                .select('*')
+                .eq('email', user.email)
+                .maybeSingle();
+
+            if (emailData) {
+                // Se encontrou por e-mail mas não tinha auth_id, vamos vincular agora
+                if (!emailData.auth_id) {
+                    await supabase.from('residents').update({ auth_id: authId }).eq('id', emailData.id);
+                }
+                return emailData as Resident;
+            }
+        }
+        return null;
+    }
     return data as Resident;
 }
 
@@ -380,7 +448,12 @@ function toSnake(obj: Record<string, any>): Record<string, any> {
     const result: Record<string, any> = {};
     for (const key in obj) {
         const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        result[snakeKey] = obj[key];
+        let val = obj[key];
+        // Prevents empty strings from crashing Postgres 'uuid' and 'date' types
+        if (val === '' && (snakeKey.includes('date') || snakeKey.includes('id'))) {
+            val = null;
+        }
+        result[snakeKey] = val;
     }
     return result;
 }
@@ -401,7 +474,7 @@ export async function createLaundrySchedule(item: Omit<LaundrySchedule, 'id' | '
 
 export async function updateLaundrySchedule(id: string, updates: Partial<LaundrySchedule>): Promise<LaundrySchedule> {
     const payload = toSnake(updates);
-    const { data, error } = await supabase.from('laundry_schedules').update(payload).eq('id', id).select().single();
+    const { data, error } = await supabase.from('laundry_schedules').update(payload).eq('id', id).select().maybeSingle();
     if (error) throw error;
     return data as LaundrySchedule;
 }

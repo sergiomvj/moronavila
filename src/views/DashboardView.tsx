@@ -11,6 +11,9 @@ interface DashboardViewProps {
     laundrySchedules: LaundrySchedule[];
     currentUser: Resident;
     setActiveTab: (tab: string) => void;
+    setShowAddResidentModal?: (show: boolean) => void;
+    setShowAddNoticeModal?: (show: boolean) => void;
+    setShowAddEventModal?: (show: boolean) => void;
 }
 
 const StatCard = ({ label, value, icon: Icon, colorClass, onClick }: { label: string, value: string | number | React.ReactNode, icon: any, colorClass: string, onClick?: () => void }) => (
@@ -25,7 +28,10 @@ const StatCard = ({ label, value, icon: Icon, colorClass, onClick }: { label: st
     </div>
 );
 
-export function DashboardView({ payments, maintenance, residents, rooms, laundrySchedules, currentUser, setActiveTab }: DashboardViewProps) {
+export function DashboardView({
+    payments, maintenance, residents, rooms, laundrySchedules, currentUser, setActiveTab,
+    setShowAddResidentModal, setShowAddNoticeModal, setShowAddEventModal
+}: DashboardViewProps) {
     const isAdmin = currentUser.role === UserRole.ADMIN;
 
     const [showComplaintModal, setShowComplaintModal] = useState(false);
@@ -75,7 +81,8 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
             await createMaintenanceRequest({
                 room_id: repairRoom,
                 title: repairTitle,
-                description: repairDesc
+                description: repairDesc,
+                requested_by: currentUser.id
             });
             setShowRepairModal(false);
             setRepairTitle('');
@@ -115,9 +122,11 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
     return (
         <div className="space-y-8">
             {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-bold mb-2">Bem-vindo(a), {currentUser.name.split(' ')[0]}! 👋</h2>
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden min-h-[160px] flex items-center">
+                <div className="relative z-10 w-full">
+                    <h2 className="text-3xl font-bold mb-2">
+                        Bem-vindo(a), {currentUser.name.length > 15 ? currentUser.name.split(' ')[0] : currentUser.name}! 👋
+                    </h2>
                     <p className="text-indigo-100 max-w-2xl text-sm sm:text-base">
                         {isAdmin
                             ? 'Aqui você tem o controle total da sua República. Acompanhe os pagamentos, aprove ou cadastre novos moradores e controle a infraestrutura do VPR.'
@@ -210,15 +219,33 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
                         </button>
                         {isAdmin && (
                             <>
-                                <button onClick={() => setActiveTab('residents')} className="flex flex-col items-center justify-center py-4 px-4 bg-emerald-50 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-colors text-emerald-700 font-medium text-center">
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('residents');
+                                        setShowAddResidentModal?.(true);
+                                    }}
+                                    className="flex flex-col items-center justify-center py-4 px-4 bg-emerald-50 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-colors text-emerald-700 font-medium text-center"
+                                >
                                     <Users size={24} className="mb-2" />
                                     <span className="text-xs">Novo Morador</span>
                                 </button>
-                                <button onClick={() => setActiveTab('calendar')} className="flex flex-col items-center justify-center py-4 px-4 bg-amber-50 rounded-2xl border border-amber-100 hover:bg-amber-100 transition-colors text-amber-700 font-medium text-center">
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('calendar');
+                                        setShowAddEventModal?.(true);
+                                    }}
+                                    className="flex flex-col items-center justify-center py-4 px-4 bg-amber-50 rounded-2xl border border-amber-100 hover:bg-amber-100 transition-colors text-amber-700 font-medium text-center"
+                                >
                                     <Plus size={24} className="mb-2" />
                                     <span className="text-xs">Novo Evento</span>
                                 </button>
-                                <button onClick={() => setActiveTab('notices')} className="flex flex-col items-center justify-center py-4 px-4 bg-purple-50 rounded-2xl border border-purple-100 hover:bg-purple-100 transition-colors text-purple-700 font-medium text-center">
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('notices');
+                                        setShowAddNoticeModal?.(true);
+                                    }}
+                                    className="flex flex-col items-center justify-center py-4 px-4 bg-purple-50 rounded-2xl border border-purple-100 hover:bg-purple-100 transition-colors text-purple-700 font-medium text-center"
+                                >
                                     <Plus size={24} className="mb-2" />
                                     <span className="text-xs">Novo Aviso</span>
                                 </button>

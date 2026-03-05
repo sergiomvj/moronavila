@@ -8,10 +8,17 @@ interface NoticesViewProps {
     isAdmin: boolean;
     currentUser: Resident;
     onRefresh: () => void;
+    initialModal?: 'add-notice' | null;
 }
 
-export function NoticesView({ notices, residents, isAdmin, currentUser, onRefresh }: NoticesViewProps) {
+export function NoticesView({ notices, residents, isAdmin, currentUser, onRefresh, initialModal }: NoticesViewProps) {
     const [showAddModal, setShowAddModal] = React.useState(false);
+
+    React.useEffect(() => {
+        if (initialModal === 'add-notice') {
+            setShowAddModal(true);
+        }
+    }, [initialModal]);
     const [newTitle, setNewTitle] = React.useState('');
     const [newContent, setNewContent] = React.useState('');
     const [newCategory, setNewCategory] = React.useState('Geral');

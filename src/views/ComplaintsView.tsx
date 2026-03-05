@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { Complaint, Resident } from '../types';
-import { createComplaint } from '../lib/database';
+import { createComplaint, updateComplaintStatus } from '../lib/database';
 
 interface ComplaintsViewProps {
     complaints: Complaint[];
@@ -19,6 +19,16 @@ export function ComplaintsView({ complaints, residents, isAdmin, currentUser, on
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const visibleComplaints = isAdmin ? complaints : complaints.filter(c => c.resident_id === currentUser.id);
+
+    const handleUpdateStatus = async (id: string, newStatus: string) => {
+        if (!isAdmin) return;
+        try {
+            await updateComplaintStatus(id, newStatus);
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao atualizar status da reclamação.');
+        }
+    };
 
     const handleCreateComplaint = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -87,18 +97,33 @@ export function ComplaintsView({ complaints, residents, isAdmin, currentUser, on
                                             {new Date(c.created_at).toLocaleDateString('pt-BR')}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            {c.status === 'resolvido' ? (
-                                                <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1">
-                                                    <CheckCircle2 size={12} /> Resolvido
-                                                </span>
-                                            ) : c.status === 'em_analise' ? (
-                                                <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1">
-                                                    <Clock size={12} /> Em Análise
-                                                </span>
+                                            {isAdmin ? (
+                                                <select
+                                                    value={c.status}
+                                                    onChange={(e) => handleUpdateStatus(c.id, e.target.value)}
+                                                    className={`text-[10px] font-bold uppercase p-1 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer ${c.status === 'resolvido' ? 'bg-emerald-50 text-emerald-700' :
+                                                        c.status === 'em_analise' ? 'bg-amber-50 text-amber-700' :
+                                                            'bg-rose-50 text-rose-700'
+                                                        }`}
+                                                >
+                                                    <option value="nova">Nova</option>
+                                                    <option value="em_analise">Em Análise</option>
+                                                    <option value="resolvido">Resolvido</option>
+                                                </select>
                                             ) : (
-                                                <span className="bg-rose-100 text-rose-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1">
-                                                    <AlertCircle size={12} /> Nova
-                                                </span>
+                                                c.status === 'resolvido' ? (
+                                                    <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1">
+                                                        <CheckCircle2 size={12} /> Resolvido
+                                                    </span>
+                                                ) : c.status === 'em_analise' ? (
+                                                    <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1">
+                                                        <Clock size={12} /> Em Análise
+                                                    </span>
+                                                ) : (
+                                                    <span className="bg-rose-100 text-rose-700 px-2 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1">
+                                                        <AlertCircle size={12} /> Nova
+                                                    </span>
+                                                )
                                             )}
                                         </td>
                                     </tr>

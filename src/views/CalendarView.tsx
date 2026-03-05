@@ -6,10 +6,17 @@ interface CalendarViewProps {
     events: CalendarEvent[];
     isAdmin: boolean;
     onRefresh: () => void;
+    initialModal?: 'add-event' | null;
 }
 
-export function CalendarView({ events, isAdmin, onRefresh }: CalendarViewProps) {
+export function CalendarView({ events, isAdmin, onRefresh, initialModal }: CalendarViewProps) {
     const [showAddModal, setShowAddModal] = React.useState(false);
+
+    React.useEffect(() => {
+        if (initialModal === 'add-event') {
+            setShowAddModal(true);
+        }
+    }, [initialModal]);
     const [newTitle, setNewTitle] = React.useState('');
     const [newDesc, setNewDesc] = React.useState('');
     const [newDate, setNewDate] = React.useState('');
@@ -101,10 +108,39 @@ export function CalendarView({ events, isAdmin, onRefresh }: CalendarViewProps) 
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                    <div className="text-center py-20 text-slate-400">
-                        [Componente de Calendário / FullCalendar aqui]
-                        <br />
-                        <span className="text-sm">Os eventos abaixo apareceriam aqui.</span>
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-bold text-slate-900 text-lg">Março 2026</h3>
+                        <div className="flex gap-2">
+                            <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">&lt;</button>
+                            <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">&gt;</button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-px bg-slate-100 rounded-xl overflow-hidden border border-slate-100">
+                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                            <div key={day} className="bg-slate-50 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                {day}
+                            </div>
+                        ))}
+                        {Array.from({ length: 31 }).map((_, i) => {
+                            const day = i + 1;
+                            const hasEvent = events.some(e => new Date(e.date).getDate() === day);
+                            return (
+                                <div key={i} className="bg-white min-h-[80px] p-2 hover:bg-slate-50 transition-colors group relative">
+                                    <span className={`text-xs font-bold ${hasEvent ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                        {day}
+                                    </span>
+                                    {hasEvent && (
+                                        <div className="mt-1 space-y-1">
+                                            {events.filter(e => new Date(e.date).getDate() === day).map(e => (
+                                                <div key={e.id} className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 truncate font-semibold" title={e.title}>
+                                                    {e.title}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 

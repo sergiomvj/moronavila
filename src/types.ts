@@ -46,11 +46,11 @@ export interface Resident {
   work_address?: string;
   photo_url?: string;
   instagram?: string;
+  mac_address?: string;
+  mac_address_pc?: string;
   room_id?: string;
   role: UserRole;
   status: string;
-  mac_address?: string;
-  mac_address_pc?: string;
   internet_active: boolean;
   internet_renewal_date?: string;
 }

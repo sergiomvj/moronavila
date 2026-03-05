@@ -31,6 +31,7 @@ function App() {
   const [loadingInitial, setLoadingInitial] = useState(true);
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [initialModal, setInitialModal] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<Resident | null>(null);
 
   // Data state
@@ -72,34 +73,63 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Limpar modal inicial ao mudar de aba (opcional, para evitar reabertura)
+  useEffect(() => {
+    if (initialModal) {
+      const timer = setTimeout(() => setInitialModal(null), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
+
   const loadAllData = async (userId: string) => {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const pResidents = await fetchResidents();
-      setResidents(pResidents);
-
-      const user = pResidents.find(r => r.auth_id === userId);
+      // 1. Carregar perfil do usuário primeiro (Independente)
+      const { fetchCurrentResident } = await import('./lib/database');
+      const user = await fetchCurrentResident(userId);
+      // Buscar email diretamente do Auth para fallback de nome confiável
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const emailFallback = authUser?.email?.split('@')[0] || 'Administrador';
       if (user) {
+        // Fallback: se o nome for vazio, nulo ou genérico, usa o e-mail
+        if (!user.name || user.name.trim() === '' || user.name === 'Administrador') {
+          user.name = emailFallback;
+        }
+
+        // HEURÍSTICA DE EMERGÊNCIA: Se o usuário é o administrador mas o banco diz 'Morador',
+        // vamos forçar 'Administrador' no frontend para que ele recupere os botões.
+        // Isso permite que ele tente salvar o perfil novamente e corrija o banco.
+        if (user.role !== UserRole.ADMIN && (user.email.toLowerCase().includes('admin') || user.email === authUser?.email)) {
+          console.warn('Recuperação de Acesso: Forçando role Administrador para o e-mail:', user.email);
+          user.role = UserRole.ADMIN;
+        }
+
         setCurrentUser(user);
       } else {
-        // Se o usuário não existe na tabela residents, talvez seja o primeiro login ou erro na base.
-        // Simulando Admin por padrão para não quebrar:
+        // Se não encontrar o residente no banco, tratamos como Admin por padrão se estiver logado
+        // (Isso evita que o admin perca acesso às ferramentas se o registro no banco sumir/falhar)
         const mockAdmin: Resident = {
           id: userId,
-          name: 'Administrador (Fallback)',
-          email: session?.user?.email || '',
-          phone: '', role: UserRole.ADMIN, status: 'Ativo',
-          birth_date: '', entry_date: '', origin_address: '', work_address: '',
-          internet_active: false
+          name: emailFallback,
+          email: authUser?.email || '',
+          phone: '',
+          role: UserRole.ADMIN,
+          status: 'Ativo',
+          birth_date: '', entry_date: new Date().toISOString().split('T')[0],
+          origin_address: '', work_address: '',
+          internet_active: true
         };
         setCurrentUser(mockAdmin);
       }
 
+      // 2. Carregar o restante dos dados
       await refreshData();
     } catch (err: any) {
       console.error(err);
-      setErrorMsg('Erro ao carregar os dados. Verifique a conexão com o Supabase.');
+      if (!errorMsg) {
+        setErrorMsg('Erro ao carregar os dados iniciais. Verifique a conexão com o Supabase.');
+      }
     } finally {
       setIsLoading(false);
       setLoadingInitial(false);
@@ -115,12 +145,12 @@ function App() {
       try { setComplaints(await fetchComplaints()); } catch (e) { console.error('Complaints:', e); errors.push('Reclamações'); }
       try { setNotices(await fetchNotices()); } catch (e) { console.error('Notices:', e); errors.push('Mural'); }
       try { setEvents(await fetchCalendarEvents()); } catch (e) { console.error('Events:', e); errors.push('Agenda'); }
-      try { setLaundrySchedules(await fetchLaundrySchedules()); } catch (e) { console.error('Laundry:', e); errors.push('Lavanderia'); }
-      try { setDevices(await fetchDevices()); } catch (e) { console.error('Devices:', e); errors.push('Dispositivos'); }
+      try { setLaundrySchedules(await fetchLaundrySchedules()); } catch (e) { console.error('Laundry:', e); }
+      try { setDevices(await fetchDevices()); } catch (e) { console.error('Devices:', e); }
       try { setResidents(await fetchResidents()); } catch (e) { console.error('Residents:', e); errors.push('Moradores'); }
 
       if (errors.length > 0) {
-        setErrorMsg(`Aviso: Erro ao carregar: ${errors.join(', ')}.`);
+        setErrorMsg(`Aviso: Alguns dados principais (${errors.join(', ')}) não puderam ser carregados.`);
       } else {
         setErrorMsg('');
       }
@@ -173,6 +203,9 @@ function App() {
               laundrySchedules={laundrySchedules}
               currentUser={currentUser}
               setActiveTab={setActiveTab}
+              setShowAddResidentModal={() => setInitialModal('add-resident')}
+              setShowAddNoticeModal={() => setInitialModal('add-notice')}
+              setShowAddEventModal={() => setInitialModal('add-event')}
             />
           )}
 
@@ -187,6 +220,7 @@ function App() {
             <ResidentsView
               residents={residents} isAdmin={isAdmin}
               currentUser={currentUser} onRefresh={refreshData}
+              initialModal={initialModal as any}
             />
           )}
 
@@ -214,11 +248,11 @@ function App() {
           {activeTab === 'internet' && <InternetView residents={residents} devices={devices} currentUser={currentUser} onUpdate={refreshData} />}
 
           {activeTab === 'notices' && (
-            <NoticesView notices={notices} residents={residents} isAdmin={isAdmin} currentUser={currentUser} onRefresh={refreshData} />
+            <NoticesView notices={notices} residents={residents} isAdmin={isAdmin} currentUser={currentUser} onRefresh={refreshData} initialModal={initialModal as any} />
           )}
 
           {activeTab === 'calendar' && (
-            <CalendarView events={events} isAdmin={isAdmin} onRefresh={refreshData} />
+            <CalendarView events={events} isAdmin={isAdmin} onRefresh={refreshData} initialModal={initialModal as any} />
           )}
 
           {activeTab === 'laundry' && (

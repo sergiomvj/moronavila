@@ -25,6 +25,7 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
     const [repairTitle, setRepairTitle] = useState('');
     const [repairDesc, setRepairDesc] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [addDefaultFurniture, setAddDefaultFurniture] = useState(true);
 
     const [selectedFurniture, setSelectedFurniture] = useState<Furniture | null>(null);
     const [editingFurniture, setEditingFurniture] = useState<Furniture | null>(null);
@@ -36,17 +37,30 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
     const [newFurnitureCond, setNewFurnitureCond] = useState<'Novo' | 'Bom' | 'Regular' | 'Ruim'>('Bom');
     const [newFurnitureDesc, setNewFurnitureDesc] = useState('');
 
-    const handleAddRoomSubmi = async (e: React.FormEvent) => {
+    const handleAddRoomSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const { createRoom } = await import('../lib/database');
-            await createRoom({
+            const { createRoom, addFurniture } = await import('../lib/database');
+            const newRoom = await createRoom({
                 name: newRoomName,
-                type: newRoomType,
+                type: newRoomType as any,
                 capacity: newRoomCapacity,
                 description: newRoomDesc
             });
+
+            // Se marcado para adicionar mobiliário padrão
+            if (addDefaultFurniture) {
+                const defaultItems = ['Cama', 'Guarda-roupa', 'Escrivaninha', 'Cadeira'];
+                for (const item of defaultItems) {
+                    await addFurniture(newRoom.id, {
+                        name: item,
+                        condition: 'Bom',
+                        description: 'Mobiliário padrão incluído na criação do cômodo.'
+                    });
+                }
+            }
+
             setShowAddRoomModal(false);
             setNewRoomName('');
             setNewRoomType('Quarto');
@@ -602,7 +616,7 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleAddRoomSubmi} className="space-y-4">
+                        <form onSubmit={handleAddRoomSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1">Nome / Número</label>
                                 <input type="text" required value={newRoomName} onChange={e => setNewRoomName(e.target.value)} placeholder="Ex: Suíte 101" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
