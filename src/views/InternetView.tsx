@@ -163,13 +163,53 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         )}
                     </div>
 
-                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-left mt-6">
-                        <p className="text-sm font-bold text-indigo-900 mb-2">Como encontrar meu MAC Address?</p>
-                        <ul className="text-xs text-indigo-800 space-y-1 list-disc list-inside ml-2">
-                            <li><strong>Android:</strong> Configurações &gt; Sobre o telefone / Rede e Internet &gt; Ver MAC Wi-Fi</li>
-                            <li><strong>iOS (iPhone):</strong> Ajustes &gt; Geral &gt; Sobre &gt; Endereço Wi-Fi</li>
-                            <li><strong>Windows:</strong> Configurações &gt; Rede e Internet &gt; Propriedades do Hardware</li>
-                        </ul>
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-left mt-6">
+                        <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <ShieldCheck size={18} className="text-indigo-600" />
+                            Como encontrar seu MAC Address?
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <div className="p-3 bg-white rounded-xl border border-slate-100">
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">📱 Android</p>
+                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                        1. Abra as <strong>Configurações</strong>.<br />
+                                        2. Vá em <strong>Sobre o telefone</strong> ou <strong>Rede e Internet</strong>.<br />
+                                        3. Toque em <strong>Status</strong> ou <strong>Ver mais</strong>.<br />
+                                        4. Procure por <strong>Endereço MAC Wi-Fi</strong>.
+                                    </p>
+                                </div>
+                                <div className="p-3 bg-white rounded-xl border border-slate-100">
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">🍎 iOS (iPhone/iPad)</p>
+                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                        1. Vá em <strong>Ajustes</strong>.<br />
+                                        2. Toque em <strong>Geral</strong> e depois em <strong>Sobre</strong>.<br />
+                                        3. O código está em <strong>Endereço Wi-Fi</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="p-3 bg-white rounded-xl border border-slate-100">
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">🖥️ Windows</p>
+                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                        1. Clique em <strong>Iniciar</strong> e digite <strong>cmd</strong>.<br />
+                                        2. Digite <code>getmac</code> ou <code>ipconfig /all</code>.<br />
+                                        3. O <strong>Endereço Físico</strong> é o seu MAC.
+                                    </p>
+                                </div>
+                                <div className="p-3 bg-white rounded-xl border border-slate-100">
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">🐧 Linux</p>
+                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                        1. Abra o <strong>Terminal</strong>.<br />
+                                        2. Digite <code>ip link show</code> ou <code>ifconfig</code>.<br />
+                                        3. Procure por <strong>link/ether</strong> no adaptador Wi-Fi.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="mt-4 text-[10px] text-slate-400 italic">
+                            * O MAC Address é um código único composto por 12 caracteres hexadecimais (ex: 00:1A:2B:3C:4D:5E).
+                        </p>
                     </div>
 
                     <div className="mt-8 pt-6 border-t border-slate-100">

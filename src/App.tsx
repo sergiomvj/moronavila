@@ -207,11 +207,11 @@ function App() {
           {activeTab === 'internet' && <InternetView residents={residents} devices={devices} currentUser={currentUser} onUpdate={refreshData} />}
 
           {activeTab === 'notices' && (
-            <NoticesView notices={notices} residents={residents} isAdmin={isAdmin} />
+            <NoticesView notices={notices} residents={residents} isAdmin={isAdmin} currentUser={currentUser} onRefresh={refreshData} />
           )}
 
           {activeTab === 'calendar' && (
-            <CalendarView events={events} isAdmin={isAdmin} />
+            <CalendarView events={events} isAdmin={isAdmin} onRefresh={refreshData} />
           )}
 
           {activeTab === 'laundry' && (

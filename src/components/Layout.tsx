@@ -66,11 +66,9 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
                     <SidebarItem icon={CreditCard} label="Financeiro" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
                     <SidebarItem icon={Droplets} label="Lavanderia" active={activeTab === 'laundry'} onClick={() => setActiveTab('laundry')} />
                     <SidebarItem icon={Trello} label={isAdmin ? "Kanban Reparos" : "Reparos"} active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} />
+                    <SidebarItem icon={Wifi} label={isAdmin ? "Internet" : "Dispositivos"} active={activeTab === 'internet'} onClick={() => setActiveTab('internet')} />
                     {isAdmin && (
-                        <>
-                            <SidebarItem icon={Wifi} label="Internet" active={activeTab === 'internet'} onClick={() => setActiveTab('internet')} />
-                            <SidebarItem icon={MessageSquare} label="Reclamações" active={activeTab === 'complaints'} onClick={() => setActiveTab('complaints')} />
-                        </>
+                        <SidebarItem icon={MessageSquare} label="Reclamações" active={activeTab === 'complaints'} onClick={() => setActiveTab('complaints')} />
                     )}
                 </nav>
 

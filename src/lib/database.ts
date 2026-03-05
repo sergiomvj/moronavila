@@ -81,6 +81,22 @@ export async function updateFurniture(id: string, updates: Partial<Furniture>): 
     return data as Furniture;
 }
 
+export async function deleteResident(id: string): Promise<void> {
+    const { error } = await supabase.from('residents').delete().eq('id', id);
+    if (error) throw error;
+}
+
+export async function createRoom(room: Partial<Room>): Promise<Room> {
+    const { data, error } = await supabase.from('rooms').insert({
+        name: room.name,
+        type: room.type,
+        capacity: room.capacity,
+        description: room.description
+    }).select().single();
+    if (error) throw error;
+    return data as Room;
+}
+
 export async function deleteFurniture(id: string): Promise<void> {
     const { error } = await supabase.from('furniture').delete().eq('id', id);
     if (error) throw error;
@@ -212,6 +228,19 @@ export async function createNoticeComment(comment: { notice_id: string; resident
     return data as NoticeComment;
 }
 
+export async function createNotice(notice: Partial<Notice>): Promise<Notice> {
+    const { data, error } = await supabase.from('notices').insert({
+        title: notice.title,
+        content: notice.content,
+        category: notice.category,
+        author_id: notice.author_id,
+        is_pinned: notice.is_pinned || false,
+        is_general: notice.is_general || true
+    }).select().single();
+    if (error) throw error;
+    return data as Notice;
+}
+
 // ── CALENDAR EVENTS ────────────────────────────────────────────────────────────
 export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
     const [eventsRes, linksRes] = await Promise.all([
@@ -227,6 +256,29 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
     })) as CalendarEvent[];
 }
 
+export async function createCalendarEvent(event: Partial<CalendarEvent>): Promise<CalendarEvent> {
+    const { data, error } = await supabase.from('calendar_events').insert({
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        location: event.location,
+        type: event.type
+    }).select().single();
+
+    if (error) throw error;
+
+    // Se houver moradores vinculados (opcional na criação simples)
+    if (event.residentIds && event.residentIds.length > 0) {
+        const links = event.residentIds.map(rid => ({
+            event_id: data.id,
+            resident_id: rid
+        }));
+        await supabase.from('calendar_event_residents').insert(links);
+    }
+
+    return { ...data, residentIds: event.residentIds || [] } as CalendarEvent;
+}
+
 // ── AUTH ───────────────────────────────────────────────────────────────────────
 export async function signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -234,7 +286,7 @@ export async function signIn(email: string, password: string) {
     return data;
 }
 
-export async function signUp(email: string, password: string, name: string, phone: string) {
+export async function signUpResident(email: string, password: string, name: string, phone: string) {
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,

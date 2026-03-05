@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi } from 'lucide-react';
+import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi, Plus, ImageIcon } from 'lucide-react';
 import { Resident, UserRole } from '../types';
 import { updateResident, signUpAdmin } from '../lib/database';
 
@@ -22,6 +22,18 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
     const [adminEmail, setAdminEmail] = useState('');
     const [adminPassword, setAdminPassword] = useState('');
     const [adminError, setAdminError] = useState('');
+
+    // Create Resident States
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newEmail, setNewEmail] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [newPhone, setNewPhone] = useState('');
+    const [newBirthDate, setNewBirthDate] = useState('');
+    const [newEntryDate, setNewEntryDate] = useState(new Date().toISOString().split('T')[0]);
+    const [newInstagram, setNewInstagram] = useState('');
+    const [newPhoto, setNewPhoto] = useState<File | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
 
     const filteredResidents = residents.filter(r =>
         r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,6 +79,47 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
         }
     };
 
+    const handleCreateResident = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCreating(true);
+        try {
+            const { signUpResident, uploadProfilePhoto, updateResident } = await import('../lib/database');
+            // 1. Criar usuário no Auth e Resident no DB
+            const authData = await signUpResident(newEmail, newPassword, newName, newPhone);
+
+            if (!authData.user) throw new Error('Erro ao criar usuário.');
+
+            // Buscar o residente criado automaticamente pelo trigger/signUpResident
+            const { fetchCurrentResident } = await import('../lib/database');
+            const resident = await fetchCurrentResident(authData.user.id);
+            if (!resident) throw new Error('Perfil de morador não encontrado.');
+
+            // 2. Upload da foto se houver
+            let photoUrl = '';
+            if (newPhoto) {
+                photoUrl = await uploadProfilePhoto(resident.id, newPhoto);
+            }
+
+            // 3. Atualizar com Instagram e PhotoUrl
+            await updateResident(resident.id, {
+                instagram: newInstagram,
+                photo_url: photoUrl,
+                birth_date: newBirthDate,
+                entry_date: newEntryDate
+            });
+
+            setShowAddModal(false);
+            setNewName(''); setNewEmail(''); setNewPassword(''); setNewPhone('');
+            setNewBirthDate(''); setNewInstagram(''); setNewPhoto(null);
+            alert('Morador cadastrado com sucesso!');
+            onRefresh();
+        } catch (err: any) {
+            alert(err.message || 'Erro ao cadastrar morador.');
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -82,13 +135,22 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
                     />
                 </div>
                 {isAdmin && (
-                    <button
-                        onClick={() => setShowAdminModal(true)}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition"
-                    >
-                        <Shield size={18} />
-                        <span className="hidden sm:inline">Adicionar Admin</span>
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-emerald-700 transition"
+                        >
+                            <Plus size={18} />
+                            <span className="hidden sm:inline">Novo Morador</span>
+                        </button>
+                        <button
+                            onClick={() => setShowAdminModal(true)}
+                            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition"
+                        >
+                            <Shield size={18} />
+                            <span className="hidden sm:inline">Adicionar Admin</span>
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -134,8 +196,9 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
                                             <Wifi size={16} className={resident.internet_active ? 'text-emerald-500' : 'text-slate-300'} />
-                                            <div className="text-xs text-slate-500">
-                                                {resident.mac_address || 'Sem MAC cadastrado'}
+                                            <div className="text-xs">
+                                                <div className="text-slate-500">{resident.mac_address || 'Sem MAC'}</div>
+                                                {resident.instagram && <div className="text-indigo-600 font-medium">@{resident.instagram}</div>}
                                             </div>
                                         </div>
                                     </td>

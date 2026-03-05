@@ -13,9 +13,14 @@ interface RoomsViewProps {
 }
 
 export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser, onRefresh }: RoomsViewProps) {
-    const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+    const [selectedRoomId, setSelectedRoomId] = useState<string | null>(!isAdmin && currentUser.room_id ? currentUser.room_id : null);
 
     // Modals state
+    const [showAddRoomModal, setShowAddRoomModal] = useState(false);
+    const [newRoomName, setNewRoomName] = useState('');
+    const [newRoomType, setNewRoomType] = useState('Quarto');
+    const [newRoomCapacity, setNewRoomCapacity] = useState(1);
+    const [newRoomDesc, setNewRoomDesc] = useState('');
     const [showRepairModal, setShowRepairModal] = useState(false);
     const [repairTitle, setRepairTitle] = useState('');
     const [repairDesc, setRepairDesc] = useState('');
@@ -26,6 +31,30 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
     const [transferringFurniture, setTransferringFurniture] = useState<Furniture | null>(null);
     const [transferTargetRoomId, setTransferTargetRoomId] = useState<string>('');
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
+    const handleAddRoomSubmi = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const { createRoom } = await import('../lib/database');
+            await createRoom({
+                name: newRoomName,
+                type: newRoomType,
+                capacity: newRoomCapacity,
+                description: newRoomDesc
+            });
+            setShowAddRoomModal(false);
+            setNewRoomName('');
+            setNewRoomType('Quarto');
+            setNewRoomCapacity(1);
+            setNewRoomDesc('');
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao criar cômodo.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleMaintenanceSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -123,7 +152,7 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
             <div className="space-y-6 relative">
                 <button
                     onClick={() => setSelectedRoomId(null)}
-                    className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors mb-4"
+                    className={`${!isAdmin ? 'hidden' : 'flex'} items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors mb-4`}
                 >
                     <ArrowLeft size={20} /> Voltar para lista
                 </button>
@@ -430,11 +459,56 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-slate-900">Gestão de Cômodos</h2>
                 {isAdmin && (
-                    <button className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors">
+                    <button
+                        onClick={() => setShowAddRoomModal(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors"
+                    >
                         <Plus size={18} /> Adicionar Cômodo
                     </button>
                 )}
             </div>
+
+            {/* Add Room Modal */}
+            {showAddRoomModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Novo Cômodo</h3>
+                            <button onClick={() => setShowAddRoomModal(false)} className="text-slate-400 hover:text-slate-700">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleAddRoomSubmi} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Nome / Número</label>
+                                <input type="text" required value={newRoomName} onChange={e => setNewRoomName(e.target.value)} placeholder="Ex: Suíte 101" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Tipo</label>
+                                    <select value={newRoomType} onChange={e => setNewRoomType(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 bg-white">
+                                        <option value="Quarto">Quarto</option>
+                                        <option value="Área Comum">Área Comum</option>
+                                        <option value="Lavanderia">Lavanderia</option>
+                                        <option value="Cozinha">Cozinha</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Capacidade</label>
+                                    <input type="number" min="1" value={newRoomCapacity} onChange={e => setNewRoomCapacity(parseInt(e.target.value))} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
+                                <textarea value={newRoomDesc} onChange={e => setNewRoomDesc(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 h-24 focus:ring-2 focus:ring-indigo-500/20" placeholder="Opcional..." />
+                            </div>
+                            <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                                {isSubmitting ? 'Criando...' : 'Criar Cômodo'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {rooms.map(room => (
                     <div

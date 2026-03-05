@@ -1,13 +1,43 @@
 import React from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, Plus } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Plus, X } from 'lucide-react';
 import { CalendarEvent } from '../types';
 
 interface CalendarViewProps {
     events: CalendarEvent[];
     isAdmin: boolean;
+    onRefresh: () => void;
 }
 
-export function CalendarView({ events, isAdmin }: CalendarViewProps) {
+export function CalendarView({ events, isAdmin, onRefresh }: CalendarViewProps) {
+    const [showAddModal, setShowAddModal] = React.useState(false);
+    const [newTitle, setNewTitle] = React.useState('');
+    const [newDesc, setNewDesc] = React.useState('');
+    const [newDate, setNewDate] = React.useState('');
+    const [newLocation, setNewLocation] = React.useState('');
+    const [newType, setNewType] = React.useState('Comunitário');
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+    const handleCreateEvent = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const { createCalendarEvent } = await import('../lib/database');
+            await createCalendarEvent({
+                title: newTitle,
+                description: newDesc,
+                date: newDate,
+                location: newLocation,
+                type: newType
+            });
+            setShowAddModal(false);
+            setNewTitle(''); setNewDesc(''); setNewDate(''); setNewLocation('');
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao criar evento.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -15,10 +45,59 @@ export function CalendarView({ events, isAdmin }: CalendarViewProps) {
                     <h2 className="text-2xl font-bold text-slate-900">Calendário</h2>
                     <p className="text-slate-500 text-sm">Eventos e agendamentos comunitários</p>
                 </div>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors">
-                    <Plus size={18} /> Novo Evento
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors"
+                    >
+                        <Plus size={18} /> Novo Evento
+                    </button>
+                )}
             </div>
+
+            {/* Add Event Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-lg">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Novo Evento</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+                        </div>
+                        <form onSubmit={handleCreateEvent} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Título do Evento</label>
+                                <input type="text" required value={newTitle} onChange={e => setNewTitle(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
+                                <textarea required value={newDesc} onChange={e => setNewDesc(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 h-24" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Data e Hora</label>
+                                    <input type="datetime-local" required value={newDate} onChange={e => setNewDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Local</label>
+                                    <input type="text" value={newLocation} onChange={e => setNewLocation(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Tipo</label>
+                                <select value={newType} onChange={e => setNewType(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 bg-white">
+                                    <option value="Comunitário">Comunitário</option>
+                                    <option value="Manutenção">Manutenção</option>
+                                    <option value="Social">Social</option>
+                                    <option value="Saúde">Saúde</option>
+                                </select>
+                            </div>
+                            <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                                {isSubmitting ? 'Salvando...' : 'Criar Evento'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">

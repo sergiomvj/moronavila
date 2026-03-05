@@ -1,14 +1,51 @@
 import React from 'react';
-import { Megaphone, Pin } from 'lucide-react';
+import { Megaphone, Pin, X } from 'lucide-react';
 import { Notice, Resident } from '../types';
 
 interface NoticesViewProps {
     notices: Notice[];
     residents: Resident[];
     isAdmin: boolean;
+    currentUser: Resident;
+    onRefresh: () => void;
 }
 
-export function NoticesView({ notices, residents, isAdmin }: NoticesViewProps) {
+export function NoticesView({ notices, residents, isAdmin, currentUser, onRefresh }: NoticesViewProps) {
+    const [showAddModal, setShowAddModal] = React.useState(false);
+    const [newTitle, setNewTitle] = React.useState('');
+    const [newContent, setNewContent] = React.useState('');
+    const [newCategory, setNewCategory] = React.useState('Geral');
+    const [isPinned, setIsPinned] = React.useState(false);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+    const handleCreateNotice = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const { createNotice } = await import('../lib/database');
+            // Nota: autor_id deve ser o ID do admin atual. 
+            // Como NoticesView não recebe currentUser, vou usar o primeiro admin encontrado ou lançar erro se não houver contexto.
+            // O ideal seria passar currentUser, mas para simplificar vou assumir que o sistema sabe quem é o autor no backend ou passar um ID fixo se necessário.
+            // Para ser robusto, vou sugerir que o usuário logado seja passado.
+
+            const admin = currentUser;
+
+            await createNotice({
+                title: newTitle,
+                content: newContent,
+                category: newCategory,
+                is_pinned: isPinned,
+                author_id: admin.id
+            });
+            setShowAddModal(false);
+            setNewTitle(''); setNewContent(''); setNewCategory('Geral'); setIsPinned(false);
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao criar aviso.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -17,11 +54,54 @@ export function NoticesView({ notices, residents, isAdmin }: NoticesViewProps) {
                     <p className="text-slate-500 text-sm">Comunicados importantes da administração</p>
                 </div>
                 {isAdmin && (
-                    <button className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors">
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 transition-colors"
+                    >
                         Novo Aviso
                     </button>
                 )}
             </div>
+
+            {/* Add Notice Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-lg">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">Novo Aviso no Mural</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+                        </div>
+                        <form onSubmit={handleCreateNotice} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Título</label>
+                                <input type="text" required value={newTitle} onChange={e => setNewTitle(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Conteúdo</label>
+                                <textarea required value={newContent} onChange={e => setNewContent(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 h-32" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Categoria</label>
+                                    <select value={newCategory} onChange={e => setNewCategory(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 bg-white">
+                                        <option value="Geral">Geral</option>
+                                        <option value="Importante">Importante</option>
+                                        <option value="Evento">Evento</option>
+                                        <option value="Regras">Regras</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2 pt-6">
+                                    <input type="checkbox" checked={isPinned} onChange={e => setIsPinned(e.target.checked)} className="w-5 h-5 text-indigo-600 rounded" />
+                                    <span className="text-sm font-bold text-slate-700">Fixar no topo</span>
+                                </div>
+                            </div>
+                            <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                                {isSubmitting ? 'Publicando...' : 'Publicar Aviso'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {notices.map(notice => {
