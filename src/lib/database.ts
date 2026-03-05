@@ -44,17 +44,27 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
 
     // Se o banco ainda não tiver as colunas novas, o Supabase retornará erro.
     // O try/catch no frontend lidará com o fallback para o 'mínimo necessário'.
-    console.log('Enviando UPDATE para resident:', id, payload);
+    console.log('Enviando persistência para resident:', id, payload);
 
-    // Tenta atualizar primeiro por ID (PK)
+    // Tenta primeiro um UPDATE convencional por ID
     let { data, error } = await supabase.from('residents').update(payload).eq('id', id).select().maybeSingle();
 
-    // Se não encontrou por ID, e o ID parece um UUID de autenticação, tenta por auth_id
-    if (!data && !error && id.length > 30) {
-        console.log('Tentando update por auth_id para:', id);
-        const { data: retryData, error: retryError } = await supabase.from('residents').update(payload).eq('auth_id', id).select().maybeSingle();
-        data = retryData;
-        error = retryError;
+    // Se falhou (não encontrou) e o ID parece um UUID de auth, tentamos um UPSERT usando auth_id como chave
+    if (!data && !error && (payload.auth_id || (id && id.length > 30))) {
+        const targetAuthId = payload.auth_id || id;
+        console.log('Tentando UPSERT por auth_id para:', targetAuthId);
+
+        // Remove 'id' do payload para evitar conflitos se for o UUID do auth
+        const { id: _, ...upsertPayload } = payload;
+        if (!upsertPayload.auth_id) upsertPayload.auth_id = targetAuthId;
+
+        const { data: upsertData, error: upsertError } = await supabase.from('residents')
+            .upsert(upsertPayload, { onConflict: 'auth_id' })
+            .select()
+            .maybeSingle();
+
+        data = upsertData;
+        error = upsertError;
     }
 
     if (error) {
