@@ -107,16 +107,23 @@ function App() {
   };
 
   const refreshData = async () => {
+    const errors: string[] = [];
     try {
-      setRooms(await fetchRooms());
-      setPayments(await fetchPayments());
-      setMaintenance(await fetchMaintenance());
-      setComplaints(await fetchComplaints());
-      setNotices(await fetchNotices());
-      setEvents(await fetchCalendarEvents());
-      setLaundrySchedules(await fetchLaundrySchedules());
-      setDevices(await fetchDevices());
-      setResidents(await fetchResidents()); // Atualizar moradores também
+      try { setRooms(await fetchRooms()); } catch (e) { console.error('Rooms:', e); errors.push('Cômodos'); }
+      try { setPayments(await fetchPayments()); } catch (e) { console.error('Payments:', e); errors.push('Financeiro'); }
+      try { setMaintenance(await fetchMaintenance()); } catch (e) { console.error('Maintenance:', e); errors.push('Reparos'); }
+      try { setComplaints(await fetchComplaints()); } catch (e) { console.error('Complaints:', e); errors.push('Reclamações'); }
+      try { setNotices(await fetchNotices()); } catch (e) { console.error('Notices:', e); errors.push('Mural'); }
+      try { setEvents(await fetchCalendarEvents()); } catch (e) { console.error('Events:', e); errors.push('Agenda'); }
+      try { setLaundrySchedules(await fetchLaundrySchedules()); } catch (e) { console.error('Laundry:', e); errors.push('Lavanderia'); }
+      try { setDevices(await fetchDevices()); } catch (e) { console.error('Devices:', e); errors.push('Dispositivos'); }
+      try { setResidents(await fetchResidents()); } catch (e) { console.error('Residents:', e); errors.push('Moradores'); }
+
+      if (errors.length > 0) {
+        setErrorMsg(`Aviso: Erro ao carregar: ${errors.join(', ')}.`);
+      } else {
+        setErrorMsg('');
+      }
     } catch (e) {
       console.error(e);
       setErrorMsg('Aviso: Alguns dados podem não ter sido carregados.');

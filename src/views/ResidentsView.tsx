@@ -267,8 +267,43 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
                                     <input type="text" value={editingResident.work_address} onChange={e => setEditingResident({ ...editingResident, work_address: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" required />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (WiFi)</label>
-                                    <input type="text" value={editingResident.mac_address || ''} onChange={e => setEditingResident({ ...editingResident, mac_address: e.target.value })} placeholder="Ex: 00:1B:44:11:3A:B7" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 font-mono" />
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Instagram (@usuario)</label>
+                                    <input type="text" value={editingResident.instagram || ''} onChange={e => setEditingResident({ ...editingResident, instagram: e.target.value })} placeholder="@exemplo" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (Celular)</label>
+                                    <input type="text" value={editingResident.mac_address || ''} onChange={e => setEditingResident({ ...editingResident, mac_address: e.target.value })} placeholder="Ex: 00:1B:..." className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 font-mono" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (Computador)</label>
+                                    <input type="text" value={(editingResident as any).mac_address_pc || ''} onChange={e => setEditingResident({ ...editingResident, ['mac_address_pc' as any]: e.target.value })} placeholder="Ex: 00:1B:..." className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 font-mono" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Foto do Perfil</label>
+                                    <div className="flex items-center gap-4">
+                                        {editingResident.photo_url && (
+                                            <img src={editingResident.photo_url} alt="Preview" className="w-16 h-16 rounded-full object-cover border-2 border-slate-200" />
+                                        )}
+                                        <label className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                                            <ImageIcon className="text-slate-400" size={24} />
+                                            <span className="text-sm font-medium text-slate-500">Alterar Foto</span>
+                                            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const { uploadProfilePhoto } = await import('../lib/database');
+                                                    setIsSubmitting(true);
+                                                    try {
+                                                        const url = await uploadProfilePhoto(editingResident.id, file);
+                                                        setEditingResident({ ...editingResident, photo_url: url });
+                                                    } catch (err) {
+                                                        alert('Erro ao carregar foto.');
+                                                    } finally {
+                                                        setIsSubmitting(false);
+                                                    }
+                                                }
+                                            }} />
+                                        </label>
+                                    </div>
                                 </div>
                                 {isAdmin && (
                                     <div>
@@ -326,6 +361,75 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh }: Re
                                 <button type="button" onClick={() => setShowAdminModal(false)} className="px-6 py-3 font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">Cancelar</button>
                                 <button type="submit" disabled={isSubmitting} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50">
                                     {isSubmitting ? 'Gerando Acesso...' : 'Criar Acesso Admin'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Resident Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-emerald-900"><Plus className="text-emerald-600" /> Cadastrar Novo Morador</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+                        </div>
+
+                        <form onSubmit={handleCreateResident} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Nome Completo</label>
+                                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" required placeholder="Ex: João da Silva" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">E-mail de Acesso</label>
+                                    <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" required placeholder="joao@email.com" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Telefone / WhatsApp</label>
+                                    <input type="text" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" required placeholder="(11) 99999-9999" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Senha Inicial</label>
+                                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" required minLength={6} placeholder="Mínimo 6 caracteres" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Data de Nascimento</label>
+                                    <input type="date" value={newBirthDate} onChange={e => setNewBirthDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" required />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Instagram (@usuario)</label>
+                                    <input type="text" value={newInstagram} onChange={e => setNewInstagram(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" placeholder="Ex: joao_silva" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Data de Entrada</label>
+                                    <input type="date" value={newEntryDate} onChange={e => setNewEntryDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" required />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Foto de Perfil</label>
+                                    <div className="flex items-center gap-4 p-4 border-2 border-dashed border-slate-200 rounded-2xl hover:border-emerald-500 transition-colors">
+                                        <div className="p-3 bg-slate-50 rounded-full text-slate-400">
+                                            <ImageIcon size={24} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={e => setNewPhoto(e.target.files ? e.target.files[0] : null)}
+                                                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                                            />
+                                            <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">JPG, PNG ou WEBP até 2MB</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-4">
+                                <button type="button" onClick={() => setShowAddModal(false)} className="px-6 py-3 font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">Cancelar</button>
+                                <button type="submit" disabled={isCreating} className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50">
+                                    {isCreating ? 'Cadastrando...' : 'Finalizar Cadastro'}
                                 </button>
                             </div>
                         </form>

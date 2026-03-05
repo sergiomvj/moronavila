@@ -50,6 +50,7 @@ export interface Resident {
   role: UserRole;
   status: string;
   mac_address?: string;
+  mac_address_pc?: string;
   internet_active: boolean;
   internet_renewal_date?: string;
 }

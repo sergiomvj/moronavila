@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bed, ArrowLeft, Plus, ImageIcon, Film, AlertCircle, ChevronRight, X, Edit2, Trash2, ArrowRightLeft } from 'lucide-react';
 import { Room, Resident, MaintenanceRequest, MaintenanceStatus, Furniture, RoomMedia } from '../types';
-import { uploadRoomMedia, createMaintenanceRequest, deleteFurniture, updateFurniture } from '../lib/database';
+import { uploadRoomMedia, createMaintenanceRequest, deleteFurniture, updateFurniture, addFurniture } from '../lib/database';
 
 interface RoomsViewProps {
     rooms: Room[];
@@ -31,6 +31,10 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
     const [transferringFurniture, setTransferringFurniture] = useState<Furniture | null>(null);
     const [transferTargetRoomId, setTransferTargetRoomId] = useState<string>('');
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+    const [showAddFurnitureModal, setShowAddFurnitureModal] = useState(false);
+    const [newFurnitureName, setNewFurnitureName] = useState('');
+    const [newFurnitureCond, setNewFurnitureCond] = useState<'Novo' | 'Bom' | 'Regular' | 'Ruim'>('Bom');
+    const [newFurnitureDesc, setNewFurnitureDesc] = useState('');
 
     const handleAddRoomSubmi = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -144,6 +148,30 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
         }
     };
 
+    const handleAddFurnitureSubmit = async (e?: React.FormEvent, quickName?: string) => {
+        if (e) e.preventDefault();
+        if (!selectedRoomId) return;
+
+        setIsSubmitting(true);
+        try {
+            await addFurniture(selectedRoomId, {
+                name: quickName || newFurnitureName,
+                condition: quickName ? 'Novo' : newFurnitureCond,
+                description: quickName ? '' : newFurnitureDesc,
+                purchase_date: new Date().toISOString().split('T')[0]
+            });
+            setShowAddFurnitureModal(false);
+            setNewFurnitureName('');
+            setNewFurnitureCond('Bom');
+            setNewFurnitureDesc('');
+            onRefresh();
+        } catch (err) {
+            alert('Erro ao adicionar móvel.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (selectedRoomId) {
         const room = rooms.find(r => r.id === selectedRoomId);
         if (!room) return null;
@@ -170,7 +198,17 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
 
                             <div className="space-y-8">
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Mobília & Detalhes</h3>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Mobília & Detalhes</h3>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => setShowAddFurnitureModal(true)}
+                                                className="flex items-center gap-1 text-[10px] font-bold uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
+                                            >
+                                                <Plus size={14} /> Adicionar Móvel
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {room.furniture.map(f => (
                                             <div
@@ -443,6 +481,92 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                     <button type="button" onClick={() => setTransferringFurniture(null)} className="px-4 py-2 font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
                                     <button type="submit" disabled={isSubmitting || !transferTargetRoomId} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50">
                                         {isSubmitting ? 'Movendo...' : 'Transferir'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Add Furniture Modal */}
+                {showAddFurnitureModal && (
+                    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Adicionar Móvel</h3>
+                                <button onClick={() => setShowAddFurnitureModal(false)} className="text-slate-400 hover:text-slate-700">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="mb-8">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Adição Rápida</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Cama', 'Guarda-roupa', 'Escrivaninha', 'Cadeira', 'Ar Condicionado', 'Frigobar', 'Smart TV'].map(item => (
+                                        <button
+                                            key={item}
+                                            onClick={() => handleAddFurnitureSubmit(undefined, item)}
+                                            disabled={isSubmitting}
+                                            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center gap-1"
+                                        >
+                                            <Plus size={12} /> {item}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="relative mb-8">
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+                                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 font-bold">Ou formulário detalhado</span></div>
+                            </div>
+
+                            <form onSubmit={(e) => handleAddFurnitureSubmit(e)} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Item</label>
+                                    <input
+                                        type="text" required
+                                        value={newFurnitureName}
+                                        onChange={e => setNewFurnitureName(e.target.value)}
+                                        placeholder="Ex: Armário de Aço"
+                                        className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Condição</label>
+                                    <select
+                                        value={newFurnitureCond}
+                                        onChange={e => setNewFurnitureCond(e.target.value as any)}
+                                        className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
+                                    >
+                                        <option value="Novo">Novo</option>
+                                        <option value="Bom">Bom</option>
+                                        <option value="Regular">Regular</option>
+                                        <option value="Ruim">Ruim (Necessita manutenção)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Descrição / Detalhes</label>
+                                    <textarea
+                                        value={newFurnitureDesc}
+                                        onChange={e => setNewFurnitureDesc(e.target.value)}
+                                        placeholder="Opcional..."
+                                        className="w-full border border-slate-200 rounded-xl p-3 h-20 focus:ring-2 focus:ring-indigo-500/20"
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddFurnitureModal(false)}
+                                        className="flex-1 py-3 font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting || !newFurnitureName}
+                                        className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all disabled:opacity-50"
+                                    >
+                                        {isSubmitting ? 'Salvando...' : 'Adicionar Móvel'}
                                     </button>
                                 </div>
                             </form>

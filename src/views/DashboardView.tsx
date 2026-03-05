@@ -199,15 +199,31 @@ export function DashboardView({ payments, maintenance, residents, rooms, laundry
                 {/* Quick Actions */}
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center space-y-4">
                     <h3 className="text-xl font-bold text-slate-900 mb-2">Ações Rápidas</h3>
-                    <div className="flex gap-4 w-full">
-                        <button onClick={() => setShowRepairModal(true)} className="flex-1 flex flex-col items-center justify-center py-6 px-4 bg-rose-50 rounded-2xl border border-rose-100 hover:bg-rose-100 transition-colors text-rose-700 font-medium">
-                            <Wrench size={32} className="mb-2" />
-                            <span>Solicitar Reparo</span>
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                        <button onClick={() => setShowRepairModal(true)} className="flex flex-col items-center justify-center py-4 px-4 bg-rose-50 rounded-2xl border border-rose-100 hover:bg-rose-100 transition-colors text-rose-700 font-medium text-center">
+                            <Wrench size={24} className="mb-2" />
+                            <span className="text-xs">Solicitar Reparo</span>
                         </button>
-                        <button onClick={() => setShowComplaintModal(true)} className="flex-1 flex flex-col items-center justify-center py-6 px-4 bg-indigo-50 rounded-2xl border border-indigo-100 hover:bg-indigo-100 transition-colors text-indigo-700 font-medium">
-                            <MessageSquare size={32} className="mb-2" />
-                            <span>Nova Reclamação</span>
+                        <button onClick={() => setShowComplaintModal(true)} className="flex flex-col items-center justify-center py-4 px-4 bg-indigo-50 rounded-2xl border border-indigo-100 hover:bg-indigo-100 transition-colors text-indigo-700 font-medium text-center">
+                            <MessageSquare size={24} className="mb-2" />
+                            <span className="text-xs">Nova Reclamação</span>
                         </button>
+                        {isAdmin && (
+                            <>
+                                <button onClick={() => setActiveTab('residents')} className="flex flex-col items-center justify-center py-4 px-4 bg-emerald-50 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-colors text-emerald-700 font-medium text-center">
+                                    <Users size={24} className="mb-2" />
+                                    <span className="text-xs">Novo Morador</span>
+                                </button>
+                                <button onClick={() => setActiveTab('calendar')} className="flex flex-col items-center justify-center py-4 px-4 bg-amber-50 rounded-2xl border border-amber-100 hover:bg-amber-100 transition-colors text-amber-700 font-medium text-center">
+                                    <Plus size={24} className="mb-2" />
+                                    <span className="text-xs">Novo Evento</span>
+                                </button>
+                                <button onClick={() => setActiveTab('notices')} className="flex flex-col items-center justify-center py-4 px-4 bg-purple-50 rounded-2xl border border-purple-100 hover:bg-purple-100 transition-colors text-purple-700 font-medium text-center">
+                                    <Plus size={24} className="mb-2" />
+                                    <span className="text-xs">Novo Aviso</span>
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
