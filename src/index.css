@@ -8,11 +8,47 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans;
+    @apply bg-slate-950 text-slate-300 font-sans selection:bg-rose-500/30 selection:text-white;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-slate-100;
   }
 }
 
-.glass-card {
-  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
+@layer components {
+  .bento-card {
+    @apply bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-[2rem] p-6 
+           hover:border-rose-500/30 hover:bg-slate-900/80 transition-all duration-500
+           shadow-2xl shadow-black/50;
+  }
+
+  .glass-header {
+    @apply bg-slate-950/70 backdrop-blur-xl border-b border-slate-800;
+  }
+
+  .red-glow {
+    @apply shadow-[0_0_20px_rgba(225,29,72,0.15)];
+  }
+
+  .red-button {
+    @apply bg-rose-600 text-white rounded-2xl px-6 py-3 font-bold hover:bg-rose-700 
+           transition-all duration-300 active:scale-95 shadow-lg shadow-rose-900/20;
+  }
+
+  .sidebar-item-active {
+    @apply bg-rose-600 text-white shadow-xl shadow-rose-900/40;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-950;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-800 rounded-full hover:bg-slate-700 transition-colors;
 }
 

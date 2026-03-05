@@ -3,6 +3,10 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
 
 const execPromise = promisify(exec);
 const app = express();
@@ -11,7 +15,18 @@ const port = 4000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Função para obter o MAC a partir do IP (Windows)
+// Supabase Admin Client
+const supabase = createClient(
+    process.env.VITE_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
+
+const ASAAS_API_URL = 'https://sandbox.asaas.com/api/v3';
+const ASAAS_API_KEY = process.env.VITE_ASAAS_API_KEY || '';
+
+app.use(express.json());
+
+// Função para obter o MAC a partir do IP (Windows)obter o MAC a partir do IP (Windows)
 async function getMacFromIp(ip: string): Promise<string | null> {
     try {
         // Para localhost em Windows, o ARP não funciona da mesma forma, mas na rede sim.
@@ -149,6 +164,99 @@ app.get('/', async (req, res) => {
 </html>
   `;
     res.send(html);
+});
+
+// --- ENDPOINTS DE PAGAMENTO PIX ---
+
+app.post('/api/payments/pix', async (req, res) => {
+    const { residentId, amount, description, paymentId } = req.body;
+
+    try {
+        // 1. Buscar dados do residente no Supabase
+        const { data: resident, error: resError } = await supabase
+            .from('residents')
+            .select('name, email')
+            .eq('id', residentId)
+            .single();
+
+        if (resError || !resident) throw new Error('Residente não encontrado');
+
+        // 2. Criar cobrança no Asaas
+        const response = await fetch(`${ASAAS_API_URL}/payments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'access_token': ASAAS_API_KEY
+            },
+            body: JSON.stringify({
+                billingType: 'PIX',
+                customer: residentId, // No Asaas real, precisaríamos criar o client antes ou usar dados avulsos
+                name: resident.name,
+                email: resident.email,
+                value: amount,
+                description: description,
+                externalReference: paymentId,
+                dueDate: new Date().toISOString().split('T')[0]
+            })
+        });
+
+        const paymentData = await response.json();
+        if (!response.ok) throw new Error(paymentData.errors?.[0]?.description || 'Erro no Asaas');
+
+        // 3. Buscar QR Code
+        const qrResponse = await fetch(`${ASAAS_API_URL}/payments/${paymentData.id}/pixQrCode`, {
+            headers: { 'access_token': ASAAS_API_KEY }
+        });
+        const qrData = await qrResponse.json();
+
+        // 4. Atualizar o Supabase com os dados do PIX (Usando service_role)
+        await supabase
+            .from('payments')
+            .update({
+                external_id: paymentData.id,
+                pix_qr_code: qrData.encodedImage,
+                pix_copy_paste: qrData.payload,
+                expiration_date: qrData.expirationDate
+            })
+            .eq('id', paymentId);
+
+        res.json({
+            success: true,
+            qrCode: qrData.encodedImage,
+            copyPaste: qrData.payload,
+            expirationDate: qrData.expirationDate
+        });
+
+    } catch (err: any) {
+        console.error('Erro PIX:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/payments/webhook', async (req, res) => {
+    const event = req.body;
+    console.log('Webhook Asaas recebido:', event.event);
+
+    if (event.event === 'PAYMENT_RECEIVED' || event.event === 'PAYMENT_CONFIRMED') {
+        const asaasId = event.payment.id;
+        const externalRef = event.payment.externalReference;
+
+        try {
+            await supabase
+                .from('payments')
+                .update({
+                    status: 'Pago',
+                    payment_date: new Date().toISOString().split('T')[0]
+                })
+                .eq('id', externalRef);
+
+            console.log(`Pagamento ${externalRef} confirmado via Webhook.`);
+        } catch (err) {
+            console.error('Erro ao atualizar status via Webhook:', err);
+        }
+    }
+
+    res.status(200).send('OK');
 });
 
 app.listen(port, '0.0.0.0', () => {

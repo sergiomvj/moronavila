@@ -27,7 +27,7 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         'name', 'phone', 'photo_url', 'instagram', 'role', 'status',
         'entry_date', 'birth_date', 'cpf', 'document_number',
         'origin_address', 'work_address', 'room_id', 'mac_address',
-        'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id'
+        'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email'
     ];
 
     const payload: Record<string, any> = {};
@@ -57,6 +57,13 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         // Remove 'id' do payload para evitar conflitos se for o UUID do auth
         const { id: _, ...upsertPayload } = payload;
         if (!upsertPayload.auth_id) upsertPayload.auth_id = targetAuthId;
+
+        // Se o email estiver faltando no payload mas o ID for o AuthID, 
+        // tentamos recuperar o email do usuário logado se possível ou usar o contexto
+        if (!upsertPayload.email) {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser?.email) upsertPayload.email = authUser.email;
+        }
 
         const { data: upsertData, error: upsertError } = await supabase.from('residents')
             .upsert(upsertPayload, { onConflict: 'auth_id' })
@@ -94,6 +101,11 @@ export async function revokeInternetAccess(residentId: string): Promise<void> {
     if (error) throw error;
 }
 
+export async function deleteResident(id: string): Promise<void> {
+    const { error } = await supabase.from('residents').delete().eq('id', id);
+    if (error) throw error;
+}
+
 // ── ROOMS ───────────────────────────────────────────────────────────────────────
 export async function fetchRooms(): Promise<Room[]> {
     const [roomsRes, furnitureRes, mediaRes, residentsRes] = await Promise.all([
@@ -116,9 +128,13 @@ export async function fetchRooms(): Promise<Room[]> {
 }
 
 export async function addFurniture(roomId: string, item: Partial<Furniture>): Promise<Furniture> {
+    const payload = toSnake({
+        ...item,
+        room_id: roomId
+    });
     const { data, error } = await supabase
         .from('furniture')
-        .insert({ room_id: roomId, name: item.name, description: item.description, condition: item.condition, purchase_date: item.purchase_date, serial_number: item.serial_number })
+        .insert(payload)
         .select().single();
     if (error) throw error;
     return data as Furniture;
@@ -130,18 +146,9 @@ export async function updateFurniture(id: string, updates: Partial<Furniture>): 
     return data as Furniture;
 }
 
-export async function deleteResident(id: string): Promise<void> {
-    const { error } = await supabase.from('residents').delete().eq('id', id);
-    if (error) throw error;
-}
-
 export async function createRoom(room: Partial<Room>): Promise<Room> {
-    const { data, error } = await supabase.from('rooms').insert({
-        name: room.name,
-        type: room.type,
-        capacity: room.capacity,
-        description: room.description
-    }).select().single();
+    const payload = toSnake(room);
+    const { data, error } = await supabase.from('rooms').insert(payload).select().single();
     if (error) throw error;
     return data as Room;
 }

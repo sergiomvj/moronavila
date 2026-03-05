@@ -84,6 +84,8 @@ export interface Room {
   residents?: Resident[];
   media: RoomMedia[];
   description?: string;
+  rent_value: number;
+  internet_value?: number;
 }
 
 export interface Payment {

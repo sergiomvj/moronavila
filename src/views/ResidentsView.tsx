@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi, Plus, ImageIcon } from 'lucide-react';
+import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi, Plus, ImageIcon, Trash2 } from 'lucide-react';
 import { Resident, UserRole } from '../types';
-import { updateResident, signUpAdmin, signUpResident, uploadProfilePhoto } from '../lib/database';
+import { updateResident, signUpAdmin, signUpResident, uploadProfilePhoto, deleteResident } from '../lib/database';
 
 interface ResidentsViewProps {
     residents: Resident[];
@@ -171,6 +171,27 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
         }
     };
 
+    const handleDelete = async (resident: Resident) => {
+        if (!isAdmin) return;
+
+        // Impede que o usuário exclua a si mesmo
+        if (resident.id === currentUser.id || resident.auth_id === currentUser.auth_id) {
+            alert('Você não pode excluir o seu próprio usuário logado.');
+            return;
+        }
+
+        if (window.confirm(`Tem certeza que deseja excluir ${resident.role}: ${resident.name}? Esta ação não pode ser desfeita.`)) {
+            try {
+                await deleteResident(resident.id);
+                alert('Morador excluído com sucesso!');
+                onRefresh();
+            } catch (err: any) {
+                console.error("Erro ao excluir residente:", err);
+                alert('Erro ao excluir morador: ' + (err?.message || JSON.stringify(err)));
+            }
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -255,13 +276,24 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         {(isAdmin || currentUser.id === resident.id) && (
-                                            <button
-                                                onClick={() => handleEditClick(resident)}
-                                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors inline-block"
-                                                title="Editar"
-                                            >
-                                                <Edit2 size={18} />
-                                            </button>
+                                            <div className="flex justify-end gap-1">
+                                                <button
+                                                    onClick={() => handleEditClick(resident)}
+                                                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors inline-block"
+                                                    title="Editar"
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                                {isAdmin && resident.id !== currentUser.id && (
+                                                    <button
+                                                        onClick={() => handleDelete(resident)}
+                                                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors inline-block"
+                                                        title="Excluir"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </td>
                                 </tr>
