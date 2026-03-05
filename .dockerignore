@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+.env.local
+.git
+.gitignore
+.agent
+README.md
+*.log
+*.txt
+ts_errors.log
+tsc_errors.txt
+supabase_schema.sql
+sql_finance_migration.sql
+schemaatual.sql
+debug_white_screen*
+blank_screen*

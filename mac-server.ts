@@ -10,7 +10,7 @@ dotenv.config({ path: '.env.local' });
 
 const execPromise = promisify(exec);
 const app = express();
-const port = 4000;
+const port = process.env.PORT || 4000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -259,10 +259,25 @@ app.post('/api/payments/webhook', async (req, res) => {
     res.status(200).send('OK');
 });
 
-app.listen(port, '0.0.0.0', () => {
+// --- SERVIR FRONTEND ESTÁTICO EM PRODUÇÃO ---
+
+// Servir arquivos da pasta dist
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Catch-all: qualquer rota que não seja API ou arquivo estático volta para o index.html
+// Isso permite que o React Router funcione corretamente ao dar refresh
+app.get('*', (req, res) => {
+    // Se não for uma rota de API, serve o index.html do frontend
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+    } else {
+        res.status(404).json({ error: 'Endpoint de API não encontrado' });
+    }
+});
+
+app.listen(port, () => {
     console.log(`--------------------------------------------------`);
-    console.log(`MoronaVila MAC Discovery App rodando em:`);
-    console.log(`http://localhost:${port}`);
-    console.log(`Acesse do seu celular/tablet usando o IP do PC!`);
+    console.log(`MoronaVila (v1.5) rodando na porta: ${port}`);
+    console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
     console.log(`--------------------------------------------------`);
 });
