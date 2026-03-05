@@ -53,6 +53,9 @@ export interface Resident {
   status: string;
   internet_active: boolean;
   internet_renewal_date?: string;
+  rent_value?: number;
+  cleaning_fee?: number;
+  extras_value?: number;
 }
 
 export interface Device {
@@ -85,7 +88,8 @@ export interface Room {
   media: RoomMedia[];
   description?: string;
   rent_value: number;
-  internet_value?: number;
+  cleaning_fee?: number;
+  extras_value?: number;
 }
 
 export interface Payment {
@@ -97,6 +101,7 @@ export interface Payment {
   status: PaymentStatus;
   description: string;
   month: string;
+  type?: string;
   external_id?: string;
   pix_qr_code?: string;
   pix_copy_paste?: string;

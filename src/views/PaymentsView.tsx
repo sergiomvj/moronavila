@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { CreditCard, CheckCircle2, AlertCircle, QrCode, ArrowRight, Wallet, Calendar, User, Info, DollarSign } from 'lucide-react';
+import { CreditCard, CheckCircle2, AlertCircle, QrCode, ArrowRight, Wallet, Calendar, User, Info, DollarSign, Plus, X } from 'lucide-react';
 import { Payment, Resident, PaymentStatus } from '../types';
-import { updatePaymentStatus, renewInternetAccess } from '../lib/database';
+import { updatePaymentStatus, renewInternetAccess, createPayment } from '../lib/database';
 import { PixPaymentModal } from '../components/PixPaymentModal';
 
 interface PaymentsViewProps {
@@ -15,19 +15,72 @@ interface PaymentsViewProps {
 export function PaymentsView({ payments, residents, isAdmin, currentUser, onRefresh }: PaymentsViewProps) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedPixPayment, setSelectedPixPayment] = useState<Payment | null>(null);
+    const [showBulkModal, setShowBulkModal] = useState(false);
+    const [showExtraModal, setShowExtraModal] = useState(false);
+    const [bulkMonth, setBulkMonth] = useState(`${new Date().toLocaleString('pt-BR', { month: 'long' })} ${new Date().getFullYear()}`);
+    const [bulkDueDate, setBulkDueDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Extra charge states
+    const [extraResidentId, setExtraResidentId] = useState('');
+    const [extraAmount, setExtraAmount] = useState(0);
+    const [extraDesc, setExtraDesc] = useState('');
+    const [extraDueDate, setExtraDueDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Filtra pagamentos para mostrar apenas os do usuário, a não ser que seja admin
     const visiblePayments = isAdmin ? payments : payments.filter(p => p.resident_id === currentUser.id);
 
-    const handleConfirmPayment = async (paymentId: string, residentId: string) => {
-        if (!isAdmin) return;
+    const handleGenerateBulk = async (e: React.FormEvent) => {
+        e.preventDefault();
         setIsProcessing(true);
         try {
-            await updatePaymentStatus(paymentId, PaymentStatus.PAID, residentId);
-            await renewInternetAccess(residentId);
+            const activeResidents = residents.filter(r => r.status === 'Ativo');
+
+            for (const resident of activeResidents) {
+                const amount = (resident.rent_value || 0) + (resident.cleaning_fee || 0) + (resident.extras_value || 0);
+                if (amount <= 0) continue;
+
+                await createPayment({
+                    resident_id: resident.id,
+                    amount,
+                    due_date: bulkDueDate,
+                    month: bulkMonth,
+                    status: PaymentStatus.PENDING,
+                    description: `Mensalidade - ${bulkMonth}`,
+                    type: 'Mensalidade'
+                });
+            }
+
+            setShowBulkModal(false);
             onRefresh();
+            alert(`Mensalidades de ${bulkMonth} geradas com sucesso para ${activeResidents.length} moradores.`);
         } catch (e) {
-            alert('Erro ao confirmar pagamento.');
+            alert('Erro ao gerar mensalidades em massa.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleCreateExtra = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!extraResidentId) return;
+        setIsProcessing(true);
+        try {
+            await createPayment({
+                resident_id: extraResidentId,
+                amount: extraAmount,
+                due_date: extraDueDate,
+                month: new Date().toLocaleString('pt-BR', { month: 'long' }) + ' ' + new Date().getFullYear(),
+                status: PaymentStatus.PENDING,
+                description: extraDesc,
+                type: 'Extra'
+            });
+            setShowExtraModal(false);
+            setExtraAmount(0);
+            setExtraDesc('');
+            onRefresh();
+            alert('Cobrança extra gerada com sucesso.');
+        } catch (e) {
+            alert('Erro ao gerar cobrança extra.');
         } finally {
             setIsProcessing(false);
         }
@@ -41,7 +94,22 @@ export function PaymentsView({ payments, residents, isAdmin, currentUser, onRefr
                     <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Painel Financeiro</h2>
                     <p className="text-slate-500 font-bold text-sm uppercase tracking-widest mt-1">Gestão de mensalidades e fluxos de recebimento</p>
                 </div>
-                {!isAdmin && (
+                {isAdmin ? (
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setShowBulkModal(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-900/30"
+                        >
+                            <Calendar size={18} /> Gerar Mensalidades
+                        </button>
+                        <button
+                            onClick={() => setShowExtraModal(true)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-900/30"
+                        >
+                            <Plus size={18} /> Cobrança Extra
+                        </button>
+                    </div>
+                ) : (
                     <div className="flex gap-4">
                         <div className="bg-slate-900 px-6 py-4 rounded-2xl border border-slate-800 flex flex-col items-end">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Total Pendente</span>
@@ -176,6 +244,80 @@ export function PaymentsView({ payments, residents, isAdmin, currentUser, onRefr
                         onRefresh();
                     }}
                 />
+            )}
+
+            {/* Bulk Generation Modal */}
+            {showBulkModal && (
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Gerar Faturas do Período</h3>
+                            <button onClick={() => setShowBulkModal(false)} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleGenerateBulk} className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Mês de Referência</label>
+                                <input type="text" value={bulkMonth} onChange={e => setBulkMonth(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" placeholder="Ex: Março 2024" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Vencimento Padrão</label>
+                                <input type="date" value={bulkDueDate} onChange={e => setBulkDueDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
+                            </div>
+                            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
+                                <p className="text-[10px] text-indigo-400 font-bold leading-relaxed">
+                                    Esta ação gerará faturas para todos os **moradores ativos** com base nos valores definidos em seus cadastros individuais.
+                                </p>
+                            </div>
+                            <button type="submit" disabled={isProcessing} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-900/30 transition-all">
+                                {isProcessing ? 'Gerando...' : 'Confirmar Geração'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Extra Charge Modal */}
+            {showExtraModal && (
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Cobrança Avulsa</h3>
+                            <button onClick={() => setShowExtraModal(false)} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateExtra} className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Morador</label>
+                                <select value={extraResidentId} onChange={e => setExtraResidentId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all appearance-none" required>
+                                    <option value="">Selecione um morador</option>
+                                    {residents.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Valor (R$)</label>
+                                    <input type="number" step="0.01" value={extraAmount} onChange={e => setExtraAmount(Number(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" required />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Vencimento</label>
+                                    <input type="date" value={extraDueDate} onChange={e => setExtraDueDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" required />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Descrição</label>
+                                <textarea value={extraDesc} onChange={e => setExtraDesc(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all min-h-[100px]" placeholder="Ex: Taxa de quebra de mobiliário, multa por barulho..." required />
+                            </div>
+                            <button type="submit" disabled={isProcessing} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-700 shadow-xl shadow-emerald-900/30 transition-all">
+                                {isProcessing ? 'Gerando...' : 'Gerar Cobrança'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );

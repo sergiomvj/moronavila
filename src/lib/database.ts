@@ -27,7 +27,8 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         'name', 'phone', 'photo_url', 'instagram', 'role', 'status',
         'entry_date', 'birth_date', 'cpf', 'document_number',
         'origin_address', 'work_address', 'room_id', 'mac_address',
-        'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email'
+        'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email',
+        'rent_value', 'cleaning_fee', 'extras_value'
     ];
 
     const payload: Record<string, any> = {};
@@ -148,6 +149,11 @@ export async function updateFurniture(id: string, updates: Partial<Furniture>): 
 
 export async function createRoom(room: Partial<Room>): Promise<Room> {
     const payload = toSnake(room);
+    // Garantir que os campos numéricos sejam tratados corretamente
+    if ('rent_value' in room) payload.rent_value = Number(room.rent_value) || 0;
+    if ('cleaning_fee' in room) payload.cleaning_fee = Number(room.cleaning_fee) || 0;
+    if ('extras_value' in room) payload.extras_value = Number(room.extras_value) || 0;
+
     const { data, error } = await supabase.from('rooms').insert(payload).select().single();
     if (error) throw error;
     return data as Room;
@@ -233,6 +239,8 @@ export async function updatePaymentStatus(id: string, status: PaymentStatus, res
 
 export async function createPayment(payment: Partial<Payment>): Promise<Payment> {
     const payload = toSnake(payment);
+    if ('amount' in payment) payload.amount = Number(payment.amount) || 0;
+
     const { data, error } = await supabase.from('payments').insert(payload).select().single();
     if (error) throw error;
     return data as Payment;

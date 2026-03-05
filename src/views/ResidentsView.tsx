@@ -361,6 +361,23 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                     <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (Computador)</label>
                                     <input type="text" value={(editingResident as any).mac_address_pc || ''} onChange={e => setEditingResident({ ...editingResident, ['mac_address_pc' as any]: e.target.value })} placeholder="Ex: 00:1B:..." className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 font-mono" />
                                 </div>
+                                <div className="border-t border-slate-100 pt-4 md:col-span-2">
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Valores Financeiros Mensais</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">Valor do Aluguel (R$)</label>
+                                            <input type="number" value={editingResident.rent_value || 0} onChange={e => setEditingResident({ ...editingResident, rent_value: Number(e.target.value) })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">Taxa de Limpeza (R$)</label>
+                                            <input type="number" value={editingResident.cleaning_fee || 0} onChange={e => setEditingResident({ ...editingResident, cleaning_fee: Number(e.target.value) })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">Valor Extras (R$)</label>
+                                            <input type="number" value={editingResident.extras_value || 0} onChange={e => setEditingResident({ ...editingResident, extras_value: Number(e.target.value) })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                        </div>
+                                    </div>
+                                </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Foto do Perfil</label>
                                     <div className="flex items-center gap-4">

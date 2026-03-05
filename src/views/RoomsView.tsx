@@ -21,7 +21,8 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
     const [newRoomType, setNewRoomType] = useState('Quarto');
     const [newRoomCapacity, setNewRoomCapacity] = useState(1);
     const [newRoomRent, setNewRoomRent] = useState(0);
-    const [newRoomInternet, setNewRoomInternet] = useState(0);
+    const [newRoomCleaning, setNewRoomCleaning] = useState(0);
+    const [newRoomExtras, setNewRoomExtras] = useState(0);
     const [newRoomDesc, setNewRoomDesc] = useState('');
     const [showRepairModal, setShowRepairModal] = useState(false);
     const [repairTitle, setRepairTitle] = useState('');
@@ -49,7 +50,8 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                 type: newRoomType as any,
                 capacity: newRoomCapacity,
                 rent_value: newRoomRent,
-                internet_value: newRoomInternet,
+                cleaning_fee: newRoomCleaning,
+                extras_value: newRoomExtras,
                 description: newRoomDesc
             });
 
@@ -69,7 +71,8 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
             setNewRoomType('Quarto');
             setNewRoomCapacity(1);
             setNewRoomRent(0);
-            setNewRoomInternet(0);
+            setNewRoomCleaning(0);
+            setNewRoomExtras(0);
             setNewRoomDesc('');
             onRefresh();
         } catch (err: any) {
@@ -392,12 +395,16 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                     <span className="text-sm font-black text-white">R$ {room.rent_value || '0,00'}</span>
                                 </div>
                                 <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em]">Internet/Serviços</span>
-                                    <span className="text-sm font-black text-white">R$ {room.internet_value || '0,00'}</span>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em]">Taxa de Limpeza</span>
+                                    <span className="text-sm font-black text-white">R$ {room.cleaning_fee || '0,00'}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em]">Extras</span>
+                                    <span className="text-sm font-black text-white">R$ {room.extras_value || '0,00'}</span>
                                 </div>
                                 <div className="flex justify-between items-center py-2">
                                     <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.1em]">Total Estimado</span>
-                                    <span className="text-lg font-black text-rose-500">R$ {((room.rent_value || 0) + (room.internet_value || 0)).toFixed(2)}</span>
+                                    <span className="text-lg font-black text-rose-500">R$ {((room.rent_value || 0) + (room.cleaning_fee || 0) + (room.extras_value || 0)).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -676,8 +683,12 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                     <input type="number" step="0.01" required value={newRoomRent} onChange={e => setNewRoomRent(parseFloat(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Encargos Internet (R$)</label>
-                                    <input type="number" step="0.01" value={newRoomInternet} onChange={e => setNewRoomInternet(parseFloat(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Taxa de Limpeza (R$)</label>
+                                    <input type="number" step="0.01" value={newRoomCleaning} onChange={e => setNewRoomCleaning(parseFloat(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Extras (R$)</label>
+                                    <input type="number" step="0.01" value={newRoomExtras} onChange={e => setNewRoomExtras(parseFloat(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 p-4 bg-slate-950 rounded-2xl border border-slate-800">
