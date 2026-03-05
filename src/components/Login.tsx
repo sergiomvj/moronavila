@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Home, LogIn, UserPlus } from 'lucide-react';
-import { signIn, signUp, resetPassword } from '../lib/database';
+import { signIn, signUpResident, resetPassword } from '../lib/database';
 
 export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
     const [isLogin, setIsLogin] = useState(true);
@@ -29,7 +29,7 @@ export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
                     onLogin(user.id);
                 }
             } else {
-                const { user } = await signUp(email, password, name, phone);
+                const { user } = await signUpResident(email, password, name, phone);
                 if (user) {
                     setSuccessMessage('Cadastro realizado com sucesso! Faça login para continuar.');
                     setIsLogin(true); // Switch to login view
