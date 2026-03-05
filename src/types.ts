@@ -97,6 +97,11 @@ export interface Payment {
   status: PaymentStatus;
   description: string;
   month: string;
+  external_id?: string;
+  pix_qr_code?: string;
+  pix_copy_paste?: string;
+  billing_type?: string;
+  expiration_date?: string;
 }
 
 export interface MaintenanceRequest {
