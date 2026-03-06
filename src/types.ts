@@ -76,6 +76,7 @@ export interface RoomMedia {
   url: string;
   type: 'image' | 'video';
   storage_path?: string;
+  is_marketing?: boolean;
 }
 
 export interface Room {
@@ -179,4 +180,18 @@ export interface InternetConfig {
   password?: string;
   monthlyCost: number;
   dueDate: number;
+}
+
+export interface PropertyDescription {
+  id: string;
+  main_text: string;
+  main_media: string[]; // URLs de imagem/vídeo principal
+  gallery_media: string[]; // URLs da galeria geral
+  rooms_text: string;
+  location_text: string;
+  location_media: string[];
+  amenities_text: string;
+  amenities_media: string[];
+  rules_text: string; // Código de conduta
+  updated_at?: string;
 }

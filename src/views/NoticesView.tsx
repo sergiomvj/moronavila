@@ -21,7 +21,7 @@ export function NoticesView({ notices, residents, isAdmin, currentUser, onRefres
     }, [initialModal]);
     const [newTitle, setNewTitle] = React.useState('');
     const [newContent, setNewContent] = React.useState('');
-    const [newCategory, setNewCategory] = React.useState('Geral');
+    const [newCategory, setNewCategory] = React.useState<'Importante' | 'Regra' | 'Evento' | 'Geral'>('Geral');
     const [isPinned, setIsPinned] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -90,11 +90,11 @@ export function NoticesView({ notices, residents, isAdmin, currentUser, onRefres
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Categoria</label>
-                                    <select value={newCategory} onChange={e => setNewCategory(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 bg-white">
+                                    <select value={newCategory} onChange={e => setNewCategory(e.target.value as any)} className="w-full border border-slate-200 rounded-xl p-3 bg-white">
                                         <option value="Geral">Geral</option>
                                         <option value="Importante">Importante</option>
                                         <option value="Evento">Evento</option>
-                                        <option value="Regras">Regras</option>
+                                        <option value="Regra">Regra</option>
                                     </select>
                                 </div>
                                 <div className="flex items-center gap-2 pt-6">

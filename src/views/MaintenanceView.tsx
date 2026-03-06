@@ -79,8 +79,8 @@ export function MaintenanceView({ maintenance, rooms, residents, isAdmin, curren
 
             {/* Modal de Solicitação (Residente) */}
             {showModal && (
-                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl shadow-black relative overflow-hidden">
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-600 to-transparent"></div>
                         <div className="flex justify-between items-center mb-8">
                             <h3 className="text-2xl font-black text-white tracking-tighter">Solicitar Reparo</h3>

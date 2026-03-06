@@ -414,8 +414,8 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                 {/* Modals are handled below for consistency */}
                 {/* Repair Modal */}
                 {showRepairModal && (
-                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
+                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                        <div className="bg-slate-900 border border-slate-800 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-600 to-transparent"></div>
                             <div className="flex justify-between items-center mb-8">
                                 <h3 className="text-2xl font-black text-white tracking-tighter">Solicitar Reparo</h3>
@@ -442,8 +442,8 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
 
                 {/* Furniture Details Modal etc. - can stay but with dark theme styling */}
                 {selectedFurniture && (
-                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
+                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                        <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 md:p-8 w-full max-w-sm shadow-2xl">
                             <div className="flex justify-between items-center mb-8">
                                 <h3 className="text-xl font-black text-white uppercase tracking-tight">Ficha Técnica</h3>
                                 <button onClick={() => setSelectedFurniture(null)} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white">
@@ -476,8 +476,8 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
 
                 {/* Outros modais seguem o mesmo padrão dark */}
                 {editingFurniture && (
-                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                        <div className="bg-slate-900 border border-slate-800 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 w-full max-w-md shadow-2xl">
                             <div className="flex justify-between items-center mb-8">
                                 <h3 className="text-xl font-black text-white uppercase tracking-tight">Editar Inventário</h3>
                                 <button onClick={() => setEditingFurniture(null)} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white">
@@ -648,8 +648,8 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
 
             {/* Add Room Modal (Grid View Context) */}
             {showAddRoomModal && (
-                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[3rem] p-10 w-full max-w-lg shadow-2xl relative overflow-hidden">
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 w-full max-w-lg shadow-2xl relative overflow-hidden">
                         <div className="flex justify-between items-center mb-10">
                             <div>
                                 <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Registrar Unidade</h3>

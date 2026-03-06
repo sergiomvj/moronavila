@@ -86,6 +86,21 @@ export function PaymentsView({ payments, residents, isAdmin, currentUser, onRefr
         }
     };
 
+    const handleConfirmPayment = async (paymentId: string, residentId: string) => {
+        if (!isAdmin) return;
+        setIsProcessing(true);
+        try {
+            await updatePaymentStatus(paymentId, PaymentStatus.PAID, residentId);
+            await renewInternetAccess(residentId);
+            onRefresh();
+            alert('Pagamento confirmado e internet renovada com sucesso.');
+        } catch (e) {
+            alert('Erro ao confirmar pagamento.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header section with Stats */}
@@ -248,8 +263,8 @@ export function PaymentsView({ payments, residents, isAdmin, currentUser, onRefr
 
             {/* Bulk Generation Modal */}
             {showBulkModal && (
-                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 md:p-8 w-full max-w-md shadow-2xl">
                         <div className="flex justify-between items-center mb-8">
                             <h3 className="text-xl font-black text-white uppercase tracking-tight">Gerar Faturas do Período</h3>
                             <button onClick={() => setShowBulkModal(false)} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white">
@@ -280,8 +295,8 @@ export function PaymentsView({ payments, residents, isAdmin, currentUser, onRefr
 
             {/* Extra Charge Modal */}
             {showExtraModal && (
-                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 md:p-8 w-full max-w-md shadow-2xl">
                         <div className="flex justify-between items-center mb-8">
                             <h3 className="text-xl font-black text-white uppercase tracking-tight">Cobrança Avulsa</h3>
                             <button onClick={() => setShowExtraModal(false)} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white">

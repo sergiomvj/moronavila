@@ -4,12 +4,14 @@ import { ShieldAlert, Loader2 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import {
   fetchResidents, fetchRooms, fetchPayments, fetchMaintenance,
-  fetchComplaints, fetchNotices, fetchCalendarEvents, fetchLaundrySchedules, fetchDevices
+  fetchComplaints, fetchNotices, fetchCalendarEvents, fetchLaundrySchedules, fetchDevices,
+  fetchPropertyDescription
 } from './lib/database';
 
 import {
   Resident, Room, Payment, MaintenanceRequest,
-  Complaint, Notice, CalendarEvent, UserRole, LaundrySchedule
+  Complaint, Notice, CalendarEvent, UserRole, LaundrySchedule,
+  PropertyDescription
 } from './types';
 
 import { Login } from './components/Login';
@@ -25,6 +27,7 @@ import { ComplaintsView } from './views/ComplaintsView';
 import { NoticesView } from './views/NoticesView';
 import { CalendarView } from './views/CalendarView';
 import { LaundryView } from './views/LaundryView';
+import { PropertyDescView } from './views/PropertyDescView';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -44,6 +47,7 @@ function App() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [laundrySchedules, setLaundrySchedules] = useState<LaundrySchedule[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
+  const [propertyDescription, setPropertyDescription] = useState<PropertyDescription | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -148,6 +152,10 @@ function App() {
       try { setLaundrySchedules(await fetchLaundrySchedules()); } catch (e) { console.error('Laundry:', e); }
       try { setDevices(await fetchDevices()); } catch (e) { console.error('Devices:', e); }
       try { setResidents(await fetchResidents()); } catch (e) { console.error('Residents:', e); errors.push('Moradores'); }
+      try {
+        const desc = await fetchPropertyDescription();
+        setPropertyDescription(desc);
+      } catch (e) { console.error('PropertyDesc:', e); errors.push('Descrição da Propriedade'); }
 
       if (errors.length > 0) {
         setErrorMsg(`Aviso: Alguns dados principais (${errors.join(', ')}) não puderam ser carregados.`);
@@ -257,6 +265,14 @@ function App() {
 
           {activeTab === 'laundry' && (
             <LaundryView schedules={laundrySchedules} residents={residents} currentUser={currentUser} isAdmin={isAdmin} onRefresh={refreshData} />
+          )}
+
+          {activeTab === 'property-description' && propertyDescription && (
+            <PropertyDescView
+              data={propertyDescription}
+              onUpdate={refreshData}
+              rooms={rooms}
+            />
           )}
         </>
       )}

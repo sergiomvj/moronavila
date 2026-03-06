@@ -32,9 +32,17 @@ interface LayoutProps {
 }
 
 export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefresh, children }: LayoutProps) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Fechada por padrão no mobile
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const isAdmin = currentUser.role === UserRole.ADMIN;
+
+    // Fechar sidebar ao mudar de aba no mobile
+    const handleSetActiveTab = (tab: string) => {
+        setActiveTab(tab);
+        if (window.innerWidth < 1024) {
+            setIsSidebarOpen(false);
+        }
+    };
 
     const handleLogout = async () => {
         await signOut();
@@ -43,9 +51,17 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
 
     return (
         <div className="min-h-screen flex bg-slate-950 text-slate-300">
+            {/* Mobile Overlay */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/50 backdrop-blur-2xl border-r border-slate-800 transform transition-transform duration-500 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/90 lg:bg-slate-900/50 backdrop-blur-2xl border-r border-slate-800 transform transition-transform duration-500 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 <div className="p-8 flex items-center gap-3 mb-10">
@@ -56,19 +72,22 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
                 </div>
 
                 <nav className="px-5 space-y-2">
-                    <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-                    <SidebarItem icon={Megaphone} label="Mural" active={activeTab === 'notices'} onClick={() => setActiveTab('notices')} />
-                    <SidebarItem icon={CalendarIcon} label="Calendário" active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} />
-                    <SidebarItem icon={Bed} label={isAdmin ? "Cômodos" : "Meu Quarto"} active={activeTab === 'rooms'} onClick={() => setActiveTab('rooms')} />
+                    <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => handleSetActiveTab('dashboard')} />
+                    <SidebarItem icon={Megaphone} label="Mural" active={activeTab === 'notices'} onClick={() => handleSetActiveTab('notices')} />
+                    <SidebarItem icon={CalendarIcon} label="Calendário" active={activeTab === 'calendar'} onClick={() => handleSetActiveTab('calendar')} />
+                    <SidebarItem icon={Bed} label={isAdmin ? "Cômodos" : "Meu Quarto"} active={activeTab === 'rooms'} onClick={() => handleSetActiveTab('rooms')} />
                     {isAdmin && (
-                        <SidebarItem icon={Users} label="Moradores" active={activeTab === 'residents'} onClick={() => setActiveTab('residents')} />
+                        <>
+                            <SidebarItem icon={Users} label="Moradores" active={activeTab === 'residents'} onClick={() => handleSetActiveTab('residents')} />
+                            <SidebarItem icon={Home} label="Descrição da Casa" active={activeTab === 'property-description'} onClick={() => handleSetActiveTab('property-description')} />
+                        </>
                     )}
-                    <SidebarItem icon={CreditCard} label="Financeiro" active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
-                    <SidebarItem icon={Droplets} label="Lavanderia" active={activeTab === 'laundry'} onClick={() => setActiveTab('laundry')} />
-                    <SidebarItem icon={Trello} label={isAdmin ? "Painel Reparos" : "Reparos"} active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} />
-                    <SidebarItem icon={Wifi} label={isAdmin ? "Internet" : "Dispositivos"} active={activeTab === 'internet'} onClick={() => setActiveTab('internet')} />
+                    <SidebarItem icon={CreditCard} label="Financeiro" active={activeTab === 'payments'} onClick={() => handleSetActiveTab('payments')} />
+                    <SidebarItem icon={Droplets} label="Lavanderia" active={activeTab === 'laundry'} onClick={() => handleSetActiveTab('laundry')} />
+                    <SidebarItem icon={Trello} label={isAdmin ? "Painel Reparos" : "Reparos"} active={activeTab === 'maintenance'} onClick={() => handleSetActiveTab('maintenance')} />
+                    <SidebarItem icon={Wifi} label={isAdmin ? "Internet" : "Dispositivos"} active={activeTab === 'internet'} onClick={() => handleSetActiveTab('internet')} />
                     {isAdmin && (
-                        <SidebarItem icon={MessageSquare} label="Reclamações" active={activeTab === 'complaints'} onClick={() => setActiveTab('complaints')} />
+                        <SidebarItem icon={MessageSquare} label="Reclamações" active={activeTab === 'complaints'} onClick={() => handleSetActiveTab('complaints')} />
                     )}
                 </nav>
 
@@ -101,7 +120,7 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0">
-                <header className="h-20 bg-slate-950/70 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-10 sticky top-0 z-40">
+                <header className="h-20 bg-slate-950/70 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-10 sticky top-0 z-30">
                     <button
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                         className="lg:hidden p-2.5 text-slate-400 hover:bg-slate-800 rounded-2xl transition-all"
@@ -127,7 +146,7 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
                             <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-rose-600 rounded-full border-2 border-slate-950"></span>
                         </button>
                         <div className="h-8 w-[1px] bg-slate-800 mx-2"></div>
-                        <button onClick={() => setIsProfileModalOpen(true)} className="flex items-center gap-4 hover:opacity-80 transition-opacity text-left">
+                        <div onClick={() => setIsProfileModalOpen(true)} className="flex items-center gap-4 hover:opacity-80 transition-opacity text-left cursor-pointer">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-black text-white tracking-tight">{currentUser.name}</p>
                                 <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest">{currentUser.role === UserRole.ADMIN ? 'Admin' : 'Morador'}</p>
@@ -135,11 +154,11 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
                             <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-black text-xl uppercase shadow-lg shadow-rose-900/30">
                                 {currentUser.name.charAt(0)}
                             </div>
-                        </button>
+                        </div>
                     </div>
                 </header>
 
-                <div className="p-10 max-w-[1600px] mx-auto w-full">
+                <div className="p-4 md:p-10 max-w-[1600px] mx-auto w-full">
                     {children}
                 </div>
             </main>

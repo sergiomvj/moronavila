@@ -227,8 +227,8 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-100">
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Morador</th>
@@ -311,8 +311,8 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
 
             {/* Edit Resident Modal */}
             {editingResident && (
-                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-white rounded-[2rem] p-6 w-full max-w-2xl max-h-[95vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold">Editar Morador</h3>
                             <button
@@ -430,8 +430,8 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
 
             {/* Create Admin Modal */}
             {showAdminModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-white rounded-[2rem] p-6 w-full max-w-lg max-h-[95vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-900"><Shield className="text-indigo-600" /> Cadastrar Administrador</h3>
                             <button onClick={() => setShowAdminModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
@@ -470,8 +470,8 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
 
             {/* Create Resident Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-white rounded-[2rem] p-6 w-full max-w-2xl max-h-[95vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold flex items-center gap-2 text-emerald-900"><Plus className="text-emerald-600" /> Cadastrar Novo Morador</h3>
                             <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>

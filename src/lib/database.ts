@@ -2,7 +2,8 @@ import { supabase } from './supabase';
 import {
     Resident, Room, Payment, MaintenanceRequest,
     Complaint, Notice, NoticeComment, CalendarEvent,
-    Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule, Device, MaintenanceStatus
+    Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule, Device, MaintenanceStatus,
+    InternetConfig, PropertyDescription
 } from '../types';
 
 // ── RESIDENTS ──────────────────────────────────────────────────────────────────
@@ -28,7 +29,7 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         'entry_date', 'birth_date', 'cpf', 'document_number',
         'origin_address', 'work_address', 'room_id', 'mac_address',
         'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email',
-        'rent_value', 'cleaning_fee', 'extras_value'
+        'rent_value', 'cleaning_fee', 'extras_value', 'bed_identifier'
     ];
 
     const payload: Record<string, any> = {};
@@ -164,6 +165,18 @@ export async function deleteFurniture(id: string): Promise<void> {
     if (error) throw error;
 }
 
+export async function updateRoom(id: string, updates: Partial<Room>): Promise<Room> {
+    const payload = toSnake(updates);
+    if ('rent_value' in updates) payload.rent_value = Number(updates.rent_value) || 0;
+    if ('cleaning_fee' in updates) payload.cleaning_fee = Number(updates.cleaning_fee) || 0;
+    if ('extras_value' in updates) payload.extras_value = Number(updates.extras_value) || 0;
+    if ('capacity' in updates) payload.capacity = Number(updates.capacity) || 0;
+
+    const { data, error } = await supabase.from('rooms').update(payload).eq('id', id).select().single();
+    if (error) throw error;
+    return data as Room;
+}
+
 
 // ── DEVICES ────────────────────────────────────────────────────────────────
 export async function fetchDevices(): Promise<Device[]> {
@@ -217,6 +230,11 @@ export async function deleteRoomMedia(id: string, storagePath?: string): Promise
     if (error) throw error;
 }
 
+export async function toggleRoomMediaMarketing(id: string, isMarketing: boolean): Promise<void> {
+    const { error } = await supabase.from('room_media').update({ is_marketing: isMarketing }).eq('id', id);
+    if (error) throw error;
+}
+
 // ── PAYMENTS ───────────────────────────────────────────────────────────────────
 export async function fetchPayments(): Promise<Payment[]> {
     const { data, error } = await supabase.from('payments').select('*').order('due_date', { ascending: false });
@@ -244,6 +262,19 @@ export async function createPayment(payment: Partial<Payment>): Promise<Payment>
     const { data, error } = await supabase.from('payments').insert(payload).select().single();
     if (error) throw error;
     return data as Payment;
+}
+
+// ── PROPERTY DESCRIPTION ──────────────────────────────────────────────────
+export async function fetchPropertyDescription(): Promise<PropertyDescription> {
+    const { data, error } = await supabase.from('property_description').select('*').maybeSingle();
+    if (error) throw error;
+    return data as PropertyDescription;
+}
+
+export async function updatePropertyDescription(updates: Partial<PropertyDescription>): Promise<PropertyDescription> {
+    const { data, error } = await supabase.from('property_description').update(toSnake(updates)).eq('id', updates.id).select().single();
+    if (error) throw error;
+    return data as PropertyDescription;
 }
 
 // ── MAINTENANCE ────────────────────────────────────────────────────────────────

@@ -21,7 +21,7 @@ export function CalendarView({ events, isAdmin, onRefresh, initialModal }: Calen
     const [newDesc, setNewDesc] = React.useState('');
     const [newDate, setNewDate] = React.useState('');
     const [newLocation, setNewLocation] = React.useState('');
-    const [newType, setNewType] = React.useState('Comunitário');
+    const [newType, setNewType] = React.useState<'Limpeza' | 'Reunião' | 'Festa' | 'Manutenção' | 'Outro'>('Outro');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const handleCreateEvent = async (e: React.FormEvent) => {
@@ -91,11 +91,12 @@ export function CalendarView({ events, isAdmin, onRefresh, initialModal }: Calen
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1">Tipo</label>
-                                <select value={newType} onChange={e => setNewType(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 bg-white">
-                                    <option value="Comunitário">Comunitário</option>
+                                <select value={newType} onChange={e => setNewType(e.target.value as any)} className="w-full border border-slate-200 rounded-xl p-3 bg-white">
                                     <option value="Manutenção">Manutenção</option>
-                                    <option value="Social">Social</option>
-                                    <option value="Saúde">Saúde</option>
+                                    <option value="Limpeza">Limpeza</option>
+                                    <option value="Reunião">Reunião</option>
+                                    <option value="Festa">Festa</option>
+                                    <option value="Outro">Outro</option>
                                 </select>
                             </div>
                             <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">

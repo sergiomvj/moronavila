@@ -131,9 +131,9 @@ export function DashboardView({
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Bento Grid Header */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 {/* Welcome Banner - Big Bento Block */}
-                <div className="lg:col-span-2 relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-10 flex flex-col justify-end min-h-[320px] border border-slate-800 group">
+                <div className="xl:col-span-2 relative overflow-hidden bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 flex flex-col justify-end min-h-[280px] md:min-h-[320px] border border-slate-800 group">
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent z-10"></div>
                     <div className="absolute inset-0 bg-gradient-to-br from-rose-600/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
 
@@ -147,7 +147,7 @@ export function DashboardView({
                                 Painel de Controle v3.0
                             </span>
                         </div>
-                        <h2 className="text-5xl font-black text-white tracking-tighter mb-4 leading-none">
+                        <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter mb-4 leading-tight md:leading-none">
                             Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-500">{currentUser.name.split(' ')[0]}</span>!
                         </h2>
                         <p className="text-slate-400 max-w-lg text-lg font-medium leading-relaxed">
@@ -189,7 +189,7 @@ export function DashboardView({
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {isAdmin ? (
                     <>
                         <StatCard
