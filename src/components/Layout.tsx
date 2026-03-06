@@ -61,17 +61,19 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 z-[60] w-72 bg-slate-900/90 lg:bg-slate-900/50 backdrop-blur-2xl border-r border-slate-800 transform transition-transform duration-500 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed inset-y-0 left-0 z-[60] w-72 bg-slate-900/95 lg:bg-slate-900/50 backdrop-blur-2xl border-r border-slate-800 transform transition-transform duration-500 ease-in-out lg:relative lg:translate-x-0 flex flex-col h-full ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
-                <div className="p-8 flex items-center gap-3 mb-10">
+                {/* Logo Section */}
+                <div className="p-6 lg:p-8 flex items-center gap-3 mb-2 lg:mb-6 shrink-0">
                     <img src="/favicon.png" alt="MoronaVila" className="w-9 h-9 rounded-xl object-cover" />
                     <h1 className="text-2xl font-black text-white tracking-tighter">
                         Moro<span className="text-purple-400">na</span><span className="text-rose-500">Vila</span>
                     </h1>
                 </div>
 
-                <nav className="px-5 space-y-2">
+                {/* Navigation Menu (Scrollable) */}
+                <nav className="px-5 space-y-2 flex-1 overflow-y-auto pb-6 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
                     <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => handleSetActiveTab('dashboard')} />
                     <SidebarItem icon={Megaphone} label="Mural" active={activeTab === 'notices'} onClick={() => handleSetActiveTab('notices')} />
                     <SidebarItem icon={CalendarIcon} label="Calendário" active={activeTab === 'calendar'} onClick={() => handleSetActiveTab('calendar')} />
@@ -91,16 +93,17 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
                     )}
                 </nav>
 
-                <div className="absolute bottom-10 left-0 w-full px-6 space-y-4">
+                {/* Footer / Profile Section */}
+                <div className="w-full px-6 pb-8 pt-4 space-y-4 shrink-0 mt-auto border-t border-slate-800/50 lg:border-transparent bg-slate-900/90 lg:bg-transparent backdrop-blur-xl">
                     <button
                         onClick={() => setIsProfileModalOpen(true)}
-                        className="w-full bg-slate-800/40 hover:bg-slate-800/70 p-5 rounded-3xl border border-slate-800 transition-all duration-300 text-left group"
+                        className="w-full bg-slate-800/40 hover:bg-slate-800/70 p-4 lg:p-5 rounded-3xl border border-slate-800 transition-all duration-300 text-left group"
                     >
-                        <p className="text-[10px] text-slate-500 group-hover:text-rose-500 transition-colors font-black uppercase tracking-[0.2em] mb-3">
+                        <p className="text-[10px] text-slate-500 group-hover:text-rose-500 transition-colors font-black uppercase tracking-[0.2em] mb-2 lg:mb-3">
                             Perfil de Acesso
                         </p>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-rose-950/30 border border-rose-500/20 flex items-center justify-center text-rose-500 font-black text-sm uppercase">
+                            <div className="w-10 h-10 rounded-2xl bg-rose-950/30 border border-rose-500/20 flex items-center justify-center text-rose-500 font-black text-sm uppercase shrink-0">
                                 {currentUser.name.charAt(0)}
                             </div>
                             <div className="flex-1 overflow-hidden">
