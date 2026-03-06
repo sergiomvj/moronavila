@@ -486,7 +486,21 @@ export async function fetchCurrentResident(authId: string): Promise<Resident | n
 
 export async function uploadProfilePhoto(residentId: string, file: File): Promise<string> {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${residentId}-${Math.random()}.${fileExt}`;
+
+    // Garante que o path sempre use um identificador seguro (UUID do auth ou timestamp aleatório)
+    // O residentId da tabela residents pode ser um inteiro, não um UUID válido.
+    let safeId = residentId;
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+            safeId = user.id; // Sempre um UUID válido do Supabase Auth
+        }
+    } catch {
+        // fallback: usa timestamp para garantir unicidade
+        safeId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    const fileName = `${safeId}-${Date.now()}.${fileExt}`;
     const filePath = `profiles/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
