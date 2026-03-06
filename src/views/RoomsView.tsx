@@ -627,7 +627,7 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Capacidade Max.</label>
-                                        <input type="number" value={editRoomData.capacity} onChange={e => setEditRoomData({ ...editRoomData, capacity: parseInt(e.target.value) || 0 })} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none" />
+                                        <input type="number" min="0" value={editRoomData.capacity} onChange={e => setEditRoomData({ ...editRoomData, capacity: parseInt(e.target.value) || 0 })} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none" />
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Aluguel (R$)</label>
@@ -667,7 +667,7 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
             </div>
 
             {/* List Grid View */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 {rooms.map(room => (
                     <div
                         key={room.id}
@@ -675,49 +675,49 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                         className="bento-card group hover:!border-rose-600 transition-all cursor-pointer relative overflow-hidden"
                     >
                         {/* Status Indicator */}
-                        <div className={`absolute top-0 right-0 px-4 py-6 rounded-bl-[2.5rem] font-black text-[9px] uppercase tracking-widest text-white transition-colors
-                            ${room.residents?.length === room.capacity ? 'bg-rose-600/20 text-rose-500 border-l border-b border-rose-500/20' : 'bg-emerald-600/20 text-emerald-500 border-l border-b border-emerald-500/20'}`}>
-                            {room.residents?.length === room.capacity ? 'Indisponível' : 'Vago'}
+                        <div className={`absolute top-0 right-0 px-3 py-4 rounded-bl-[1.5rem] font-black text-[8px] uppercase tracking-widest text-white transition-colors
+                            ${room.residents?.length === room.capacity && room.capacity > 0 ? 'bg-rose-600/20 text-rose-500 border-l border-b border-rose-500/20' : 'bg-emerald-600/20 text-emerald-500 border-l border-b border-emerald-500/20'}`}>
+                            {room.residents?.length === room.capacity && room.capacity > 0 ? 'Indisponível' : (room.capacity === 0 ? 'Livre' : 'Vago')}
                         </div>
 
-                        <div className="mb-6">
-                            <div className="w-16 h-16 bg-slate-950 rounded-3xl flex items-center justify-center text-slate-600 group-hover:text-rose-500 group-hover:bg-rose-600/10 transition-all border border-slate-800">
-                                <Bed size={32} />
+                        <div className="mb-4">
+                            <div className="w-12 h-12 bg-slate-950 rounded-2xl flex items-center justify-center text-slate-600 group-hover:text-rose-500 group-hover:bg-rose-600/10 transition-all border border-slate-800">
+                                <Bed size={24} />
                             </div>
                         </div>
 
-                        <h3 className="text-xl font-black text-white uppercase tracking-tight group-hover:text-rose-500 transition-colors mb-2 truncate">{room.name}</h3>
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{room.type}</span>
-                            <div className="w-1 h-1 rounded-full bg-slate-800"></div>
-                            <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">
-                                {room.type === 'Quarto' ? `Capacidade ${room.residents?.length || 0}/${room.capacity}` : 'Compartilhado'}
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight group-hover:text-rose-500 transition-colors mb-1 truncate">{room.name}</h3>
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{room.type}</span>
+                            <div className="w-0.5 h-0.5 rounded-full bg-slate-800"></div>
+                            <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">
+                                {room.type === 'Quarto' ? `Cap. ${room.residents?.length || 0}/${room.capacity} (${Array.from({ length: room.capacity }, (_, i) => String.fromCharCode(65 + i)).join('')})` : 'Espaço Comum'}
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-800/50">
+                        <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-800/50">
                             {room.furniture.slice(0, 2).map(f => (
-                                <div key={f.id} className="bg-slate-950/50 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-tight text-slate-500 border border-slate-800/50">
+                                <div key={f.id} className="bg-slate-950/50 px-2 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tight text-slate-500 border border-slate-800/50 truncate">
                                     {f.name}
                                 </div>
                             ))}
                             {room.furniture.length > 2 && (
-                                <div className="bg-slate-950/50 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-tight text-slate-400 border border-slate-800/50 flex items-center justify-center">
+                                <div className="bg-slate-950/50 px-2 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tight text-slate-400 border border-slate-800/50 flex items-center justify-center">
                                     +{room.furniture.length - 2} itens
                                 </div>
                             )}
                         </div>
 
-                        <div className="mt-8 flex items-center justify-between">
-                            <div className="flex -space-x-3">
+                        <div className="mt-6 flex items-center justify-between">
+                            <div className="flex -space-x-2">
                                 {room.residents?.map(res => (
-                                    <div key={res.id} className="w-10 h-10 rounded-2xl bg-slate-800 border-2 border-slate-900 flex items-center justify-center text-rose-500 text-xs font-black uppercase group-hover:bg-rose-600 group-hover:text-white transition-all shadow-lg" title={res.name}>
+                                    <div key={res.id} className="w-8 h-8 rounded-xl bg-slate-800 border-2 border-slate-900 flex items-center justify-center text-rose-500 text-[10px] font-black uppercase group-hover:bg-rose-600 group-hover:text-white transition-all shadow-lg" title={res.name}>
                                         {res.name.charAt(0)}
                                     </div>
                                 ))}
                             </div>
-                            <div className="p-3 bg-slate-950 rounded-2xl text-slate-600 group-hover:text-rose-500 border border-slate-800 transition-all">
-                                <ChevronRight size={20} />
+                            <div className="p-2 bg-slate-950 rounded-xl text-slate-600 group-hover:text-rose-500 border border-slate-800 transition-all">
+                                <ChevronRight size={16} />
                             </div>
                         </div>
                     </div>
@@ -748,13 +748,15 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                     <select value={newRoomType} onChange={e => setNewRoomType(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all appearance-none">
                                         <option value="Quarto">Quarto</option>
                                         <option value="Área Comum">Área Comum</option>
-                                        <option value="Lavanderia">Lavanderia</option>
+                                        <option value="Suíte">Suíte</option>
                                         <option value="Cozinha">Cozinha</option>
+                                        <option value="Banheiro">Banheiro</option>
+                                        <option value="Varanda">Varanda</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Vagas</label>
-                                    <input type="number" min="1" value={newRoomCapacity} onChange={e => setNewRoomCapacity(parseInt(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
+                                    <input type="number" min="0" value={newRoomCapacity} onChange={e => setNewRoomCapacity(parseInt(e.target.value) || 0)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Aluguel (R$)</label>
@@ -767,6 +769,10 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Extras (R$)</label>
                                     <input type="number" step="0.01" value={newRoomExtras} onChange={e => setNewRoomExtras(parseFloat(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none transition-all" />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Descrição Geral do Cômodo</label>
+                                    <textarea value={newRoomDesc} onChange={e => setNewRoomDesc(e.target.value)} placeholder="Ex: Suite com ventilação natural, piso frio..." className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white h-24 focus:border-rose-500 outline-none resize-none transition-all" />
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 p-4 bg-slate-950 rounded-2xl border border-slate-800">

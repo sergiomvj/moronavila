@@ -61,14 +61,14 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/90 lg:bg-slate-900/50 backdrop-blur-2xl border-r border-slate-800 transform transition-transform duration-500 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed inset-y-0 left-0 z-[60] w-72 bg-slate-900/90 lg:bg-slate-900/50 backdrop-blur-2xl border-r border-slate-800 transform transition-transform duration-500 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 <div className="p-8 flex items-center gap-3 mb-10">
-                    <div className="bg-rose-600 p-2.5 rounded-2xl text-white shadow-lg shadow-rose-900/30">
-                        <Music size={24} />
-                    </div>
-                    <h1 className="text-2xl font-black text-white tracking-tighter">Morona<span className="text-rose-600">Vila</span></h1>
+                    <img src="/favicon.png" alt="MoronaVila" className="w-9 h-9 rounded-xl object-cover" />
+                    <h1 className="text-2xl font-black text-white tracking-tighter">
+                        Moro<span className="text-purple-400">na</span><span className="text-rose-500">Vila</span>
+                    </h1>
                 </div>
 
                 <nav className="px-5 space-y-2">
@@ -120,13 +120,23 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0">
-                <header className="h-20 bg-slate-950/70 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-10 sticky top-0 z-30">
-                    <button
-                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                        className="lg:hidden p-2.5 text-slate-400 hover:bg-slate-800 rounded-2xl transition-all"
-                    >
-                        {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-                    </button>
+                <header className="h-20 bg-slate-950/70 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 lg:px-10 sticky top-0 z-[50]">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="lg:hidden p-2.5 text-slate-400 hover:bg-slate-800 rounded-2xl transition-all"
+                        >
+                            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                        </button>
+
+                        {/* Mobile Logo */}
+                        <div className="flex lg:hidden items-center gap-2">
+                            <img src="/favicon.png" alt="Logo" className="w-7 h-7 rounded-lg object-cover" />
+                            <span className="text-lg font-black text-white tracking-tighter">
+                                Moro<span className="text-purple-400">na</span><span className="text-rose-500">Vila</span>
+                            </span>
+                        </div>
+                    </div>
 
                     <div className="flex-1 max-w-xl mx-10 hidden md:block">
                         <div className="relative group">

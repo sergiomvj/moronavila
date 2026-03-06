@@ -49,7 +49,7 @@ async function getMacFromIp(ip: string): Promise<string | null> {
     }
 }
 
-app.get('/', async (req, res) => {
+app.get('/mac', async (req, res) => {
     const ip = req.ip?.replace('::ffff:', '') || '0.0.0.0';
     const mac = await getMacFromIp(ip);
 

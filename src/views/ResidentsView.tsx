@@ -441,11 +441,19 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                                     className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
                                                 >
                                                     <option value="">Nenhum</option>
-                                                    {rooms.map(room => (
-                                                        <option key={room.id} value={room.id}>
-                                                            {room.name} ({room.type === 'Quarto' ? `Vagas: ${room.capacity - (room.residents?.length || 0)}` : 'Compartilhado'})
-                                                        </option>
-                                                    ))}
+                                                    {rooms.map(room => {
+                                                        const occupiedSlots = residents
+                                                            .filter(r => r.room_id === room.id)
+                                                            .map(r => r.bed_identifier);
+                                                        const allSlots = Array.from({ length: room.capacity }, (_, i) => String.fromCharCode(65 + i));
+                                                        const freeSlots = allSlots.filter(s => !occupiedSlots.includes(s));
+
+                                                        return (
+                                                            <option key={room.id} value={room.id}>
+                                                                {room.name} {room.type === 'Quarto' ? `(Vagos: ${freeSlots.join(', ') || 'Nenhum'})` : `(${room.type})`}
+                                                            </option>
+                                                        );
+                                                    })}
                                                 </select>
                                             </div>
 
