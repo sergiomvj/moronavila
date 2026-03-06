@@ -40,6 +40,10 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
     const [newFurnitureCond, setNewFurnitureCond] = useState<'Novo' | 'Bom' | 'Regular' | 'Ruim'>('Bom');
     const [newFurnitureDesc, setNewFurnitureDesc] = useState('');
 
+    // Edit Room Modal State
+    const [isEditingRoom, setIsEditingRoom] = useState(false);
+    const [editRoomData, setEditRoomData] = useState<Partial<Room>>({});
+
     const handleAddRoomSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -211,20 +215,40 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                     {/* Header Bento Block */}
                     <div className="lg:col-span-12 bento-card border-l-4 border-l-rose-600 !p-8">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div>
+                            <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
                                     <span className="bg-rose-500/10 text-rose-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-rose-500/20">
                                         {room.type}
                                     </span>
                                     <span className="text-slate-600 font-black text-[9px] uppercase tracking-widest">ID: {room.id.slice(0, 8)}</span>
                                 </div>
-                                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">{room.name}</h2>
+                                <div className="flex items-center gap-4 group/title">
+                                    <h2 className="text-4xl font-black text-white tracking-tighter uppercase">{room.name}</h2>
+                                    {isAdmin && (
+                                        <button
+                                            onClick={() => {
+                                                setEditRoomData(room);
+                                                setIsEditingRoom(true);
+                                            }}
+                                            className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-rose-500 opacity-0 group-hover/title:opacity-100 transition-all"
+                                        >
+                                            <Edit2 size={18} />
+                                        </button>
+                                    )}
+                                </div>
                                 <p className="text-slate-400 mt-2 font-medium max-w-2xl leading-relaxed">{room.description || 'Este cômodo não possui uma descrição técnica detalhada ainda.'}</p>
                             </div>
                             <div className="flex gap-3">
                                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col items-center justify-center min-w-[100px]">
                                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Capacidade</span>
-                                    <span className="text-xl font-black text-white">{room.residents?.length || 0} / {room.capacity}</span>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-xl font-black text-white">{room.residents?.length || 0} / {room.capacity}</span>
+                                        {room.type === 'Quarto' && room.capacity > 0 && (
+                                            <span className="text-[8px] font-black text-rose-500/50 uppercase tracking-tighter mt-0.5">
+                                                Slots: {Array.from({ length: room.capacity }, (_, i) => String.fromCharCode(65 + i)).join(', ')}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col items-center justify-center min-w-[100px]">
                                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Mobiliário</span>
@@ -341,7 +365,10 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                             {res.name.charAt(0)}
                                         </div>
                                         <div>
-                                            <p className="font-black text-white uppercase tracking-tight group-hover:text-rose-500 transition-colors">{res.name}</p>
+                                            <p className="font-black text-white uppercase tracking-tight group-hover:text-rose-500 transition-colors">
+                                                {res.name}
+                                                {res.bed_identifier && <span className="ml-2 text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded-lg">Cama {res.bed_identifier}</span>}
+                                            </p>
                                             <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Check-in: {res.entry_date}</p>
                                         </div>
                                     </div>
@@ -569,6 +596,55 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                         </div>
                     </div>
                 )}
+                {/* Edit Room Modal */}
+                {isEditingRoom && editRoomData && (
+                    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 w-full max-w-lg shadow-2xl relative overflow-hidden">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase">Editar Cômodo</h3>
+                                <button onClick={() => setIsEditingRoom(false)} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                setIsSubmitting(true);
+                                try {
+                                    const { updateRoom } = await import('../lib/database');
+                                    await updateRoom(room.id, editRoomData);
+                                    setIsEditingRoom(false);
+                                    onRefresh();
+                                } catch (err: any) {
+                                    alert('Erro ao atualizar: ' + (err?.message || 'Erro desconhecido'));
+                                } finally {
+                                    setIsSubmitting(false);
+                                }
+                            }} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nome</label>
+                                        <input type="text" value={editRoomData.name} onChange={e => setEditRoomData({ ...editRoomData, name: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Capacidade Max.</label>
+                                        <input type="number" value={editRoomData.capacity} onChange={e => setEditRoomData({ ...editRoomData, capacity: parseInt(e.target.value) || 0 })} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Aluguel (R$)</label>
+                                        <input type="number" value={editRoomData.rent_value} onChange={e => setEditRoomData({ ...editRoomData, rent_value: parseFloat(e.target.value) || 0 })} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white focus:border-rose-500 outline-none" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Descrição Geral</label>
+                                        <textarea value={editRoomData.description} onChange={e => setEditRoomData({ ...editRoomData, description: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white h-24 focus:border-rose-500 outline-none resize-none" placeholder="Ex: Suite com ventilação natural, piso frio..." />
+                                    </div>
+                                </div>
+                                <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-rose-700 shadow-xl shadow-rose-900/30 transition-all active:scale-95">
+                                    {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -591,7 +667,7 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
             </div>
 
             {/* List Grid View */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {rooms.map(room => (
                     <div
                         key={room.id}
@@ -610,11 +686,13 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                             </div>
                         </div>
 
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tight group-hover:text-rose-500 transition-colors mb-2">{room.name}</h3>
-                        <div className="flex items-center gap-2 mb-6">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{room.type}</span>
+                        <h3 className="text-xl font-black text-white uppercase tracking-tight group-hover:text-rose-500 transition-colors mb-2 truncate">{room.name}</h3>
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{room.type}</span>
                             <div className="w-1 h-1 rounded-full bg-slate-800"></div>
-                            <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Capacidade {room.residents?.length || 0}/{room.capacity}</span>
+                            <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">
+                                {room.type === 'Quarto' ? `Capacidade ${room.residents?.length || 0}/${room.capacity}` : 'Compartilhado'}
+                            </span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-800/50">

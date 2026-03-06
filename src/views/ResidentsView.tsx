@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi, Plus, ImageIcon, Trash2 } from 'lucide-react';
-import { Resident, UserRole } from '../types';
-import { updateResident, signUpAdmin, signUpResident, uploadProfilePhoto, deleteResident } from '../lib/database';
+import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi, Plus, ImageIcon, Trash2, Bed } from 'lucide-react';
+import { Resident, UserRole, Room } from '../types';
+import { updateResident, signUpAdmin, signUpResident, uploadProfilePhoto, deleteResident, fetchRooms } from '../lib/database';
 
 interface ResidentsViewProps {
     residents: Resident[];
@@ -20,6 +20,20 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     const [searchTerm, setSearchTerm] = useState('');
     const [editingResident, setEditingResident] = useState<Resident | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [rooms, setRooms] = useState<Room[]>([]);
+
+    useEffect(() => {
+        loadRooms();
+    }, []);
+
+    const loadRooms = async () => {
+        try {
+            const data = await fetchRooms();
+            setRooms(data);
+        } catch (err) {
+            console.error("Erro ao carregar quartos:", err);
+        }
+    };
 
     // Create Admin States
     const [showAdminModal, setShowAdminModal] = useState(false);
@@ -406,13 +420,59 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                     </div>
                                 </div>
                                 {isAdmin && (
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">Status de Internet</label>
-                                        <div className="flex items-center gap-2 h-12">
-                                            <input type="checkbox" checked={editingResident.internet_active || false} onChange={e => setEditingResident({ ...editingResident, internet_active: e.target.checked })} className="w-5 h-5 text-indigo-600 rounded" />
-                                            <span className="text-sm font-medium">Acesso Ativo</span>
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">Status de Internet</label>
+                                            <div className="flex items-center gap-2 h-12">
+                                                <input type="checkbox" checked={editingResident.internet_active || false} onChange={e => setEditingResident({ ...editingResident, internet_active: e.target.checked })} className="w-5 h-5 text-indigo-600 rounded" />
+                                                <span className="text-sm font-medium">Acesso Ativo</span>
+                                            </div>
                                         </div>
-                                    </div>
+
+                                        {/* Room and Bed Selection */}
+                                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                                                    <Users size={16} className="text-indigo-600" /> Quarto / Cômodo
+                                                </label>
+                                                <select
+                                                    value={editingResident.room_id || ''}
+                                                    onChange={e => setEditingResident({ ...editingResident, room_id: e.target.value, bed_identifier: '' })}
+                                                    className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
+                                                >
+                                                    <option value="">Nenhum</option>
+                                                    {rooms.map(room => (
+                                                        <option key={room.id} value={room.id}>
+                                                            {room.name} ({room.type === 'Quarto' ? `Vagas: ${room.capacity - (room.residents?.length || 0)}` : 'Compartilhado'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {editingResident.room_id && rooms.find(r => r.id === editingResident.room_id)?.type === 'Quarto' && (
+                                                <div>
+                                                    <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                                                        <Bed size={16} className="text-indigo-600" /> Cama / Slot
+                                                    </label>
+                                                    <select
+                                                        value={editingResident.bed_identifier || ''}
+                                                        onChange={e => setEditingResident({ ...editingResident, bed_identifier: e.target.value })}
+                                                        className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
+                                                    >
+                                                        <option value="">Selecionar Slot</option>
+                                                        {Array.from({ length: rooms.find(r => r.id === editingResident.room_id)?.capacity || 0 }, (_, i) => String.fromCharCode(65 + i)).map(slot => {
+                                                            const isOccupied = residents.some(r => r.room_id === editingResident.room_id && r.bed_identifier === slot && r.id !== editingResident.id);
+                                                            return (
+                                                                <option key={slot} value={slot} disabled={isOccupied}>
+                                                                    Slot {slot} {isOccupied ? '(Ocupado)' : ''}
+                                                                </option>
+                                                            );
+                                                        })}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </div>
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">

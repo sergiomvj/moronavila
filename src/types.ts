@@ -56,6 +56,7 @@ export interface Resident {
   rent_value?: number;
   cleaning_fee?: number;
   extras_value?: number;
+  bed_identifier?: string;
 }
 
 export interface Device {
