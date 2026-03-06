@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Users, CreditCard, Wrench, LayoutDashboard, CheckCircle2, AlertCircle, Wifi, Droplets, Plus, MessageSquare, X, Trello } from 'lucide-react';
+import { Users, CreditCard, Wrench, LayoutDashboard, CheckCircle2, AlertCircle, Wifi, Droplets, Plus, MessageSquare, X, Trello, Bed } from 'lucide-react';
 import { Payment, MaintenanceRequest, Resident, Room, PaymentStatus, MaintenanceStatus, LaundrySchedule, UserRole, RoomType } from '../types';
 import { createMaintenanceRequest, createComplaint } from '../lib/database';
 
@@ -70,6 +70,7 @@ export function DashboardView({
         const today = new Date().toISOString().split('T')[0];
         const todaysLaundry = laundrySchedules.filter(l => l.date === today).length;
         const myTodaysLaundry = laundrySchedules.filter(l => l.date === today && (isAdmin || l.resident_id === currentUser.id)).length;
+        const totalAvailableBeds = rooms.reduce((acc, room) => acc + Math.max(0, room.capacity - (room.residents?.length || 0)), 0);
 
         return {
             totalPayments,
@@ -79,9 +80,10 @@ export function DashboardView({
             internetEnabled,
             internetBlocked,
             todaysLaundry,
-            myTodaysLaundry
+            myTodaysLaundry,
+            totalAvailableBeds
         };
-    }, [payments, maintenance, residents, laundrySchedules, currentUser, isAdmin]);
+    }, [payments, maintenance, residents, laundrySchedules, currentUser, isAdmin, rooms]);
 
     const handleCreateRepair = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -189,9 +191,16 @@ export function DashboardView({
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6">
                 {isAdmin ? (
                     <>
+                        <StatCard
+                            label="Vagas Livres"
+                            value={stats.totalAvailableBeds}
+                            icon={Bed}
+                            colorClass="bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+                            onClick={() => setActiveTab('rooms')}
+                        />
                         <StatCard
                             label="Internet Ativa"
                             value={`${stats.internetEnabled}`}

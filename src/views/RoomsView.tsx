@@ -656,14 +656,20 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                     <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Gestão de Cômodos</h2>
                     <p className="text-slate-500 font-bold text-sm uppercase tracking-widest mt-1">Status e inventário das unidades habitacionais</p>
                 </div>
-                {isAdmin && (
-                    <button
-                        onClick={() => setShowAddRoomModal(true)}
-                        className="bg-rose-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-all hover:scale-105 shadow-lg shadow-rose-900/30"
-                    >
-                        <Plus size={18} /> Adicionar Cômodo
-                    </button>
-                )}
+                <div className="flex items-center gap-4">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-2xl flex flex-col items-center justify-center min-w-[120px] shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Vagas Livres</span>
+                        <span className="text-2xl font-black text-emerald-400">{rooms.reduce((acc, r) => acc + Math.max(0, r.capacity - (r.residents?.length || 0)), 0)}</span>
+                    </div>
+                    {isAdmin && (
+                        <button
+                            onClick={() => setShowAddRoomModal(true)}
+                            className="bg-rose-600 text-white px-6 py-4 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-all hover:scale-105 shadow-lg shadow-rose-900/30"
+                        >
+                            <Plus size={18} /> Adicionar Cômodo
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* List Grid View */}
@@ -677,7 +683,7 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                         {/* Status Indicator */}
                         <div className={`absolute top-0 right-0 px-3 py-4 rounded-bl-[1.5rem] font-black text-[8px] uppercase tracking-widest text-white transition-colors
                             ${room.residents?.length === room.capacity && room.capacity > 0 ? 'bg-rose-600/20 text-rose-500 border-l border-b border-rose-500/20' : 'bg-emerald-600/20 text-emerald-500 border-l border-b border-emerald-500/20'}`}>
-                            {room.residents?.length === room.capacity && room.capacity > 0 ? 'Indisponível' : (room.capacity === 0 ? 'Livre' : 'Vago')}
+                            {room.residents?.length === room.capacity && room.capacity > 0 ? 'Esgotado' : (room.capacity === 0 ? 'Livre' : `${Math.max(0, room.capacity - (room.residents?.length || 0))} Vaga${Math.max(0, room.capacity - (room.residents?.length || 0)) === 1 ? '' : 's'}`)}
                         </div>
 
                         <div className="mb-4">
