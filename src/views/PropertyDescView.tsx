@@ -167,11 +167,13 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                     {activeTab === 'general' && (
                         <div className="bg-slate-900/40 border border-slate-800/60 rounded-[40px] p-10 space-y-10 shadow-inner">
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 italic">Texto de Boas-vindas (Hero Section)</label>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 italic">
+                                    Texto de Boas-vindas (Hero Section) <span className="text-amber-500 ml-2 normal-case font-bold">*A primeira linha será o Título Gigante, o restante será o Subtítulo.</span>
+                                </label>
                                 <textarea
                                     value={formData.main_text}
                                     onChange={(e) => setFormData({ ...formData, main_text: e.target.value })}
-                                    placeholder="Ex: Descubra o conforto de morar bem em Joinville..."
+                                    placeholder="Linha 1: Seu título de alto impacto aqui.&#10;Linha 2 em diante: Subtítulo descritivo com mais detalhes sobre a propriedade..."
                                     className="w-full bg-slate-950/50 border border-slate-800 rounded-[24px] p-6 text-slate-200 text-base leading-relaxed focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all min-h-[180px]"
                                 />
                             </div>

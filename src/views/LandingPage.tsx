@@ -58,6 +58,26 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
     const heroMedia = main_media?.[0] || 'https://images.pexels.com/photos/5935228/pexels-photo-5935228.jpeg';
 
+    const defaultTitle = "MoronaVila é a solução ideal para quem precisa de silencio, ordem e privacidade para morar, viver e estudar.";
+    const defaultSubtitle = "Pertinho das principais universidades e do trabalho, comercio farto 24 horas por dia e transporte para todo o Rio de Janeiro. Oferecemos quartos individuais com banheiro privativo e quartos compartilhados para 3 pessoas, ampla cozinha com armarios individuais para mantimentos com chave, lavanderia, sala de TV, sala de estudo e muita area externa arborizada para relachar. Quartos com mobiliário básico completo e funcional, interfone com ramal exclusivo para cada quarto, internet de alta velocidade em toda a propriedade.";
+
+    const formatHeroText = (text: string) => {
+        if (!text || text.trim() === '') return { title: defaultTitle, subtitle: defaultSubtitle };
+
+        // Divide o texto por quebras de linha para separar o título do subtítulo
+        const parts = text.split('\n').filter(p => p.trim() !== '');
+
+        if (parts.length > 1) {
+            return {
+                title: parts[0],
+                subtitle: parts.slice(1).join('\n')
+            };
+        }
+        return { title: parts[0], subtitle: null };
+    };
+
+    const { title: heroTitle, subtitle: heroSubtitle } = formatHeroText(main_text);
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-rose-500/30">
             {/* Topbar */}
@@ -89,9 +109,14 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
                 <div className="relative z-10 max-w-7xl mx-auto px-6 w-full mt-10">
                     <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tighter uppercase italic mb-8 drop-shadow-2xl">
-                            {main_text || "Descubra o conforto de morar bem!"}
+                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tighter uppercase italic mb-6 drop-shadow-2xl">
+                            {heroTitle}
                         </h2>
+                        {heroSubtitle && (
+                            <p className="text-lg md:text-xl text-slate-200 font-medium leading-relaxed mb-10 drop-shadow-lg max-w-2xl">
+                                {heroSubtitle}
+                            </p>
+                        )}
                         <a href="#rooms" className="inline-flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95">
                             Conhecer as Vagas <ArrowRight size={18} />
                         </a>
@@ -99,16 +124,85 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                 </div>
             </section>
 
-            {/* Rooms Section */}
+            {/* A Casa */}
+            <section id="a-casa" className="py-32 relative">
+                <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+                    <div className="order-2 lg:order-1 space-y-8">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500">
+                                <Home size={24} />
+                            </div>
+                            <h3 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase italic drop-shadow-lg">A Casa</h3>
+                        </div>
+                        <p className="text-slate-300 text-lg md:text-xl leading-relaxed whitespace-pre-line font-medium">{rooms_text}</p>
+                    </div>
+                    <div className="order-1 lg:order-2 relative aspect-[4/3] rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl">
+                        <img
+                            src="https://images.unsplash.com/photo-1556228308-f6e92d757b1c?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                            alt="A Casa"
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-1000"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+                    </div>
+                </div>
+            </section>
+
+            {/* Onde Estamos */}
+            <section id="onde-estamos" className="py-32 bg-slate-900/20 border-y border-white/5 relative overflow-hidden">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl h-full max-h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+                <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center relative z-10">
+                    <div className="order-1 relative aspect-[4/3] rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl">
+                        <img
+                            src="https://ogimg.infoglobo.com.br/in/24235475-bd5-3f6/FT1086A/thumbnail_IMG_8718.jpg"
+                            alt="Localização"
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-1000"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/80 via-transparent to-indigo-900/20 pointer-events-none" />
+                    </div>
+
+                    <div className="order-2 space-y-8">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400">
+                                <MapPin size={24} />
+                            </div>
+                            <h3 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase italic drop-shadow-lg">Onde Estamos</h3>
+                        </div>
+                        <p className="text-slate-300 text-lg md:text-xl leading-relaxed whitespace-pre-line font-medium">{location_text}</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* Amenidades */}
+            <section id="amenidades" className="py-32 relative">
+                <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+                    <div className="order-2 lg:order-1 space-y-8">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
+                                <Sparkles size={24} />
+                            </div>
+                            <h3 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase italic drop-shadow-lg">Amenidades</h3>
+                        </div>
+                        <p className="text-slate-300 text-lg md:text-xl leading-relaxed whitespace-pre-line font-medium">{amenities_text}</p>
+                    </div>
+                    <div className="order-1 lg:order-2 relative aspect-[4/3] rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl">
+                        <img
+                            src="https://auroracultural.com/wp-content/uploads/2026/03/A97A8175-scaled.webp"
+                            alt="Amenidades"
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-1000"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/80 via-transparent to-emerald-900/20 pointer-events-none" />
+                    </div>
+                </div>
+            </section>
+
+            {/* Quartos e Acomodações Grid */}
             {rooms.length > 0 && (
-                <section id="rooms" className="py-32 relative">
+                <section id="quartos" className="py-32 bg-slate-900/20 border-t border-white/5 relative">
                     <div className="max-w-7xl mx-auto px-6">
-                        <div className="mb-16 max-w-3xl">
-                            <h3 className="text-sm font-black text-rose-500 uppercase tracking-[0.3em] mb-4">Acomodações</h3>
-                            <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter uppercase italic mb-6">Seu novo espaço</h2>
-                            {rooms_text && (
-                                <p className="text-slate-400 text-lg leading-relaxed">{rooms_text}</p>
-                            )}
+                        <div className="mb-16 max-w-3xl mx-auto text-center">
+                            <h3 className="text-sm font-black text-rose-500 uppercase tracking-[0.3em] mb-4">Escolha a sua</h3>
+                            <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter uppercase italic mb-6">Acomodação Ideal</h2>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -153,44 +247,6 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                     </div>
                 </section>
             )}
-
-            {/* Location & Amenities */}
-            <section className="py-32 bg-slate-900/20 border-y border-white/5 relative overflow-hidden">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl h-full max-h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-
-                <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative z-10">
-                    <div className="order-2 lg:order-1 relative aspect-square md:aspect-video lg:aspect-square rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl">
-                        <img
-                            src={location_media?.[0] || 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg'}
-                            alt="Localização"
-                            className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/80 via-transparent to-rose-900/20" />
-                    </div>
-
-                    <div className="order-1 lg:order-2 space-y-16">
-                        <div>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400">
-                                    <MapPin size={24} />
-                                </div>
-                                <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic">Onde Estamos</h3>
-                            </div>
-                            <p className="text-slate-300 text-lg leading-relaxed">{location_text || "Excelente localização com mobilidade impecável."}</p>
-                        </div>
-
-                        <div>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
-                                    <Sparkles size={24} />
-                                </div>
-                                <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic">Comodidades</h3>
-                            </div>
-                            <p className="text-slate-300 text-lg leading-relaxed">{amenities_text || "Tudo que você precisa a poucos passos de casa."}</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             {/* Rules */}
             <section className="py-32">
