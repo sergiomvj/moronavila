@@ -125,7 +125,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
                 <div className="relative z-10 max-w-7xl mx-auto px-6 w-full mt-10">
                     <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tighter uppercase italic mb-6 drop-shadow-2xl">
+                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight uppercase italic mb-6 drop-shadow-xl">
                             {heroTitle}
                         </h2>
                         {heroSubtitle && (
