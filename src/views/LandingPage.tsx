@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Home, MapPin, Sparkles, Shield, ChevronRight, Play, ArrowRight } from 'lucide-react';
+import { Home, MapPin, Sparkles, Shield, ChevronRight, Play, ArrowRight, MessageCircle, Send } from 'lucide-react';
 import { fetchPublicPropertyDescription, fetchPublicRooms } from '../lib/database';
 import { PropertyDescription, Room } from '../types';
 
@@ -7,6 +7,8 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
     const [propertyDesc, setPropertyDesc] = useState<PropertyDescription | null>(null);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
+    const [leadForm, setLeadForm] = useState({ name: '', phone: '', email: '' });
+    const [leadSubmitted, setLeadSubmitted] = useState(false);
 
     useEffect(() => {
         const loadPublicData = async () => {
@@ -78,6 +80,12 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
     const { title: heroTitle, subtitle: heroSubtitle } = formatHeroText(main_text);
 
+    const handleLeadSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setLeadSubmitted(true);
+        // Aqui deve entrar integração futura com o agente virtual (ex: Whatsapp, Manychat, ou redirecionamento Web)
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-rose-500/30">
             {/* Topbar */}
@@ -87,8 +95,16 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                         <div className="bg-gradient-to-br from-rose-500 to-rose-700 p-2.5 rounded-xl text-white shadow-lg shadow-rose-900/20">
                             <Home size={24} />
                         </div>
-                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">Morona<span className="text-rose-600">Vila</span></h1>
+                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic hidden md:block">Morona<span className="text-rose-600">Vila</span></h1>
                     </div>
+
+                    <nav className="hidden lg:flex items-center gap-8">
+                        <a href="#a-casa" className="text-sm font-bold text-slate-300 hover:text-white uppercase tracking-wider transition-colors">A Casa</a>
+                        <a href="#onde-estamos" className="text-sm font-bold text-slate-300 hover:text-white uppercase tracking-wider transition-colors">Onde Estamos</a>
+                        <a href="#amenidades" className="text-sm font-bold text-slate-300 hover:text-white uppercase tracking-wider transition-colors">Amenidades</a>
+                        <a href="#contato" className="text-sm font-bold text-rose-500 hover:text-rose-400 uppercase tracking-wider transition-colors">Quero saber mais</a>
+                    </nav>
+
                     <button
                         onClick={onLoginClick}
                         className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all border border-white/10 hover:border-white/20"
@@ -258,6 +274,75 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                     <p className="text-slate-300 text-lg leading-relaxed whitespace-pre-line text-left md:text-center p-8 md:p-12 bg-slate-900/40 backdrop-blur-sm shadow-xl rounded-[2.5rem] border border-slate-800">
                         {rules_text || "Valorizamos o respeito, o silêncio após as 22h e a colaboração para manter o ambiente sempre agradável para todos."}
                     </p>
+                </div>
+            </section>
+
+            {/* Quer saber mais? (Lead Capture / AI Agent) */}
+            <section id="contato" className="py-32 bg-gradient-to-b from-slate-950 to-slate-900 border-t border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-full max-h-96 bg-rose-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+                <div className="max-w-4xl mx-auto px-6 relative z-10">
+                    <div className="text-center mb-16">
+                        <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-rose-500/10 text-rose-500 mb-6">
+                            <MessageCircle size={32} />
+                        </div>
+                        <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase italic mb-6">Quer saber mais?</h2>
+                        <p className="text-xl text-slate-300 font-medium">Fale com nosso Agente Virtual! Ele é bem humorado, tira todas as suas dúvidas e até te mostra um tour de fotos inédito da casa.</p>
+                    </div>
+
+                    <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+                        {!leadSubmitted ? (
+                            <form onSubmit={handleLeadSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Como quer ser chamado?</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={leadForm.name}
+                                            onChange={e => setLeadForm({ ...leadForm, name: e.target.value })}
+                                            placeholder="Seu nome"
+                                            className="w-full bg-slate-950/50 border border-slate-800 rounded-full px-6 py-4 text-white focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Telefone (WhatsApp)</label>
+                                        <input
+                                            required
+                                            type="tel"
+                                            value={leadForm.phone}
+                                            onChange={e => setLeadForm({ ...leadForm, phone: e.target.value })}
+                                            placeholder="(21) 99999-9999"
+                                            className="w-full bg-slate-950/50 border border-slate-800 rounded-full px-6 py-4 text-white focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Melhor E-mail</label>
+                                    <input
+                                        required
+                                        type="email"
+                                        value={leadForm.email}
+                                        onChange={e => setLeadForm({ ...leadForm, email: e.target.value })}
+                                        placeholder="seu@email.com"
+                                        className="w-full bg-slate-950/50 border border-slate-800 rounded-full px-6 py-4 text-white focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500 outline-none transition-all"
+                                    />
+                                </div>
+                                <button type="submit" className="w-full flex items-center justify-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95 mt-8">
+                                    Chamar o Agente <Send size={18} />
+                                </button>
+                            </form>
+                        ) : (
+                            <div className="text-center py-10 animate-in fade-in zoom-in duration-500">
+                                <div className="inline-flex items-center justify-center p-6 rounded-full bg-emerald-500/10 text-emerald-400 mb-6 border border-emerald-500/20">
+                                    <MessageCircle size={48} />
+                                </div>
+                                <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic mb-4">Conectando...</h3>
+                                <p className="text-slate-400 font-medium">Aguarde um momento enquanto te transferimos para o nosso Agente Virtual super gente fina!</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </section>
 
