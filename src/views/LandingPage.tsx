@@ -88,8 +88,8 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                 </div>
 
                 <div className="relative z-10 max-w-7xl mx-auto px-6 w-full mt-10">
-                    <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                        <h2 className="text-5xl md:text-7xl font-black text-white leading-[1.1] tracking-tighter uppercase italic mb-8">
+                    <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tighter uppercase italic mb-8 drop-shadow-2xl">
                             {main_text || "Descubra o conforto de morar bem!"}
                         </h2>
                         <a href="#rooms" className="inline-flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95">
