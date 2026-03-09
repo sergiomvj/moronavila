@@ -151,8 +151,8 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
                         className={`flex items-center gap-2.5 px-8 py-3.5 rounded-[22px] font-black text-[11px] uppercase tracking-[0.15em] transition-all whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-rose-600 text-white shadow-xl shadow-rose-900/60 scale-105 z-10'
-                                : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800'
+                            ? 'bg-rose-600 text-white shadow-xl shadow-rose-900/60 scale-105 z-10'
+                            : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800'
                             }`}
                     >
                         <tab.icon size={16} />
@@ -240,8 +240,8 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                                                         <button
                                                             onClick={() => handleToggleRoomMediaMarketing(media.id, !media.is_marketing)}
                                                             className={`p-2.5 rounded-xl backdrop-blur-md border shadow-2xl transition-all duration-300 active:scale-90 ${media.is_marketing
-                                                                    ? 'bg-amber-500 text-white border-white/20 opacity-100'
-                                                                    : 'bg-slate-900/70 text-slate-400 border-slate-700 opacity-0 group-hover:opacity-100 hover:text-amber-400 hover:border-amber-400/30'
+                                                                ? 'bg-amber-500 text-white border-white/20 opacity-100'
+                                                                : 'bg-slate-900/70 text-slate-400 border-slate-700 opacity-0 group-hover:opacity-100 hover:text-amber-400 hover:border-amber-400/30'
                                                                 }`}
                                                             title={media.is_marketing ? "Remover do site de vendas" : "Adicionar ao site de vendas"}
                                                         >
@@ -355,7 +355,10 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                     <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[40px] p-8 space-y-6 shadow-xl">
                         <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Painel de Controle</h3>
                         <div className="space-y-3">
-                            <button className="w-full flex items-center justify-between p-5 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-rose-500/50 rounded-3xl transition-all group shadow-inner">
+                            <button
+                                onClick={() => window.open('/', '_blank')}
+                                className="w-full flex items-center justify-between p-5 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-rose-500/50 rounded-3xl transition-all group shadow-inner"
+                            >
                                 <div className="flex items-center gap-3 text-slate-300 group-hover:text-white transition-colors">
                                     <Layout size={20} />
                                     <span className="text-xs font-black uppercase tracking-widest">Preview Landing Page</span>
