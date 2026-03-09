@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Home, LogIn, UserPlus, Mail, Lock, User, Phone, ArrowRight, Heart } from 'lucide-react';
 import { signIn, signUpResident, resetPassword } from '../lib/database';
 
-export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
+export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, onBack?: () => void }) {
     const [isLogin, setIsLogin] = useState(true);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [name, setName] = useState('');
@@ -74,6 +74,17 @@ export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
                         <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-[280px]">
                             A gestão inteligente que você precisava para sua república, com a harmonia que você merece.
                         </p>
+
+                        {onBack && (
+                            <div className="pt-4">
+                                <button
+                                    onClick={onBack}
+                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-widest transition-all border border-white/10"
+                                >
+                                    <ArrowRight className="rotate-180" size={16} /> Voltar para o Site
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-4 text-white/40">
@@ -85,11 +96,19 @@ export function Login({ onLogin }: { onLogin: (authId: string) => void }) {
                 {/* Form Side */}
                 <div className="p-8 lg:p-12 bg-slate-950/50">
                     {/* Header for mobile */}
-                    <div className="lg:hidden flex flex-col items-center mb-10">
+                    <div className="lg:hidden flex flex-col items-center mb-10 relative">
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="absolute left-0 top-0 p-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
+                            >
+                                <ArrowRight className="rotate-180" size={20} />
+                            </button>
+                        )}
                         <div className="bg-rose-600 p-2.5 rounded-xl text-white mb-4 shadow-lg shadow-rose-900/30">
                             <Home size={24} />
                         </div>
-                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic text-center">Morona<span className="text-rose-600">Vila</span></h1>
+                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">Morona<span className="text-rose-600">Vila</span></h1>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Viver feliz perto de tudo</p>
                     </div>
 

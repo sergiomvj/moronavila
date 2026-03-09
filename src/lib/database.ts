@@ -272,9 +272,35 @@ export async function fetchPropertyDescription(): Promise<PropertyDescription> {
 }
 
 export async function updatePropertyDescription(updates: Partial<PropertyDescription>): Promise<PropertyDescription> {
-    const { data, error } = await supabase.from('property_description').update(toSnake(updates)).eq('id', updates.id).select().single();
+    const { data, error } = await supabase.from('property_description').upsert({ id: 'default', ...updates }).select().single();
     if (error) throw error;
     return data as PropertyDescription;
+}
+
+// ── PUBLIC ENDPOINTS FOR LANDING PAGE ──────────────────────────────────────────
+
+export async function fetchPublicPropertyDescription(): Promise<PropertyDescription> {
+    const { data, error } = await supabase.from('property_description').select('*').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data as PropertyDescription;
+}
+
+export async function fetchPublicRooms(): Promise<Room[]> {
+    const [roomsRes, mediaRes] = await Promise.all([
+        supabase.from('rooms').select('*').order('name'),
+        supabase.from('room_media').select('*').eq('is_marketing', true).order('created_at'),
+    ]);
+    if (roomsRes.error) throw roomsRes.error;
+
+    const rooms = (roomsRes.data || []) as any[];
+    const media = (mediaRes.data || []) as any[];
+
+    return rooms.map(r => ({
+        ...r,
+        media: media.filter(m => m.room_id === r.id),
+        furniture: [], // não exibir móveis publicamente
+        residentIds: [], // não exibir moradores publicamente
+    })) as Room[];
 }
 
 // ── MAINTENANCE ────────────────────────────────────────────────────────────────

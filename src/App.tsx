@@ -28,10 +28,12 @@ import { NoticesView } from './views/NoticesView';
 import { CalendarView } from './views/CalendarView';
 import { LaundryView } from './views/LaundryView';
 import { PropertyDescView } from './views/PropertyDescView';
+import { LandingPage } from './views/LandingPage';
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [loadingInitial, setLoadingInitial] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [initialModal, setInitialModal] = useState<string | null>(null);
@@ -177,7 +179,10 @@ function App() {
   }
 
   if (!session || !currentUser) {
-    return <Login onLogin={loadAllData} />;
+    if (showLogin) {
+      return <Login onLogin={loadAllData} onBack={() => setShowLogin(false)} />;
+    }
+    return <LandingPage onLoginClick={() => setShowLogin(true)} />;
   }
 
   const isAdmin = currentUser.role === UserRole.ADMIN;
