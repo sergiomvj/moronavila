@@ -79,7 +79,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                         <div className="bg-gradient-to-br from-rose-500 to-rose-700 p-2.5 rounded-xl text-white shadow-lg shadow-rose-900/20">
                             <Home size={24} />
                         </div>
-                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic hidden md:block">Morona<span className="text-rose-600">Vila</span></h1>
+                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">Morona<span className="text-rose-600">Vila</span></h1>
                     </div>
 
                     <nav className="hidden lg:flex items-center gap-8">
