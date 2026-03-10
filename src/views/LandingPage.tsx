@@ -60,25 +60,9 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
     const heroMedia = main_media?.[0] || 'https://images.pexels.com/photos/5935228/pexels-photo-5935228.jpeg';
 
-    const defaultTitle = "Para morar, viver e estudar próximo das principais universidades e do trabalho";
-    const defaultSubtitle = "MoronaVila é a solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com banheiro privativo, ampla cozinha com armarios individuais para mantimentos com chave, lavanderia, sala de TV, sala de estudo e muita area externa arborizada para relachar. Quartos com mobiliário básico completo e funcional, interfone com ramal exclusivo para cada quarto, internet de alta velocidade em toda a propriedade.";
-
-    const formatHeroText = (text: string) => {
-        if (!text || text.trim() === '') return { title: defaultTitle, subtitle: defaultSubtitle };
-
-        // Divide o texto por quebras de linha para separar o título do subtítulo
-        const parts = text.split('\n').filter(p => p.trim() !== '');
-
-        if (parts.length > 1) {
-            return {
-                title: parts[0],
-                subtitle: parts.slice(1).join('\n')
-            };
-        }
-        return { title: parts[0], subtitle: null };
-    };
-
-    const { title: heroTitle, subtitle: heroSubtitle } = formatHeroText(main_text);
+    // Define o Título e Subtítulo fixos solicitados pelo usuário ignorando o DB para essa parte
+    const heroTitle = "Para morar, viver e estudar próximo das principais universidades e do trabalho";
+    const heroSubtitle = "MoronaVila é a solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com banheiro privativo, ampla cozinha com armarios individuais para mantimentos com chave, lavanderia, sala de TV, sala de estudo e muita area externa arborizada para relachar. Quartos com mobiliário básico completo e funcional, interfone com ramal exclusivo para cada quarto, internet de alta velocidade em toda a propriedade.";
 
     const handleLeadSubmit = (e: React.FormEvent) => {
         e.preventDefault();
