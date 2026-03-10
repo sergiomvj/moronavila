@@ -62,7 +62,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
     // Define o Título e Subtítulo fixos solicitados pelo usuário ignorando o DB para essa parte
     const heroTitle = "Para morar, viver e estudar próximo das principais universidades e do trabalho";
-    const heroSubtitle = "MoronaVila é a solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com banheiro privativo, ampla cozinha com armarios individuais para mantimentos com chave, lavanderia, sala de TV, sala de estudo e muita area externa arborizada para relachar. Quartos com mobiliário básico completo e funcional, interfone com ramal exclusivo para cada quarto, internet de alta velocidade em toda a propriedade.";
+    const heroSubtitle = "A solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com mobiliário básico completo, interfone com ramal exclusivo e banheiro privativo, ampla cozinha com armarios individuais, lavanderia, sala de TV, sala de estudo e muita area externa arborizada compartilhada, tudo com internet banda larga.";
 
     const handleLeadSubmit = (e: React.FormEvent) => {
         e.preventDefault();
