@@ -60,8 +60,8 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
     const heroMedia = main_media?.[0] || 'https://images.pexels.com/photos/5935228/pexels-photo-5935228.jpeg';
 
-    const defaultTitle = "MoronaVila é a solução ideal para quem precisa de silencio, ordem e privacidade para morar, viver e estudar.";
-    const defaultSubtitle = "Pertinho das principais universidades e do trabalho, comercio farto 24 horas por dia e transporte para todo o Rio de Janeiro. Oferecemos quartos individuais com banheiro privativo e quartos compartilhados para 3 pessoas, ampla cozinha com armarios individuais para mantimentos com chave, lavanderia, sala de TV, sala de estudo e muita area externa arborizada para relachar. Quartos com mobiliário básico completo e funcional, interfone com ramal exclusivo para cada quarto, internet de alta velocidade em toda a propriedade.";
+    const defaultTitle = "Para morar, viver e estudar próximo das principais universidades e do trabalho";
+    const defaultSubtitle = "MoronaVila é a solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com banheiro privativo, ampla cozinha com armarios individuais para mantimentos com chave, lavanderia, sala de TV, sala de estudo e muita area externa arborizada para relachar. Quartos com mobiliário básico completo e funcional, interfone com ramal exclusivo para cada quarto, internet de alta velocidade em toda a propriedade.";
 
     const formatHeroText = (text: string) => {
         if (!text || text.trim() === '') return { title: defaultTitle, subtitle: defaultSubtitle };
