@@ -10,6 +10,11 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
     const [leadForm, setLeadForm] = useState({ name: '', phone: '', email: '' });
     const [leadSubmitted, setLeadSubmitted] = useState(false);
 
+    // Chat state - Moved to top to follow Rules of Hooks
+    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+    const [currentMessage, setCurrentMessage] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+
     useEffect(() => {
         const loadPublicData = async () => {
             try {
@@ -64,10 +69,6 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
     // Define o Título e Subtítulo fixos solicitados pelo usuário ignorando o DB para essa parte
     const heroTitle = "Para morar, viver e estudar próximo das principais universidades e do trabalho";
     const heroSubtitle = "A solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com mobiliário básico completo, interfone com ramal exclusivo e banheiro privativo, ampla cozinha com armarios individuais, lavanderia, sala de TV, sala de estudo e muita area externa arborizada compartilhada, tudo com internet banda larga.";
-
-    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
-    const [currentMessage, setCurrentMessage] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
 
     const handleLeadSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

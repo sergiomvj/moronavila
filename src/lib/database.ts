@@ -288,7 +288,7 @@ export async function fetchPublicPropertyDescription(): Promise<PropertyDescript
 export async function fetchPublicRooms(): Promise<Room[]> {
     const [roomsRes, mediaRes] = await Promise.all([
         supabase.from('rooms').select('*').order('name'),
-        supabase.from('room_media').select('*').eq('is_marketing', true).order('created_at'),
+        supabase.from('room_media').select('*').order('created_at'),
     ]);
     if (roomsRes.error) throw roomsRes.error;
 
