@@ -74,7 +74,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
         setLeadSubmitted(true);
 
         // Início automático do chat
-        const welcomeMessage = `Olá ${leadForm.name}! Sou o Agente Virtual da MoronaVila. Como posso te ajudar hoje? Já vi que você deixou seu contato e logo alguém da nossa equipe também pode falar com você, mas enquanto isso, pode tirar suas dúvidas comigo!`;
+        const welcomeMessage = `Olá ${leadForm.name}! Sou o Agente Virtual da MoronaVila. Como posso te ajudar hoje? Além de tirar dúvidas comigo, você pode clicar no botão verde abaixo para falar direto com um consultor no nosso WhatsApp e agendar sua visita!`;
         setChatMessages([{ role: 'assistant', content: welcomeMessage }]);
     };
 
@@ -385,6 +385,16 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                                <div className="p-4 bg-slate-950/20 border-t border-white/5 flex justify-center">
+                                    <a
+                                        href={`https://wa.me/5521999999999?text=${encodeURIComponent(`Olá, meu nome é ${leadForm.name} e acabei de conhecer a MoronaVila! Gostaria de mais informações.`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full font-black text-[10px] uppercase tracking-widest transition-all shadow-lg hover:scale-105 active:scale-95"
+                                    >
+                                        <MessageCircle size={16} /> Falar no WhatsApp
+                                    </a>
                                 </div>
                                 <form onSubmit={handleSendMessage} className="p-4 bg-slate-950/40 border-t border-white/5 flex gap-3">
                                     <input

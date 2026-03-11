@@ -299,13 +299,10 @@ app.post('/api/chat', async (req, res) => {
     const { message, name, phone, history = [] } = req.body;
 
     // Se for a primeira mensagem, envia notificação de WhatsApp (Lead)
-    if (history.length === 0 && name) {
-        // Log para debug
-        console.log(`Novo Lead capturado: ${name} - Iniciando WhatsApp via AiSensy...`);
-        // Aqui chamamos o AiSensy se tivermos o telefone
-        if (phone) {
-            sendWhatsAppNotification(name, phone);
-        }
+    if (history.length === 0 && name && phone) {
+        // Notificação via WhatsApp desativada devido às limitações do plano gratuito da AiSensy (API Outbound bloqueada).
+        // O contato agora é iniciado pelo usuário via botão no frontend.
+        console.log(`Novo lead capturado no chat: ${name} (${phone})`);
     }
 
     try {
