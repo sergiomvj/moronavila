@@ -5,12 +5,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import OpenAI from 'openai';
 
 dotenv.config({ path: '.env.local' });
 
 const execPromise = promisify(exec);
 const app = express();
 const port = process.env.PORT || 4000;
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || ''
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -257,6 +262,106 @@ app.post('/api/payments/webhook', async (req, res) => {
     }
 
     res.status(200).send('OK');
+});
+
+// --- UTILITÁRIOS ---
+
+async function sendWhatsAppNotification(name: string, phone: string) {
+    const AISENSY_KEY = process.env.AISENSY_API_KEY;
+    if (!AISENSY_KEY) {
+        console.warn('AISENSY_API_KEY não configurada no .env.local');
+        return;
+    }
+
+    try {
+        const response = await fetch('https://backend.aisensy.com/campaign/t1/api/v2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                apiKey: AISENSY_KEY,
+                campaignName: 'lead_capture', // Placeholder: Alterar para o nome real da campanha no AiSensy
+                destination: phone,
+                userName: name,
+                templateParams: [name], // Exemplo: ["Olá {{1}}, recebemos seu interesse..."]
+                source: 'LandingPage'
+            })
+        });
+        const data = await response.json();
+        console.log('AiSensy Response:', data);
+    } catch (error) {
+        console.error('Erro ao enviar WhatsApp via AiSensy:', error);
+    }
+}
+
+// --- ENDPOINT DO AGENTE VIRTUAL (OPENAI) ---
+
+app.post('/api/chat', async (req, res) => {
+    const { message, name, phone, history = [] } = req.body;
+
+    // Se for a primeira mensagem, envia notificação de WhatsApp (Lead)
+    if (history.length === 0 && name) {
+        // Log para debug
+        console.log(`Novo Lead capturado: ${name} - Iniciando WhatsApp via AiSensy...`);
+        // Aqui chamamos o AiSensy se tivermos o telefone
+        if (phone) {
+            sendWhatsAppNotification(name, phone);
+        }
+    }
+
+    try {
+        const systemPrompt = `
+            Você é o "Morona", o Agente Virtual acolhedor e elucidativo da MoronaVila. Sua missão é guiar interessados pela experiência de morar na Vila Isabel com silêncio, ordem e privacidade.
+
+            SOBRE A MORONAVILA:
+            - CONCEITO: Solução ideal para quem busca foco total em estudos e trabalho, com infraestrutura simples, funcional e muito tranquila.
+            - LOCALIZAÇÃO: Rua Torres Homem 886, no coração de Vila Isabel, Rio de Janeiro. 
+                - Referências: A 100 metros da quadra da Unidos de Vila Isabel, pertinho da Praça Sete e a apenas 200 metros do Shopping Boulevard.
+            - VIZINHANÇA ESTRATÉGICA: Vila Isabel é o reduto boêmio mais charmoso do Rio. Comércio farto 24h na porta: Food Trucks, Restaurantes, Academias, Supermercados, Farmácias 24h e Padarias a 2 minutos de distância.
+            - ACESSIBILIDADE E PROXIMIDADE:
+                - Estudo/Saúde: Localização privilegiada para quem estuda ou trabalha na UERJ (Campus Maracanã), Hospital Universitário Pedro Ernesto (HUPE), UVA (Tijuca), IFF e outras unidades na região do Maracanã/Tijuca.
+                - Mobilidade: Centenas de opções de transporte para todo o Rio. Estamos a 20 minutos do Centro e 30 minutos da Zona Sul.
+
+            INFRAESTRUTURA E ACOMODAÇÕES:
+            - Quartos: Simples, funcionais e focados no descanso e estudo. Mobiliário completo: cama, armários, mesa de estudo e instalação para antena de TV.
+            - Tipos e Valores:
+                - Individuais: R$ 850 + taxas (com banheiro privativo).
+                - Compartilhados: R$ 500 + taxas (até 3 pessoas, EXCLUSIVO para homens).
+            - Tecnologia e Conforto: Interfone com ramal exclusivo em cada quarto (privacidade total), internet de alta velocidade em toda a propriedade, controle de água e energia individualizados e sistema de climatização para o calor do Rio.
+            - Áreas Comuns: Copa-Cozinha equipada com armários individuais com chave (para mantimentos), geladeiras (uma para cada 4 pessoas), microondas e forno elétrico. Lavanderia, Sala de TV, Sala de Estudo e uma ampla área externa arborizada para relaxar.
+
+            REGRAS DE CONVIVÊNCIA (SÍNTESE: "Mantenha o ambiente tão bom para os outros quanto você gostaria para você"):
+            - Proibições: NÃO é permitido visitas, NÃO é permitido fumar, NÃO é permitido animais.
+            - Ordem: Manter quarto, cozinha e lavanderia sempre limpos e arrumados após o uso.
+            - Silêncio: O barulho deve ser evitado a TODO momento (não apenas após as 22h) para não incomodar outros residentes. Som e TV apenas em limites razoáveis.
+
+            PROCESSO DE ENTRADA:
+            1. Preenchimento de formulário completo para análise.
+            2. Se aprovado: Pagamento do aluguel do mês + 1 mês de depósito (caução) + Depósito das chaves (R$ 65).
+
+            DIRETRIZES DE COMUNICAÇÃO:
+            - PERSONA: Seja acolhedor, empático e elucidativo. Use o nome (${name || 'Interessado'}).
+            - ESTILO: Explique as regras de forma positiva (foco no benefício do silêncio e ordem para quem estuda/trabalha).
+            - ENCERRAMENTO: Se o interesse for alto, peça para finalizarem os dados aqui no formulário ou sugerir o contato via WhatsApp para agendar visita.
+        `;
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                { role: "system", content: systemPrompt },
+                ...history,
+                { role: "user", content: message }
+            ],
+            max_tokens: 800,
+            temperature: 0.7
+        });
+
+        const response = completion.choices[0].message.content;
+        res.json({ response });
+
+    } catch (error: any) {
+        console.error('Erro no Chat OpenAI:', error);
+        res.status(500).json({ error: 'Erro ao processar mensagem do chat' });
+    }
 });
 
 // --- SERVIR FRONTEND ESTÁTICO EM PRODUÇÃO ---

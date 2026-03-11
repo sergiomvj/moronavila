@@ -16,8 +16,9 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                 const desc = await fetchPublicPropertyDescription();
                 const publicRooms = await fetchPublicRooms();
                 setPropertyDesc(desc);
-                // Exibe apenas quartos que possuem mídias marcadas como marketing
-                setRooms(publicRooms.filter(r => r.media && r.media.length > 0));
+                // Exibe todos os quartos para evitar que quartos recém-cadastrados sumam
+                // Se houver mídias marketing, elas serão prioridade no componente
+                setRooms(publicRooms);
             } catch (error) {
                 console.error('Failed to load public data:', error);
             } finally {
@@ -64,10 +65,53 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
     const heroTitle = "Para morar, viver e estudar próximo das principais universidades e do trabalho";
     const heroSubtitle = "A solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com mobiliário básico completo, interfone com ramal exclusivo e banheiro privativo, ampla cozinha com armarios individuais, lavanderia, sala de TV, sala de estudo e muita area externa arborizada compartilhada, tudo com internet banda larga.";
 
-    const handleLeadSubmit = (e: React.FormEvent) => {
+    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+    const [currentMessage, setCurrentMessage] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+
+    const handleLeadSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLeadSubmitted(true);
-        // Aqui deve entrar integração futura com o agente virtual (ex: Whatsapp, Manychat, ou redirecionamento Web)
+
+        // Início automático do chat
+        const welcomeMessage = `Olá ${leadForm.name}! Sou o Agente Virtual da MoronaVila. Como posso te ajudar hoje? Já vi que você deixou seu contato e logo alguém da nossa equipe também pode falar com você, mas enquanto isso, pode tirar suas dúvidas comigo!`;
+        setChatMessages([{ role: 'assistant', content: welcomeMessage }]);
+    };
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentMessage.trim()) return;
+
+        const newUserMessage = { role: 'user' as const, content: currentMessage };
+        setChatMessages(prev => [...prev, newUserMessage]);
+        setCurrentMessage('');
+        setIsTyping(true);
+
+        try {
+            const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+            const response = await fetch(`${apiBase}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: currentMessage,
+                    name: leadForm.name,
+                    phone: leadForm.phone,
+                    history: chatMessages
+                })
+            });
+
+            const data = await response.json();
+            if (data.response) {
+                setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+            } else {
+                setChatMessages(prev => [...prev, { role: 'assistant', content: 'Desculpe, tive um probleminha para processar sua mensagem. Pode repetir?' }]);
+            }
+        } catch (error) {
+            console.error('Chat error:', error);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: 'Estou com dificuldades de conexão agora. Que tal nos chamar no WhatsApp?' }]);
+        } finally {
+            setIsTyping(false);
+        }
     };
 
     return (
@@ -318,12 +362,46 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                                 </button>
                             </form>
                         ) : (
-                            <div className="text-center py-10 animate-in fade-in zoom-in duration-500">
-                                <div className="inline-flex items-center justify-center p-6 rounded-full bg-emerald-500/10 text-emerald-400 mb-6 border border-emerald-500/20">
-                                    <MessageCircle size={48} />
+                            <div className="flex flex-col h-[600px] animate-in fade-in zoom-in duration-500">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                    {chatMessages.map((msg, idx) => (
+                                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[85%] p-4 rounded-[2rem] text-sm font-medium leading-relaxed shadow-lg ${msg.role === 'user'
+                                                ? 'bg-rose-600 text-white rounded-tr-none'
+                                                : 'bg-slate-950/80 border border-slate-800 text-slate-200 rounded-tl-none'
+                                                }`}>
+                                                {msg.content}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {isTyping && (
+                                        <div className="flex justify-start">
+                                            <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-[2rem] rounded-tl-none shadow-lg">
+                                                <div className="flex gap-1">
+                                                    <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                    <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                    <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic mb-4">Conectando...</h3>
-                                <p className="text-slate-400 font-medium">Aguarde um momento enquanto te transferimos para o nosso Agente Virtual super gente fina!</p>
+                                <form onSubmit={handleSendMessage} className="p-4 bg-slate-950/40 border-t border-white/5 flex gap-3">
+                                    <input
+                                        type="text"
+                                        value={currentMessage}
+                                        onChange={e => setCurrentMessage(e.target.value)}
+                                        placeholder="Tire suas dúvidas aqui..."
+                                        className="flex-1 bg-slate-950/50 border border-slate-800 rounded-full px-6 py-3 text-white focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500 outline-none transition-all text-sm"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={isTyping}
+                                        className="bg-rose-600 hover:bg-rose-700 text-white p-3 rounded-full transition-all disabled:opacity-50 disabled:scale-95"
+                                    >
+                                        <Send size={20} />
+                                    </button>
+                                </form>
                             </div>
                         )}
                     </div>
