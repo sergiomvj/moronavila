@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, Edit2, Shield, User as UserIcon, X, Wifi, Plus, ImageIcon, Trash2, Bed } from 'lucide-react';
 import { Resident, UserRole, Room } from '../types';
-import { updateResident, signUpAdmin, signUpResident, uploadProfilePhoto, deleteResident, fetchRooms } from '../lib/database';
+import { updateResident, signUpAdmin, signUpResident, uploadProfilePhoto, deleteResident, fetchRooms, fetchCurrentResident } from '../lib/database';
 
 interface ResidentsViewProps {
     residents: Resident[];
@@ -138,14 +138,12 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
         e.preventDefault();
         setIsCreating(true);
         try {
-            const { signUpResident, uploadProfilePhoto, updateResident } = await import('../lib/database');
             // 1. Criar usuário no Auth e Resident no DB
             const authData = await signUpResident(newEmail, newPassword, newName, newPhone);
 
             if (!authData.user) throw new Error('Erro ao criar usuário.');
 
             // Buscar o residente criado automaticamente pelo trigger/signUpResident
-            const { fetchCurrentResident } = await import('../lib/database');
             const resident = await fetchCurrentResident(authData.user.id);
             if (!resident) throw new Error('Perfil de morador não encontrado.');
 
@@ -428,7 +426,6 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                             <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                                                 const file = e.target.files?.[0];
                                                 if (file) {
-                                                    const { uploadProfilePhoto } = await import('../lib/database');
                                                     setIsSubmitting(true);
                                                     try {
                                                         const url = await uploadProfilePhoto(editingResident.id, file);

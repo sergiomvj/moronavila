@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar as CalendarIcon, Clock, MapPin, Plus, X } from 'lucide-react';
 import { CalendarEvent } from '../types';
+import { createCalendarEvent } from '../lib/database';
 
 interface CalendarViewProps {
     events: CalendarEvent[];
@@ -28,7 +29,6 @@ export function CalendarView({ events, isAdmin, onRefresh, initialModal }: Calen
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const { createCalendarEvent } = await import('../lib/database');
             await createCalendarEvent({
                 title: newTitle,
                 description: newDesc,

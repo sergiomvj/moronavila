@@ -70,6 +70,19 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
   );
   const [resolvedResident, setResolvedResident] = useState<Resident>(currentUser);
   const [sipCredentials, setSipCredentials] = useState<SoftphoneSipCredentials | null>(null);
+  const [microphonePermission, setMicrophonePermission] = useState<
+    'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
+  >('unknown');
+  const [testingMicrophone, setTestingMicrophone] = useState(false);
+  const [browserReadiness, setBrowserReadiness] = useState<{
+    secureContext: boolean;
+    mediaDevices: boolean;
+    webRtc: boolean;
+  }>({
+    secureContext: false,
+    mediaDevices: false,
+    webRtc: false,
+  });
   const transportRef = useRef<SoftphoneTransport>(createSoftphoneTransport(fallbackConfig));
 
   useEffect(() => {
@@ -127,6 +140,53 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
   }, [config]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setBrowserReadiness({
+      secureContext: window.isSecureContext,
+      mediaDevices: Boolean(navigator.mediaDevices?.getUserMedia),
+      webRtc: typeof RTCPeerConnection !== 'undefined',
+    });
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function inspectMicrophonePermission() {
+      if (
+        typeof navigator === 'undefined' ||
+        !('permissions' in navigator) ||
+        typeof navigator.permissions.query !== 'function'
+      ) {
+        if (active) setMicrophonePermission('unsupported');
+        return;
+      }
+
+      try {
+        const status = await navigator.permissions.query({
+          name: 'microphone' as PermissionName,
+        });
+
+        if (!active) return;
+        setMicrophonePermission(status.state as 'prompt' | 'granted' | 'denied');
+
+        status.onchange = () => {
+          if (!active) return;
+          setMicrophonePermission(status.state as 'prompt' | 'granted' | 'denied');
+        };
+      } catch {
+        if (active) setMicrophonePermission('unsupported');
+      }
+    }
+
+    inspectMicrophonePermission().catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const next = getInitialSoftphoneState(resolvedResident, config);
     setState(next);
     setDirectory((previous) =>
@@ -178,6 +238,37 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
   }, [config, resolvedResident, sipCredentials]);
 
   const canPlaceCalls = state.connectionStatus === 'active';
+
+  const handleMicrophoneTest = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMicrophonePermission('unsupported');
+      setState((previous) => ({
+        ...previous,
+        message: 'Este navegador nao permite testar o microfone por getUserMedia.',
+      }));
+      return;
+    }
+
+    setTestingMicrophone(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMicrophonePermission('granted');
+      setState((previous) => ({
+        ...previous,
+        message: 'Microfone liberado e pronto para chamadas WebRTC.',
+      }));
+    } catch (error) {
+      console.error(error);
+      setMicrophonePermission('denied');
+      setState((previous) => ({
+        ...previous,
+        message: 'Permissao de microfone negada. Libere o acesso no navegador antes de usar o softphone.',
+      }));
+    } finally {
+      setTestingMicrophone(false);
+    }
+  };
 
   const handleDial = (extension: string) => {
     setDialedNumber(extension);
@@ -334,6 +425,73 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
                 Estado atual
               </div>
               <p className="text-sm leading-relaxed text-slate-300">{state.message}</p>
+            </div>
+
+            <div className="rounded-2xl border border-white/5 bg-slate-900/70 p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                <Mic size={16} />
+                Prontidao do microfone
+              </div>
+              <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                    Permissao
+                  </div>
+                  <div className="mt-1 text-sm font-bold text-slate-100">
+                    {microphonePermission === 'granted'
+                      ? 'Liberado'
+                      : microphonePermission === 'denied'
+                        ? 'Negado'
+                        : microphonePermission === 'prompt'
+                          ? 'Aguardando autorizacao'
+                          : microphonePermission === 'unsupported'
+                            ? 'Nao suportado'
+                            : 'Verificando'}
+                  </div>
+                </div>
+                <button
+                  onClick={handleMicrophoneTest}
+                  disabled={testingMicrophone}
+                  className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold uppercase tracking-widest text-slate-200 transition hover:border-rose-500/30 disabled:opacity-60"
+                >
+                  {testingMicrophone ? 'Testando...' : 'Testar microfone'}
+                </button>
+              </div>
+              <p className="text-xs leading-relaxed text-slate-400">
+                Antes de usar o softphone com o PBX real, confirme que o navegador tem acesso ao microfone deste dispositivo.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/5 bg-slate-900/70 p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                <ShieldCheck size={16} />
+                Compatibilidade do navegador
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <span className="text-sm text-slate-300">Contexto seguro</span>
+                  <span className={`text-xs font-black uppercase tracking-widest ${browserReadiness.secureContext ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {browserReadiness.secureContext ? 'ok' : 'pendente'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <span className="text-sm text-slate-300">MediaDevices</span>
+                  <span className={`text-xs font-black uppercase tracking-widest ${browserReadiness.mediaDevices ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {browserReadiness.mediaDevices ? 'ok' : 'indisponivel'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <span className="text-sm text-slate-300">WebRTC</span>
+                  <span className={`text-xs font-black uppercase tracking-widest ${browserReadiness.webRtc ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {browserReadiness.webRtc ? 'ok' : 'indisponivel'}
+                  </span>
+                </div>
+              </div>
+              {!browserReadiness.secureContext && (
+                <p className="mt-3 text-xs leading-relaxed text-amber-300">
+                  Chamadas WebRTC no navegador normalmente exigem HTTPS ou `localhost`.
+                </p>
+              )}
             </div>
           </div>
         </div>

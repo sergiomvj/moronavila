@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 
 import { supabase } from './lib/supabase';
 import {
   fetchResidents, fetchRooms, fetchPayments, fetchMaintenance,
   fetchComplaints, fetchNotices, fetchCalendarEvents, fetchLaundrySchedules, fetchDevices,
-  fetchPropertyDescription
+  fetchPropertyDescription, fetchCurrentResident
 } from './lib/database';
 
 import {
@@ -29,7 +29,11 @@ import { CalendarView } from './views/CalendarView';
 import { LaundryView } from './views/LaundryView';
 import { PropertyDescView } from './views/PropertyDescView';
 import { LandingPage } from './views/LandingPage';
-import { SoftphoneDock } from './modules/softphone/SoftphoneDock';
+const SoftphoneDock = lazy(() =>
+  import('./modules/softphone/SoftphoneDock').then((module) => ({
+    default: module.SoftphoneDock,
+  }))
+);
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -93,7 +97,6 @@ function App() {
     setErrorMsg('');
     try {
       // 1. Carregar perfil do usuário primeiro (Independente)
-      const { fetchCurrentResident } = await import('./lib/database');
       const user = await fetchCurrentResident(userId);
       // Buscar email diretamente do Auth para fallback de nome confiável
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -284,7 +287,9 @@ function App() {
       )}
 
       {currentUser.role === UserRole.RESIDENT && (
-        <SoftphoneDock currentUser={currentUser} />
+        <Suspense fallback={null}>
+          <SoftphoneDock currentUser={currentUser} />
+        </Suspense>
       )}
     </Layout>
   );

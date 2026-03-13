@@ -53,3 +53,27 @@ Estas variaveis foram adicionadas para permitir que o softphone fique preparado 
 - Se o PBX ainda nao estiver provisionado, a interface entra em modo `Aguardando PBX`.
 - Quando as variaveis do PBX forem preenchidas, a aplicacao ja passa a refletir o estado `Pronto` e `Ativo` no fluxo local.
 - A proxima fase e conectar esse shell a uma implementacao SIP/WebRTC real.
+
+## Diagnostico rapido
+
+`npm run softphone:doctor`
+- Faz uma checagem local das variaveis do softphone.
+
+`GET /api/softphone/health`
+- Endpoint do `mac-server` para verificar se o backend local esta pronto para tentar o registro SIP.
+
+## Fluxo recomendado quando o PBX estiver instalado
+
+1. Preencher no `.env.local`:
+   `VITE_SOFTPHONE_ENABLED=true`
+   `VITE_SOFTPHONE_TRANSPORT=sipjs`
+   `VITE_SOFTPHONE_PBX_HOST=...`
+   `VITE_SOFTPHONE_PBX_DOMAIN=...`
+   `VITE_SOFTPHONE_PBX_WSS_URL=...`
+   `SOFTPHONE_PBX_DEFAULT_SECRET=...`
+2. Rodar `npm run softphone:doctor`
+3. Reiniciar `npm run mac-app`
+4. Conferir `http://localhost:4000/api/softphone/health`
+5. Entrar no app como morador e validar o shell do softphone
+6. No shell do softphone, usar `Testar microfone` antes da primeira chamada real
+7. Confirmar no shell que `Contexto seguro`, `MediaDevices` e `WebRTC` aparecem como compatíveis

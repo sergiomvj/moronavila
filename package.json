@@ -10,6 +10,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "mac-app": "tsx mac-server.ts",
+    "softphone:doctor": "node scripts/softphone-doctor.mjs",
     "docker:build": "docker build --build-arg VITE_SUPABASE_URL=%VITE_SUPABASE_URL% --build-arg VITE_SUPABASE_ANON_KEY=%VITE_SUPABASE_ANON_KEY% -t vpr-manager ."
   },
   "dependencies": {

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Wifi, Router, AlertTriangle, ShieldCheck, Laptop, Smartphone, Plus, Trash2, Edit } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Wifi, Router, AlertTriangle, ShieldCheck, Laptop, Smartphone, Plus, Trash2, Edit, PhoneCall, RefreshCw } from 'lucide-react';
 import { Resident, Device, UserRole } from '../types';
 import { createDevice, updateDevice, deleteDevice } from '../lib/database';
+import { getLocalApiBase } from '../lib/localApi';
 
 interface InternetViewProps {
     residents: Resident[];
@@ -12,6 +13,15 @@ interface InternetViewProps {
 
 export function InternetView({ residents, devices, currentUser, onUpdate }: InternetViewProps) {
     const isAdmin = currentUser.role === UserRole.ADMIN;
+    const [softphoneHealth, setSoftphoneHealth] = useState<{
+        ok: boolean;
+        transport: string;
+        enabled: boolean;
+        configured: boolean;
+        missing: string[];
+        recommendations: string[];
+    } | null>(null);
+    const [loadingSoftphoneHealth, setLoadingSoftphoneHealth] = useState(false);
 
     // View state
     const [isAdding, setIsAdding] = useState(false);
@@ -32,6 +42,26 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
 
     const activeDevices = devices.filter(d => d.status === 'Ativo');
     const pendingDevices = devices.filter(d => d.status === 'Pendente');
+
+    useEffect(() => {
+        if (!isAdmin) return;
+        loadSoftphoneHealth();
+    }, [isAdmin]);
+
+    const loadSoftphoneHealth = async () => {
+        setLoadingSoftphoneHealth(true);
+        try {
+            const response = await fetch(`${getLocalApiBase()}/api/softphone/health`);
+            if (!response.ok) throw new Error('Falha ao consultar saúde do softphone');
+            const data = await response.json();
+            setSoftphoneHealth(data);
+        } catch (error) {
+            console.error(error);
+            setSoftphoneHealth(null);
+        } finally {
+            setLoadingSoftphoneHealth(false);
+        }
+    };
 
     const handleSaveDevice = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -281,6 +311,76 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     <h4 className="text-3xl font-bold text-slate-900 mb-2">{activeUsers.length}</h4>
                     <p className="text-xs text-slate-500">Com plano de internet válido</p>
                 </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                    <div>
+                        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                            <PhoneCall size={18} className="text-indigo-600" />
+                            Prontidão do Softphone
+                        </h3>
+                        <p className="text-xs text-slate-500">Diagnóstico local do ambiente antes da ativação do PBX.</p>
+                    </div>
+                    <button
+                        onClick={loadSoftphoneHealth}
+                        className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                    >
+                        <RefreshCw size={14} className={loadingSoftphoneHealth ? 'animate-spin' : ''} />
+                        Atualizar
+                    </button>
+                </div>
+
+                {softphoneHealth ? (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</div>
+                                <div className={`mt-2 text-lg font-bold ${softphoneHealth.ok ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                    {softphoneHealth.ok ? 'Pronto para teste' : 'Pendente de configuração'}
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Transporte</div>
+                                <div className="mt-2 text-lg font-bold text-slate-900">{softphoneHealth.transport}</div>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Shell</div>
+                                <div className={`mt-2 text-lg font-bold ${softphoneHealth.enabled ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                    {softphoneHealth.enabled ? 'Habilitado' : 'Desabilitado'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {softphoneHealth.missing.length > 0 && (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                <div className="mb-2 text-xs font-bold uppercase tracking-widest text-amber-700">Variáveis ausentes</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {softphoneHealth.missing.map(item => (
+                                        <span key={item} className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase text-amber-700 border border-amber-200">
+                                            {item}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">Recomendações</div>
+                            <div className="space-y-2">
+                                {softphoneHealth.recommendations.map((item, index) => (
+                                    <div key={`${item}-${index}`} className="text-sm text-slate-600">
+                                        {item}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                        Não foi possível carregar o diagnóstico do softphone local.
+                    </div>
+                )}
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

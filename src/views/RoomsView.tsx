@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bed, ArrowLeft, Plus, ImageIcon, Film, AlertCircle, ChevronRight, X, Edit2, Trash2, ArrowRightLeft, Wrench, Users, CreditCard } from 'lucide-react';
 import { Room, Resident, MaintenanceRequest, MaintenanceStatus, Furniture, RoomMedia } from '../types';
-import { uploadRoomMedia, createMaintenanceRequest, deleteFurniture, updateFurniture, addFurniture } from '../lib/database';
+import { uploadRoomMedia, createMaintenanceRequest, deleteFurniture, updateFurniture, addFurniture, createRoom, updateRoom } from '../lib/database';
 
 interface RoomsViewProps {
     rooms: Room[];
@@ -48,7 +48,6 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const { createRoom, addFurniture } = await import('../lib/database');
             const newRoom = await createRoom({
                 name: newRoomName,
                 type: newRoomType as any,
@@ -610,7 +609,6 @@ export function RoomsView({ rooms, residents, maintenance, isAdmin, currentUser,
                                 e.preventDefault();
                                 setIsSubmitting(true);
                                 try {
-                                    const { updateRoom } = await import('../lib/database');
                                     await updateRoom(room.id, editRoomData);
                                     setIsEditingRoom(false);
                                     onRefresh();

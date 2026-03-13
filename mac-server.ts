@@ -192,6 +192,33 @@ app.get('/api/softphone/config', async (req, res) => {
     });
 });
 
+app.get('/api/softphone/health', async (_req, res) => {
+    const missing = [];
+
+    if (!SOFTPHONE_ENABLED) missing.push('VITE_SOFTPHONE_ENABLED');
+    if (!SOFTPHONE_PBX_HOST) missing.push('VITE_SOFTPHONE_PBX_HOST');
+    if (!SOFTPHONE_PBX_DOMAIN) missing.push('VITE_SOFTPHONE_PBX_DOMAIN');
+    if (!SOFTPHONE_PBX_WSS_URL) missing.push('VITE_SOFTPHONE_PBX_WSS_URL');
+    if (SOFTPHONE_TRANSPORT === 'sipjs' && !SOFTPHONE_PBX_DEFAULT_SECRET) {
+        missing.push('SOFTPHONE_PBX_DEFAULT_SECRET');
+    }
+
+    res.json({
+        ok: missing.length === 0,
+        transport: SOFTPHONE_TRANSPORT,
+        enabled: SOFTPHONE_ENABLED,
+        configured: Boolean(SOFTPHONE_PBX_HOST && SOFTPHONE_PBX_DOMAIN && SOFTPHONE_PBX_WSS_URL),
+        missing,
+        recommendations: missing.length === 0
+            ? ['Softphone pronto para testes de registro SIP no navegador.']
+            : [
+                'Preencha as variáveis ausentes no .env.local.',
+                'Reinicie o mac-server depois de alterar as variáveis.',
+                'Use npm run softphone:doctor para conferir o ambiente local.'
+            ]
+    });
+});
+
 // Função para obter o MAC a partir do IP (Windows)obter o MAC a partir do IP (Windows)
 async function getMacFromIp(ip: string): Promise<string | null> {
     try {

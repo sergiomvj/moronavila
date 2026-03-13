@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Users, CreditCard, Wrench, LayoutDashboard, CheckCircle2, AlertCircle, Wifi, Droplets, Plus, MessageSquare, X, Trello, Bed } from 'lucide-react';
+import { Users, CreditCard, Wrench, LayoutDashboard, CheckCircle2, AlertCircle, Wifi, Droplets, Plus, MessageSquare, X, Trello, Bed, PhoneCall } from 'lucide-react';
 import { Payment, MaintenanceRequest, Resident, Room, PaymentStatus, MaintenanceStatus, LaundrySchedule, UserRole, RoomType } from '../types';
 import { createMaintenanceRequest, createComplaint } from '../lib/database';
 
@@ -67,6 +67,9 @@ export function DashboardView({
         const openMaintenance = myMaintenance.filter(m => m.status === MaintenanceStatus.OPEN).length;
         const internetEnabled = residents.filter(r => r.internet_active).length;
         const internetBlocked = residents.filter(r => !r.internet_active).length;
+        const softphoneEnabled = residents.filter(r => r.softphone_enabled !== false).length;
+        const softphoneProvisioned = residents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension)).length;
+        const softphoneReadyOnNetwork = residents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active).length;
         const today = new Date().toISOString().split('T')[0];
         const todaysLaundry = laundrySchedules.filter(l => l.date === today).length;
         const myTodaysLaundry = laundrySchedules.filter(l => l.date === today && (isAdmin || l.resident_id === currentUser.id)).length;
@@ -79,6 +82,9 @@ export function DashboardView({
             totalResidents: residents.length,
             internetEnabled,
             internetBlocked,
+            softphoneEnabled,
+            softphoneProvisioned,
+            softphoneReadyOnNetwork,
             todaysLaundry,
             myTodaysLaundry,
             totalAvailableBeds
@@ -328,6 +334,47 @@ export function DashboardView({
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-2">Moradores Online</span>
                         </div>
                     </div>
+
+                    {isAdmin && (
+                        <div className="bento-card border-indigo-500/20 bg-indigo-500/5">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mb-2">Rollout Softphone</p>
+                                    <h4 className="text-2xl font-black text-white tracking-tight">Prontidão dos moradores</h4>
+                                </div>
+                                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                    <PhoneCall size={22} />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3 mb-6">
+                                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                                    <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Habilitados</div>
+                                    <div className="mt-2 text-2xl font-black text-white">{stats.softphoneEnabled}</div>
+                                </div>
+                                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                                    <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Com Ramal</div>
+                                    <div className="mt-2 text-2xl font-black text-white">{stats.softphoneProvisioned}</div>
+                                </div>
+                                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                                    <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Prontos</div>
+                                    <div className="mt-2 text-2xl font-black text-white">{stats.softphoneReadyOnNetwork}</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+                                    Prontos = softphone habilitado, ramal definido e internet ativa para o morador.
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab('internet')}
+                                    className="w-full rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-xs font-black uppercase tracking-widest text-indigo-300 transition hover:bg-indigo-500/20"
+                                >
+                                    Abrir painel técnico
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bento-card border-rose-500/20 bg-rose-600/5 flex items-center justify-between">
                         <div>

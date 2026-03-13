@@ -1,6 +1,7 @@
 import React from 'react';
 import { Megaphone, Pin, X } from 'lucide-react';
 import { Notice, Resident } from '../types';
+import { createNotice } from '../lib/database';
 
 interface NoticesViewProps {
     notices: Notice[];
@@ -29,7 +30,6 @@ export function NoticesView({ notices, residents, isAdmin, currentUser, onRefres
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const { createNotice } = await import('../lib/database');
             // Nota: autor_id deve ser o ID do admin atual. 
             // Como NoticesView não recebe currentUser, vou usar o primeiro admin encontrado ou lançar erro se não houver contexto.
             // O ideal seria passar currentUser, mas para simplificar vou assumir que o sistema sabe quem é o autor no backend ou passar um ID fixo se necessário.
