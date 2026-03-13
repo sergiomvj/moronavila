@@ -29,6 +29,7 @@ import { CalendarView } from './views/CalendarView';
 import { LaundryView } from './views/LaundryView';
 import { PropertyDescView } from './views/PropertyDescView';
 import { LandingPage } from './views/LandingPage';
+import { SoftphoneDock } from './modules/softphone/SoftphoneDock';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -280,6 +281,10 @@ function App() {
             />
           )}
         </>
+      )}
+
+      {currentUser.role === UserRole.RESIDENT && (
+        <SoftphoneDock currentUser={currentUser} />
       )}
     </Layout>
   );

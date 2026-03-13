@@ -154,6 +154,41 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
                             <label className="block text-sm font-bold text-slate-700 mb-1">Endereço de Trabalho</label>
                             <input type="text" value={editingResident.work_address} onChange={e => setEditingResident({ ...editingResident, work_address: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" required />
                         </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Nome no Softphone</label>
+                            <input
+                                type="text"
+                                value={editingResident.softphone_display_name || ''}
+                                onChange={e => setEditingResident({ ...editingResident, softphone_display_name: e.target.value })}
+                                className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
+                                placeholder="Ex: Apto 201 - Joao"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Ramal Preferencial</label>
+                            <input
+                                type="text"
+                                value={editingResident.softphone_extension || ''}
+                                onChange={e => setEditingResident({ ...editingResident, softphone_extension: e.target.value })}
+                                className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
+                                placeholder="Ex: 201"
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Preferencia do Softphone</label>
+                            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <input
+                                    type="checkbox"
+                                    checked={editingResident.softphone_enabled !== false}
+                                    onChange={e => setEditingResident({ ...editingResident, softphone_enabled: e.target.checked })}
+                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                                />
+                                <div>
+                                    <div className="text-sm font-bold text-slate-900">Manter softphone disponivel no meu login</div>
+                                    <div className="text-xs text-slate-500">Quando o PBX estiver pronto, o app usara essa preferencia para iniciar o atendimento do interfone.</div>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Guia de Acesso à Internet */}

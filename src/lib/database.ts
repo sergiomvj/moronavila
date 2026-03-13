@@ -29,7 +29,8 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         'entry_date', 'birth_date', 'cpf', 'document_number',
         'origin_address', 'work_address', 'room_id', 'mac_address',
         'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email',
-        'rent_value', 'cleaning_fee', 'extras_value', 'bed_identifier'
+        'rent_value', 'cleaning_fee', 'extras_value', 'bed_identifier',
+        'softphone_extension', 'softphone_enabled', 'softphone_display_name'
     ];
 
     const payload: Record<string, any> = {};

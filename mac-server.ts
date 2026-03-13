@@ -28,8 +28,169 @@ const supabase = createClient(
 
 const ASAAS_API_URL = 'https://sandbox.asaas.com/api/v3';
 const ASAAS_API_KEY = process.env.VITE_ASAAS_API_KEY || '';
+const SOFTPHONE_ENABLED = (process.env.VITE_SOFTPHONE_ENABLED || 'false').toLowerCase() === 'true';
+const SOFTPHONE_AUTO_CONNECT = (process.env.VITE_SOFTPHONE_AUTO_CONNECT || 'true').toLowerCase() === 'true';
+const SOFTPHONE_REQUIRE_INTERNET_ACTIVE = (process.env.VITE_SOFTPHONE_REQUIRE_INTERNET_ACTIVE || 'true').toLowerCase() === 'true';
+const SOFTPHONE_PBX_HOST = process.env.VITE_SOFTPHONE_PBX_HOST || '';
+const SOFTPHONE_PBX_DOMAIN = process.env.VITE_SOFTPHONE_PBX_DOMAIN || '';
+const SOFTPHONE_PBX_WSS_URL = process.env.VITE_SOFTPHONE_PBX_WSS_URL || '';
+const SOFTPHONE_DEFAULT_DISPLAY_NAME = process.env.VITE_SOFTPHONE_DEFAULT_DISPLAY_NAME || 'MoronaVila Softphone';
+const SOFTPHONE_TRANSPORT = process.env.VITE_SOFTPHONE_TRANSPORT === 'sipjs' ? 'sipjs' : 'mock';
+const SOFTPHONE_PBX_DEFAULT_SECRET = process.env.SOFTPHONE_PBX_DEFAULT_SECRET || '';
+const SOFTPHONE_PORTARIA_EXTENSION = process.env.VITE_SOFTPHONE_PORTARIA_EXTENSION || '100';
+const SOFTPHONE_ADMIN_EXTENSION = process.env.VITE_SOFTPHONE_ADMIN_EXTENSION || '101';
+const SOFTPHONE_LAUNDRY_EXTENSION = process.env.VITE_SOFTPHONE_LAUNDRY_EXTENSION || '102';
+const SOFTPHONE_DELIVERY_EXTENSION = process.env.VITE_SOFTPHONE_DELIVERY_EXTENSION || '103';
 
 app.use(express.json());
+
+function buildSuggestedResidentExtension(resident: any): string | null {
+    if (resident?.softphone_extension) return String(resident.softphone_extension);
+    if (resident?.bed_identifier) {
+        const digits = String(resident.bed_identifier).replace(/\D/g, '');
+        if (digits) return `2${digits.padStart(2, '0').slice(-2)}`;
+    }
+    if (resident?.phone) {
+        const digits = String(resident.phone).replace(/\D/g, '').slice(-3);
+        if (digits) return `2${digits.padStart(3, '0').slice(-3)}`;
+    }
+    return null;
+}
+
+app.get('/api/softphone/env', async (_req, res) => {
+    res.json({
+        enabled: SOFTPHONE_ENABLED,
+        autoConnect: SOFTPHONE_AUTO_CONNECT,
+        requireInternetActive: SOFTPHONE_REQUIRE_INTERNET_ACTIVE,
+        configured: Boolean(SOFTPHONE_PBX_HOST && SOFTPHONE_PBX_DOMAIN && SOFTPHONE_PBX_WSS_URL),
+        pbxHost: SOFTPHONE_PBX_HOST || null,
+        pbxDomain: SOFTPHONE_PBX_DOMAIN || null,
+        pbxWssUrl: SOFTPHONE_PBX_WSS_URL || null,
+        defaultDisplayName: SOFTPHONE_DEFAULT_DISPLAY_NAME,
+        transport: SOFTPHONE_TRANSPORT,
+        quickExtensions: {
+            portaria: SOFTPHONE_PORTARIA_EXTENSION,
+            administracao: SOFTPHONE_ADMIN_EXTENSION,
+            lavanderia: SOFTPHONE_LAUNDRY_EXTENSION,
+            encomendas: SOFTPHONE_DELIVERY_EXTENSION
+        }
+    });
+});
+
+app.get('/api/softphone/directory', async (req, res) => {
+    const authId = typeof req.query.authId === 'string' ? req.query.authId : '';
+    let resident: any = null;
+
+    if (authId) {
+        const result = await supabase
+            .from('residents')
+            .select('id, name, phone, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active')
+            .eq('auth_id', authId)
+            .maybeSingle();
+
+        if (!result.error) {
+            resident = result.data;
+        }
+    }
+
+    const residentExtension = buildSuggestedResidentExtension(resident);
+    const directory = [
+        residentExtension ? {
+            id: 'meu-ramal',
+            extension: residentExtension,
+            name: resident?.softphone_display_name || resident?.name || 'Meu Ramal',
+            kind: 'resident',
+            description: 'Ramal sugerido para este morador'
+        } : null,
+        {
+            id: 'portaria',
+            extension: SOFTPHONE_PORTARIA_EXTENSION,
+            name: 'Portaria',
+            kind: 'doorphone',
+            description: 'Interfone e atendimento principal'
+        },
+        {
+            id: 'administracao',
+            extension: SOFTPHONE_ADMIN_EXTENSION,
+            name: 'Administracao',
+            kind: 'admin',
+            description: 'Equipe administrativa'
+        },
+        {
+            id: 'lavanderia',
+            extension: SOFTPHONE_LAUNDRY_EXTENSION,
+            name: 'Lavanderia',
+            kind: 'laundry',
+            description: 'Suporte da lavanderia'
+        },
+        {
+            id: 'encomendas',
+            extension: SOFTPHONE_DELIVERY_EXTENSION,
+            name: 'Encomendas',
+            kind: 'delivery',
+            description: 'Recebimento e entregas'
+        }
+    ].filter(Boolean);
+
+    res.json({
+        resident: resident ? {
+            id: resident.id,
+            softphoneEnabled: resident.softphone_enabled !== false,
+            internetActive: resident.internet_active === true
+        } : null,
+        directory
+    });
+});
+
+app.get('/api/softphone/config', async (req, res) => {
+    const authId = typeof req.query.authId === 'string' ? req.query.authId : '';
+
+    if (!authId) {
+        return res.status(400).json({ error: 'authId é obrigatório' });
+    }
+
+    const result = await supabase
+        .from('residents')
+        .select('id, name, phone, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active')
+        .eq('auth_id', authId)
+        .maybeSingle();
+
+    if (result.error || !result.data) {
+        return res.status(404).json({ error: 'Morador não encontrado' });
+    }
+
+    const resident = result.data;
+    const extension = buildSuggestedResidentExtension(resident);
+    const canIssueSipConfig = Boolean(
+        extension &&
+        SOFTPHONE_PBX_DOMAIN &&
+        SOFTPHONE_PBX_WSS_URL &&
+        SOFTPHONE_PBX_DEFAULT_SECRET
+    );
+
+    return res.json({
+        enabled: SOFTPHONE_ENABLED && resident.softphone_enabled !== false,
+        autoConnect: SOFTPHONE_AUTO_CONNECT,
+        requireInternetActive: SOFTPHONE_REQUIRE_INTERNET_ACTIVE,
+        transport: SOFTPHONE_TRANSPORT,
+        configured: Boolean(SOFTPHONE_PBX_HOST && SOFTPHONE_PBX_DOMAIN && SOFTPHONE_PBX_WSS_URL),
+        resident: {
+            id: resident.id,
+            name: resident.name,
+            displayName: resident.softphone_display_name || resident.name || SOFTPHONE_DEFAULT_DISPLAY_NAME,
+            extension,
+            internetActive: resident.internet_active === true
+        },
+        sip: {
+            host: SOFTPHONE_PBX_HOST || null,
+            domain: SOFTPHONE_PBX_DOMAIN || null,
+            websocketServer: SOFTPHONE_PBX_WSS_URL || null,
+            uri: canIssueSipConfig ? `sip:${extension}@${SOFTPHONE_PBX_DOMAIN}` : null,
+            authorizationUsername: canIssueSipConfig ? extension : null,
+            authorizationPassword: canIssueSipConfig ? SOFTPHONE_PBX_DEFAULT_SECRET : null
+        }
+    });
+});
 
 // Função para obter o MAC a partir do IP (Windows)obter o MAC a partir do IP (Windows)
 async function getMacFromIp(ip: string): Promise<string | null> {

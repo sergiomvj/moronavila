@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Home, MapPin, Sparkles, Shield, ChevronRight, Play, ArrowRight, MessageCircle, Send } from 'lucide-react';
 import { fetchPublicPropertyDescription, fetchPublicRooms } from '../lib/database';
+import { getLocalApiBase } from '../lib/localApi';
 import { PropertyDescription, Room } from '../types';
 
 export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
@@ -89,8 +90,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
         setIsTyping(true);
 
         try {
-            const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
-            const response = await fetch(`${apiBase}/api/chat`, {
+            const response = await fetch(`${getLocalApiBase()}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

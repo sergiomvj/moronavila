@@ -54,6 +54,9 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     const [newInstagram, setNewInstagram] = useState('');
     const [newMacAddress, setNewMacAddress] = useState('');
     const [newMacAddressPC, setNewMacAddressPC] = useState('');
+    const [newSoftphoneExtension, setNewSoftphoneExtension] = useState('');
+    const [newSoftphoneDisplayName, setNewSoftphoneDisplayName] = useState('');
+    const [newSoftphoneEnabled, setNewSoftphoneEnabled] = useState(true);
     const [newPhoto, setNewPhoto] = useState<File | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
@@ -158,6 +161,9 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                     instagram: newInstagram,
                     mac_address: newMacAddress,
                     mac_address_pc: newMacAddressPC,
+                    softphone_extension: newSoftphoneExtension,
+                    softphone_display_name: newSoftphoneDisplayName,
+                    softphone_enabled: newSoftphoneEnabled,
                     photo_url: photoUrl,
                     birth_date: newBirthDate,
                     entry_date: newEntryDate
@@ -174,7 +180,8 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
 
             setShowAddModal(false);
             setNewName(''); setNewEmail(''); setNewPassword(''); setNewPhone('');
-            setNewBirthDate(''); setNewInstagram(''); setNewMacAddress(''); setNewMacAddressPC(''); setNewPhoto(null);
+            setNewBirthDate(''); setNewInstagram(''); setNewMacAddress(''); setNewMacAddressPC('');
+            setNewSoftphoneExtension(''); setNewSoftphoneDisplayName(''); setNewSoftphoneEnabled(true); setNewPhoto(null);
             alert('Morador cadastrado com sucesso!');
             onRefresh();
         } catch (err: any) {
@@ -249,6 +256,7 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Contato</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Internet</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Softphone</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
                             </tr>
                         </thead>
@@ -286,6 +294,14 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                                 <div className="text-slate-500">{resident.mac_address || 'Sem MAC'}</div>
                                                 {resident.instagram && <div className="text-indigo-600 font-medium">@{resident.instagram}</div>}
                                             </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-xs">
+                                            <div className={`font-bold ${resident.softphone_enabled === false ? 'text-slate-400' : 'text-emerald-600'}`}>
+                                                {resident.softphone_enabled === false ? 'Desativado' : 'Habilitado'}
+                                            </div>
+                                            <div className="text-slate-500">{resident.softphone_extension || 'Sem ramal definido'}</div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
@@ -375,6 +391,14 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                     <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (Computador)</label>
                                     <input type="text" value={(editingResident as any).mac_address_pc || ''} onChange={e => setEditingResident({ ...editingResident, ['mac_address_pc' as any]: e.target.value })} placeholder="Ex: 00:1B:..." className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 font-mono" />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Ramal do Softphone</label>
+                                    <input type="text" value={editingResident.softphone_extension || ''} onChange={e => setEditingResident({ ...editingResident, softphone_extension: e.target.value })} placeholder="Ex: 201" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Nome de ExibiÃ§Ã£o no Softphone</label>
+                                    <input type="text" value={editingResident.softphone_display_name || ''} onChange={e => setEditingResident({ ...editingResident, softphone_display_name: e.target.value })} placeholder="Ex: Apto 201 - Joao" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                </div>
                                 <div className="border-t border-slate-100 pt-4 md:col-span-2">
                                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Valores Financeiros Mensais</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -426,6 +450,13 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                             <div className="flex items-center gap-2 h-12">
                                                 <input type="checkbox" checked={editingResident.internet_active || false} onChange={e => setEditingResident({ ...editingResident, internet_active: e.target.checked })} className="w-5 h-5 text-indigo-600 rounded" />
                                                 <span className="text-sm font-medium">Acesso Ativo</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">Softphone do Morador</label>
+                                            <div className="flex items-center gap-2 h-12">
+                                                <input type="checkbox" checked={editingResident.softphone_enabled !== false} onChange={e => setEditingResident({ ...editingResident, softphone_enabled: e.target.checked })} className="w-5 h-5 text-indigo-600 rounded" />
+                                                <span className="text-sm font-medium">Habilitado</span>
                                             </div>
                                         </div>
 
@@ -582,6 +613,23 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">MAC Address (Computador)</label>
                                     <input type="text" value={newMacAddressPC} onChange={e => setNewMacAddressPC(e.target.value)} placeholder="Ex: 00:1B:..." className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20 font-mono" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Ramal do Softphone</label>
+                                    <input type="text" value={newSoftphoneExtension} onChange={e => setNewSoftphoneExtension(e.target.value)} placeholder="Ex: 201" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Nome de ExibiÃ§Ã£o no Softphone</label>
+                                    <input type="text" value={newSoftphoneDisplayName} onChange={e => setNewSoftphoneDisplayName(e.target.value)} placeholder="Ex: Apto 201 - Joao" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <input type="checkbox" checked={newSoftphoneEnabled} onChange={e => setNewSoftphoneEnabled(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600" />
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-900">Habilitar softphone para este morador</div>
+                                            <div className="text-xs text-slate-500">Mantem o shell disponivel quando o morador entrar no app.</div>
+                                        </div>
+                                    </label>
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Foto de Perfil</label>

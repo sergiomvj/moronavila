@@ -57,6 +57,9 @@ export interface Resident {
   cleaning_fee?: number;
   extras_value?: number;
   bed_identifier?: string;
+  softphone_extension?: string;
+  softphone_enabled?: boolean;
+  softphone_display_name?: string;
 }
 
 export interface Device {

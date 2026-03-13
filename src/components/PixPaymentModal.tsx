@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, CheckCircle2, QrCode, Timer, Loader2, AlertCircle } from 'lucide-react';
+import { getLocalApiBase } from '../lib/localApi';
 import { Payment } from '../types';
 
 interface PixPaymentModalProps {
@@ -28,8 +29,7 @@ export function PixPaymentModal({ payment, residentId, onClose, onSuccess }: Pix
         setLoading(true);
         setError(null);
         try {
-            // Chamada ao nosso proxy local no mac-server.ts (Porta 4000)
-            const response = await fetch('http://localhost:4000/api/payments/pix', {
+            const response = await fetch(`${getLocalApiBase()}/api/payments/pix`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
