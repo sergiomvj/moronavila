@@ -389,7 +389,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                                 </div>
                                 <div className="p-4 bg-slate-950/20 border-t border-white/5 flex justify-center">
                                     <a
-                                        href={`https://wa.me/5521999999999?text=${encodeURIComponent(`Olá, meu nome é ${leadForm.name} e acabei de conhecer a MoronaVila! Gostaria de mais informações.`)}`}
+                                        href={`https://wa.me/5521983245000?text=${encodeURIComponent(`Olá, meu nome é ${leadForm.name} e acabei de conhecer a MoronaVila! Gostaria de mais informações.`)}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full font-black text-[10px] uppercase tracking-widest transition-all shadow-lg hover:scale-105 active:scale-95"
