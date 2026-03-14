@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
-import {
-    Save, Image as ImageIcon, Video, MapPin,
-    Home, Info, CheckCircle2, ChevronRight,
-    Plus, X, Layout, Sparkles, Shield, Play, Trash2
-} from 'lucide-react';
-import { PropertyDescription, Room } from '../types';
-import { updatePropertyDescription, toggleRoomMediaMarketing } from '../lib/database';
+import { Save, Image as ImageIcon, Video, MapPin, Home, Info, CheckCircle2, ChevronRight, Plus, X, Layout, Sparkles, Shield, Play, Trash2, Sofa, Edit3, Type } from 'lucide-react';
+import { PropertyDescription, Room, RoomType, Furniture, RoomMedia } from '../types';
+import { updatePropertyDescription, toggleRoomMediaMarketing, updateRoom, addFurniture, deleteFurniture, updateFurniture, deleteRoomMedia } from '../lib/database';
 
 interface PropertyDescriptionViewProps {
     data: PropertyDescription;
@@ -107,6 +103,235 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
         </div>
     );
 
+    const RoomEditor = ({ room, onUpdate, onToggleMarketing }: {
+        room: Room,
+        onUpdate: () => void,
+        onToggleMarketing: (id: string, val: boolean) => Promise<void>
+    }) => {
+        const [editingRoom, setEditingRoom] = useState<Partial<Room>>({
+            name: room.name,
+            type: room.type,
+            description: room.description || '',
+        });
+        const [newFurniture, setNewFurniture] = useState({ name: '', condition: 'Bom' as any });
+        const [newMediaUrl, setNewMediaUrl] = useState('');
+        const [isUpdating, setIsUpdating] = useState(false);
+
+        const handleSaveRoom = async () => {
+            setIsUpdating(true);
+            try {
+                await updateRoom(room.id, editingRoom);
+                alert('Cômodo atualizado!');
+                onUpdate();
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao atualizar cômodo.');
+            } finally {
+                setIsUpdating(false);
+            }
+        };
+
+        const handleAddFurniture = async () => {
+            if (!newFurniture.name) return;
+            try {
+                await addFurniture(room.id, newFurniture);
+                setNewFurniture({ name: '', condition: 'Bom' });
+                onUpdate();
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const handleRemoveFurniture = async (id: string) => {
+            if (!confirm('Excluir este item de mobília?')) return;
+            try {
+                await deleteFurniture(id);
+                onUpdate();
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const handleAddMedia = async () => {
+            if (!newMediaUrl) return;
+            // Para simplicidade inicial, assume imagem se não for .mp4 ou tiver video no nome
+            const type = (newMediaUrl.includes('.mp4') || newMediaUrl.toLowerCase().includes('video')) ? 'video' : 'image';
+            try {
+                // Aqui usaríamos uma função para inserir na tabela room_media se ela aceitasse URL direta
+                // Como uploadRoomMedia faz upload de arquivo, faremos uma inserção direta no Supabase via lib/database ou aqui
+                const { supabase } = await import('../lib/supabase');
+                await supabase.from('room_media').insert({ room_id: room.id, url: newMediaUrl, type });
+                setNewMediaUrl('');
+                onUpdate();
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const handleRemoveMedia = async (media: RoomMedia) => {
+            if (!confirm('Remover esta mídia?')) return;
+            try {
+                await deleteRoomMedia(media.id, media.storage_path);
+                onUpdate();
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        return (
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-[40px] p-8 md:p-10 space-y-8 transition-all hover:bg-slate-900/60 shadow-xl overflow-hidden group">
+                {/* Header do Quarto */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-800/50 pb-8">
+                    <div className="flex-1 space-y-4">
+                        <div className="flex flex-col md:flex-row gap-4">
+                            <div className="flex-1 space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome do Cômodo</label>
+                                <div className="relative">
+                                    <Edit3 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <input
+                                        type="text"
+                                        value={editingRoom.name}
+                                        onChange={(e) => setEditingRoom({ ...editingRoom, name: e.target.value })}
+                                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-6 text-white text-sm font-bold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500/50 transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="md:w-1/3 space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo</label>
+                                <div className="relative">
+                                    <Type size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <select
+                                        value={editingRoom.type}
+                                        onChange={(e) => setEditingRoom({ ...editingRoom, type: e.target.value as RoomType })}
+                                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-6 text-white text-sm font-bold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500/50 transition-all appearance-none"
+                                    >
+                                        {Object.values(RoomType).map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Descrição do Marketing (O que o cliente vê)</label>
+                            <textarea
+                                value={editingRoom.description}
+                                onChange={(e) => setEditingRoom({ ...editingRoom, description: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl p-4 text-slate-300 text-sm leading-relaxed focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500/50 transition-all min-h-[100px]"
+                                placeholder="Descreva os pontos positivos deste quarto..."
+                            />
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        <button
+                            onClick={handleSaveRoom}
+                            disabled={isUpdating}
+                            className="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-rose-900/20 disabled:opacity-50"
+                        >
+                            {isUpdating ? '...' : <Save size={16} />}
+                            Salvar Cômodo
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    {/* Coluna de Mídias */}
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h4 className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                <ImageIcon size={16} className="text-rose-500" /> Mídias do Quarto
+                            </h4>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Cole a URL da imagem ou vídeo..."
+                                value={newMediaUrl}
+                                onChange={(e) => setNewMediaUrl(e.target.value)}
+                                className="flex-1 bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-300 focus:border-rose-500/50"
+                            />
+                            <button onClick={handleAddMedia} className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors">
+                                <Plus size={18} />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                            {room.media?.map((media) => (
+                                <div key={media.id} className="relative group/media rounded-xl overflow-hidden aspect-square border border-slate-800 bg-slate-950">
+                                    <img src={media.url} className="w-full h-full object-cover" alt="" />
+                                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <button
+                                            onClick={() => onToggleMarketing(media.id, !media.is_marketing)}
+                                            className={`p-2 rounded-lg ${media.is_marketing ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300'}`}
+                                            title="Marketing"
+                                        >
+                                            <CheckCircle2 size={14} fill={media.is_marketing ? "currentColor" : "none"} />
+                                        </button>
+                                        <button onClick={() => handleRemoveMedia(media)} className="p-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700">
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                    {media.type === 'video' && (
+                                        <div className="absolute bottom-1 right-1 p-1 bg-rose-600 rounded text-white"><Video size={10} /></div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Coluna de Mobiliário */}
+                    <div className="space-y-6">
+                        <h4 className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                            <Sofa size={16} className="text-rose-500" /> Mobiliário do Quarto
+                        </h4>
+
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Nome do móvel (ex: Cama Casal)"
+                                value={newFurniture.name}
+                                onChange={(e) => setNewFurniture({ ...newFurniture, name: e.target.value })}
+                                className="flex-1 bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-300 focus:border-rose-500/50"
+                            />
+                            <select
+                                value={newFurniture.condition}
+                                onChange={(e) => setNewFurniture({ ...newFurniture, condition: e.target.value as any })}
+                                className="bg-slate-950/50 border border-slate-800 rounded-xl px-3 py-3 text-[10px] font-bold text-slate-400 appearance-none"
+                            >
+                                <option value="Novo">Novo</option>
+                                <option value="Bom">Bom</option>
+                                <option value="Regular">Regular</option>
+                                <option value="Ruim">Ruim</option>
+                            </select>
+                            <button onClick={handleAddFurniture} className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors">
+                                <Plus size={18} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 no-scrollbar">
+                            {room.furniture?.map((f) => (
+                                <div key={f.id} className="flex items-center justify-between p-4 bg-slate-950/40 border border-slate-800 rounded-2xl group/item hover:border-slate-700 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-2 h-2 rounded-full ${f.condition === 'Novo' ? 'bg-emerald-500' : f.condition === 'Bom' ? 'bg-sky-500' : 'bg-amber-500'}`} />
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-200">{f.name}</p>
+                                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{f.condition}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleRemoveFurniture(f.id)} className="p-2 text-slate-600 hover:text-rose-500 opacity-0 group-item:opacity-100 transition-all">
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                            {(!room.furniture || room.furniture.length === 0) && (
+                                <p className="text-center text-[10px] text-slate-600 italic py-4">Nenhum móvel cadastrado.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
@@ -207,64 +432,14 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 gap-6">
+                            <div className="grid grid-cols-1 gap-8">
                                 {rooms.map((room) => (
-                                    <div key={room.id} className="bg-slate-900/40 border border-slate-800/60 rounded-[40px] p-10 space-y-8 transition-all hover:bg-slate-900/60">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h3 className="text-2xl font-black text-white tracking-tighter uppercase">{room.name}</h3>
-                                                <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mt-1">{room.type}</p>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-1">
-                                                <span className="text-[10px] font-black text-slate-500 uppercase">Status de Marketing</span>
-                                                <div className="flex items-center gap-2 p-1.5 bg-slate-950/50 rounded-xl border border-slate-800">
-                                                    <CheckCircle2 size={14} className="text-amber-500" />
-                                                    <span className="text-[10px] font-bold text-slate-300 uppercase">{room.media?.filter(m => m.is_marketing).length || 0} Ativas</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                            {room.media?.map((media) => (
-                                                <div key={media.id} className="relative group rounded-2xl overflow-hidden aspect-square border border-slate-800 bg-slate-950 shadow-lg">
-                                                    {media.type === 'video' ? (
-                                                        <div className="w-full h-full flex flex-col items-center justify-center text-rose-500 gap-2">
-                                                            <Play size={32} />
-                                                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Vídeo</span>
-                                                        </div>
-                                                    ) : (
-                                                        <img src={media.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
-                                                    )}
-
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                                                    <div className="absolute top-3 left-3 z-10">
-                                                        <button
-                                                            onClick={() => handleToggleRoomMediaMarketing(media.id, !media.is_marketing)}
-                                                            className={`p-2.5 rounded-xl backdrop-blur-md border shadow-2xl transition-all duration-300 active:scale-90 ${media.is_marketing
-                                                                ? 'bg-amber-500 text-white border-white/20 opacity-100'
-                                                                : 'bg-slate-900/70 text-slate-400 border-slate-700 opacity-0 group-hover:opacity-100 hover:text-amber-400 hover:border-amber-400/30'
-                                                                }`}
-                                                            title={media.is_marketing ? "Remover do site de vendas" : "Adicionar ao site de vendas"}
-                                                        >
-                                                            <CheckCircle2 size={16} fill={media.is_marketing ? "currentColor" : "none"} />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="absolute bottom-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <span className="text-[9px] font-black text-white/50 uppercase tracking-tighter">
-                                                            {media.is_marketing ? 'Em destaque' : 'Privada'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {(!room.media || room.media.length === 0) && (
-                                                <div className="col-span-full py-8 text-center bg-slate-950/20 border border-dashed border-slate-800 rounded-3xl">
-                                                    <p className="text-slate-600 font-bold text-xs italic">Nenhuma mídia vinculada a este cômodo.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                    <RoomEditor
+                                        key={room.id}
+                                        room={room}
+                                        onUpdate={onUpdate}
+                                        onToggleMarketing={handleToggleRoomMediaMarketing}
+                                    />
                                 ))}
                             </div>
                         </div>

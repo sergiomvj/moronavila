@@ -47,7 +47,7 @@ const SOFTPHONE_DOOR_LABEL = process.env.VITE_SOFTPHONE_DOOR_LABEL || 'Abrir por
 const SOFTPHONE_DOOR_DTMF = process.env.VITE_SOFTPHONE_DOOR_DTMF || '9';
 const SOFTPHONE_DOOR_RELAY_URL = process.env.SOFTPHONE_DOOR_RELAY_URL || '';
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 type AuthenticatedRequest = express.Request & {
     authUser?: {
@@ -56,6 +56,45 @@ type AuthenticatedRequest = express.Request & {
     };
     authResident?: any;
 };
+
+const requestBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function getClientIp(req: express.Request): string {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string' && forwarded.trim()) {
+        return forwarded.split(',')[0].trim();
+    }
+    return req.ip || req.socket.remoteAddress || 'unknown';
+}
+
+function consumeRateLimit(key: string, limit: number, windowMs: number): boolean {
+    const now = Date.now();
+    const bucket = requestBuckets.get(key);
+
+    if (!bucket || bucket.resetAt <= now) {
+        requestBuckets.set(key, {
+            count: 1,
+            resetAt: now + windowMs
+        });
+        return true;
+    }
+
+    if (bucket.count >= limit) {
+        return false;
+    }
+
+    bucket.count += 1;
+    return true;
+}
+
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 async function requireAuthenticatedResident(
     req: AuthenticatedRequest,
@@ -555,6 +594,11 @@ async function getMacFromIp(ip: string): Promise<string | null> {
 app.get('/mac', async (req, res) => {
     const ip = req.ip?.replace('::ffff:', '') || '0.0.0.0';
     const mac = await getMacFromIp(ip);
+    const safeIp = escapeHtml(ip);
+    const safeMac = escapeHtml(mac || 'Nao identificado');
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
 
     const html = `
 <!DOCTYPE html>
@@ -647,8 +691,8 @@ app.get('/mac', async (req, res) => {
     <div class="container">
         <div class="logo">MoronaVila</div>
         <div class="label">Identificamos seu dispositivo</div>
-        <div class="mac-box">${mac}</div>
-        <div class="label">Seu IP na rede: ${ip}</div>
+        <div class="mac-box">${safeMac}</div>
+        <div class="label">Seu IP na rede: ${safeIp}</div>
         <button class="btn" onclick="copyMac()">Copiar MAC Address</button>
         <p class="info">
             Este cÃ³digo Ã© necessÃ¡rio para liberar o acesso Ã  internet na MoronaVila. 
@@ -658,7 +702,7 @@ app.get('/mac', async (req, res) => {
 
     <script>
         function copyMac() {
-            const mac = "${mac}";
+            const mac = ${JSON.stringify(mac || 'Nao identificado')};
             navigator.clipboard.writeText(mac);
             alert("MAC Address copiado!");
         }
@@ -840,13 +884,38 @@ async function sendWhatsAppNotification(name: string, phone: string) {
 // --- ENDPOINT DO AGENTE VIRTUAL (OPENAI) ---
 
 app.post('/api/chat', async (req, res) => {
-    const { message, name, phone, history = [] } = req.body;
+    const clientIp = getClientIp(req);
+    if (!consumeRateLimit(`chat:${clientIp}`, 12, 5 * 60 * 1000)) {
+        return res.status(429).json({ error: 'Muitas mensagens em pouco tempo. Tente novamente em alguns minutos.' });
+    }
+
+    const { message, name, phone, history = [] } = req.body || {};
+    const safeMessage = typeof message === 'string' ? message.trim() : '';
+    const safeName = typeof name === 'string' ? name.trim().slice(0, 80) : '';
+    const safePhone = typeof phone === 'string' ? phone.trim().slice(0, 30) : '';
+    const safeHistory = Array.isArray(history)
+        ? history
+            .filter((item: any) => item && (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string')
+            .slice(-12)
+            .map((item: any) => ({
+                role: item.role,
+                content: item.content.trim().slice(0, 1200)
+            }))
+        : [];
+
+    if (!safeMessage) {
+        return res.status(400).json({ error: 'Mensagem obrigatoria.' });
+    }
+
+    if (safeMessage.length > 1200) {
+        return res.status(400).json({ error: 'Mensagem muito longa.' });
+    }
 
     // Se for a primeira mensagem, envia notificaÃ§Ã£o de WhatsApp (Lead)
-    if (history.length === 0 && name && phone) {
+    if (safeHistory.length === 0 && safeName && safePhone) {
         // NotificaÃ§Ã£o via WhatsApp desativada devido Ã s limitaÃ§Ãµes do plano gratuito da AiSensy (API Outbound bloqueada).
         // O contato agora Ã© iniciado pelo usuÃ¡rio via botÃ£o no frontend.
-        console.log(`Novo lead capturado no chat: ${name} (${phone})`);
+        console.log(`Novo lead capturado no chat: ${safeName} (${safePhone})`);
     }
 
     try {
@@ -880,7 +949,7 @@ app.post('/api/chat', async (req, res) => {
             2. Se aprovado: Pagamento do aluguel do mÃªs + 1 mÃªs de depÃ³sito (cauÃ§Ã£o) + DepÃ³sito das chaves (R$ 65).
 
             DIRETRIZES DE COMUNICAÃ‡ÃƒO:
-            - PERSONA: Seja acolhedor, empÃ¡tico e elucidativo. Use o nome (${name || 'Interessado'}).
+            - PERSONA: Seja acolhedor, empÃ¡tico e elucidativo. Use o nome (${safeName || 'Interessado'}).
             - ESTILO: Explique as regras de forma positiva (foco no benefÃ­cio do silÃªncio e ordem para quem estuda/trabalha).
             - ENCERRAMENTO: Se o interesse for alto, peÃ§a para finalizarem os dados aqui no formulÃ¡rio ou sugerir o contato via WhatsApp para agendar visita.
         `;
@@ -889,8 +958,8 @@ app.post('/api/chat', async (req, res) => {
             model: "gpt-4o",
             messages: [
                 { role: "system", content: systemPrompt },
-                ...history,
-                { role: "user", content: message }
+                ...safeHistory,
+                { role: "user", content: safeMessage }
             ],
             max_tokens: 800,
             temperature: 0.7
