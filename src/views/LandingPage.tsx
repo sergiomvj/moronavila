@@ -158,7 +158,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                             {heroTitle}
                         </h2>
                         {heroSubtitle && (
-                            <p className="text-lg md:text-xl text-slate-200 font-medium leading-relaxed mb-10 drop-shadow-lg max-w-2xl">
+                            <p className="text-base md:text-lg text-slate-300 leading-relaxed mb-10 drop-shadow-md max-w-2xl">
                                 {heroSubtitle}
                             </p>
                         )}
@@ -226,9 +226,9 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                             <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
                                 <Sparkles size={24} />
                             </div>
-                            <h3 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase italic drop-shadow-lg">Amenidades</h3>
+                            <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter uppercase italic mb-6">Conforto & Facilidade</h2>
                         </div>
-                        <p className="text-slate-300 text-lg md:text-xl leading-relaxed whitespace-pre-line font-medium">{amenities_text}</p>
+                        <p className="text-slate-400 text-sm md:text-base leading-relaxed whitespace-pre-line">{amenities_text}</p>
                     </div>
                     <div className="order-1 lg:order-2 relative aspect-[4/3] rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl">
                         <img
@@ -249,8 +249,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                             <h3 className="text-sm font-black text-rose-500 uppercase tracking-[0.3em] mb-4">Escolha a sua</h3>
                             <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter uppercase italic mb-6">Acomodação Ideal</h2>
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {rooms.map(room => (
                                 <div key={room.id} className="group bg-slate-900/40 border border-slate-800 rounded-[32px] overflow-hidden hover:border-rose-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-rose-900/20">
                                     <div className="relative aspect-[4/3] overflow-hidden">

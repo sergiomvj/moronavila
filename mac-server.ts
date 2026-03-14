@@ -28,6 +28,7 @@ const supabase = createClient(
 
 const ASAAS_API_URL = 'https://sandbox.asaas.com/api/v3';
 const ASAAS_API_KEY = process.env.VITE_ASAAS_API_KEY || '';
+const ASAAS_WEBHOOK_SECRET = process.env.ASAAS_WEBHOOK_SECRET || '';
 const SOFTPHONE_ENABLED = (process.env.VITE_SOFTPHONE_ENABLED || 'false').toLowerCase() === 'true';
 const SOFTPHONE_AUTO_CONNECT = (process.env.VITE_SOFTPHONE_AUTO_CONNECT || 'true').toLowerCase() === 'true';
 const SOFTPHONE_REQUIRE_INTERNET_ACTIVE = (process.env.VITE_SOFTPHONE_REQUIRE_INTERNET_ACTIVE || 'true').toLowerCase() === 'true';
@@ -769,11 +770,24 @@ app.post('/api/payments/pix', async (req, res) => {
 });
 
 app.post('/api/payments/webhook', async (req, res) => {
+    if (!ASAAS_WEBHOOK_SECRET) {
+        console.warn('ASAAS_WEBHOOK_SECRET nao configurada no .env.local');
+        return res.status(503).json({ error: 'Webhook de pagamentos indisponivel.' });
+    }
+
+    const providedSecret =
+        req.headers['x-asaas-webhook-secret'] ||
+        req.headers['asaas-access-token'] ||
+        req.headers['x-webhook-secret'];
+
+    if (providedSecret !== ASAAS_WEBHOOK_SECRET) {
+        return res.status(401).json({ error: 'Webhook nao autorizado.' });
+    }
+
     const event = req.body;
     console.log('Webhook Asaas recebido:', event.event);
 
-    if (event.event === 'PAYMENT_RECEIVED' || event.event === 'PAYMENT_CONFIRMED') {
-        const asaasId = event.payment.id;
+    if ((event.event === 'PAYMENT_RECEIVED' || event.event === 'PAYMENT_CONFIRMED') && event.payment?.externalReference) {
         const externalRef = event.payment.externalReference;
 
         try {
