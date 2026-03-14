@@ -162,7 +162,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                                 {heroSubtitle}
                             </p>
                         )}
-                        <a href="#rooms" className="inline-flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95">
+                        <a href="#quartos" className="inline-flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95">
                             Conhecer as Vagas <ArrowRight size={18} />
                         </a>
                     </div>
