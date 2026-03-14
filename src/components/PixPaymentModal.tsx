@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, CheckCircle2, QrCode, Timer, Loader2, AlertCircle } from 'lucide-react';
-import { getLocalApiBase } from '../lib/localApi';
+import { localApiFetch } from '../lib/localApi';
 import { Payment } from '../types';
 
 interface PixPaymentModalProps {
@@ -29,13 +29,11 @@ export function PixPaymentModal({ payment, residentId, onClose, onSuccess }: Pix
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${getLocalApiBase()}/api/payments/pix`, {
+            const response = await localApiFetch('/api/payments/pix', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     residentId,
-                    amount: payment.amount,
-                    description: `VPR Manager - ${payment.month}`,
                     paymentId: payment.id
                 })
             });

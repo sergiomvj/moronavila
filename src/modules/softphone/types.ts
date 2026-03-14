@@ -35,6 +35,11 @@ export interface SoftphoneEnvConfig {
     lavanderia: string;
     encomendas: string;
   };
+  door: {
+    mode: 'none' | 'dtmf' | 'http-relay' | 'extension';
+    label: string;
+    dtmf: string;
+  };
 }
 
 export interface SoftphoneRuntimeState {
@@ -43,6 +48,25 @@ export interface SoftphoneRuntimeState {
   activeExtension?: string;
   lastDialed?: string;
   message: string;
+}
+
+export interface SoftphoneInboxSummary {
+  voiceUnreadCount: number;
+  notesUnreadCount: number;
+  pendingPackagesCount: number;
+  totalAttentionItems: number;
+}
+
+export interface SoftphoneInboxItem {
+  id: string;
+  source: 'manual' | 'system';
+  channel: 'note' | 'voice' | 'package';
+  category: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  unread: boolean;
+  pending: boolean;
 }
 
 export interface SoftphoneSipCredentials {

@@ -15,6 +15,30 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const softphoneReadiness = [
+        {
+            label: 'Softphone habilitado',
+            ok: editingResident.softphone_enabled !== false,
+            action: 'Mantenha a preferencia do softphone habilitada no perfil.',
+        },
+        {
+            label: 'Ramal configurado',
+            ok: Boolean(editingResident.softphone_extension),
+            action: 'Defina um ramal preferencial para o seu cadastro.',
+        },
+        {
+            label: 'Internet ativa',
+            ok: editingResident.internet_active,
+            action: 'Regularize a internet para liberar a ativacao automatica.',
+        },
+        {
+            label: 'MAC principal cadastrado',
+            ok: Boolean(editingResident.mac_address),
+            action: 'Cadastre o MAC principal para evitar bloqueios na rede autenticada.',
+        },
+    ];
+    const softphonePending = softphoneReadiness.filter((item) => !item.ok).length;
+    const softphoneNextSteps = softphoneReadiness.filter((item) => !item.ok);
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -163,6 +187,7 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
                                 className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
                                 placeholder="Ex: Apto 201 - Joao"
                             />
+                            <p className="mt-1 text-xs text-slate-500">Esse nome aparece no shell do softphone e pode ajudar a portaria a identificar o morador.</p>
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-1">Ramal Preferencial</label>
@@ -173,6 +198,7 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
                                 className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20"
                                 placeholder="Ex: 201"
                             />
+                            <p className="mt-1 text-xs text-slate-500">Se esse campo ficar vazio, o morador continua pendente para ativacao completa do softphone.</p>
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-bold text-slate-700 mb-2">Preferencia do Softphone</label>
@@ -188,6 +214,39 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
                                     <div className="text-xs text-slate-500">Quando o PBX estiver pronto, o app usara essa preferencia para iniciar o atendimento do interfone.</div>
                                 </div>
                             </label>
+                        </div>
+                        <div className="md:col-span-2 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="text-sm font-bold text-indigo-900">Prontidao do softphone</div>
+                                <div className="text-xs font-bold uppercase tracking-wider text-indigo-700">
+                                    {softphonePending === 0 ? 'Pronto' : `${softphonePending} pendencia(s)`}
+                                </div>
+                            </div>
+                            <div className="mt-3 space-y-2">
+                                {softphoneReadiness.map((item) => (
+                                    <div
+                                        key={item.label}
+                                        className="flex items-center justify-between rounded-xl border border-indigo-100 bg-white px-4 py-3"
+                                    >
+                                        <span className="text-sm text-slate-700">{item.label}</span>
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${item.ok ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {item.ok ? 'ok' : 'pendente'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            {softphoneNextSteps.length > 0 && (
+                                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-amber-700">
+                                        Proximos passos
+                                    </div>
+                                    <div className="mt-2 space-y-2 text-sm text-amber-900">
+                                        {softphoneNextSteps.map((item) => (
+                                            <div key={`${item.label}-next-step`}>{item.action}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

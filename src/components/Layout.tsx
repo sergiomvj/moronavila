@@ -66,9 +66,9 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
             >
                 {/* Logo Section */}
                 <div className="p-6 lg:p-8 flex items-center gap-3 mb-2 lg:mb-6 shrink-0">
-                    <img src="/favicon.png" alt="MoronaVila" className="w-9 h-9 rounded-xl object-cover" />
-                    <h1 className="text-2xl font-black text-white tracking-tighter">
-                        Moro<span className="text-purple-400">na</span><span className="text-rose-500">Vila</span>
+                    <Home size={28} className="text-rose-600 drop-shadow-lg" />
+                    <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">
+                        MORONA<span className="text-rose-600">VILA</span>
                     </h1>
                 </div>
 
@@ -134,9 +134,9 @@ export function Layout({ currentUser, activeTab, setActiveTab, onLogout, onRefre
 
                         {/* Mobile Logo */}
                         <div className="flex lg:hidden items-center gap-2">
-                            <img src="/favicon.png" alt="Logo" className="w-7 h-7 rounded-lg object-cover" />
-                            <span className="text-lg font-black text-white tracking-tighter">
-                                Moro<span className="text-purple-400">na</span><span className="text-rose-500">Vila</span>
+                             <Home size={24} className="text-rose-600" />
+                            <span className="text-lg font-black text-white tracking-tighter uppercase italic">
+                                MORONA<span className="text-rose-600">VILA</span>
                             </span>
                         </div>
                     </div>

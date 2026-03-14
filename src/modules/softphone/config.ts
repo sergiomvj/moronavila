@@ -31,6 +31,16 @@ export function getSoftphoneEnvConfig(): SoftphoneEnvConfig {
       lavanderia: import.meta.env.VITE_SOFTPHONE_LAUNDRY_EXTENSION || '102',
       encomendas: import.meta.env.VITE_SOFTPHONE_DELIVERY_EXTENSION || '103',
     },
+    door: {
+      mode:
+        import.meta.env.VITE_SOFTPHONE_DOOR_MODE === 'dtmf' ||
+        import.meta.env.VITE_SOFTPHONE_DOOR_MODE === 'http-relay' ||
+        import.meta.env.VITE_SOFTPHONE_DOOR_MODE === 'extension'
+          ? import.meta.env.VITE_SOFTPHONE_DOOR_MODE
+          : 'none',
+      label: import.meta.env.VITE_SOFTPHONE_DOOR_LABEL || 'Abrir porta',
+      dtmf: import.meta.env.VITE_SOFTPHONE_DOOR_DTMF || '9',
+    },
   };
 }
 

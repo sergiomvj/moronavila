@@ -18,6 +18,9 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
         }
     }, [initialModal]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [softphoneFilter, setSoftphoneFilter] = useState<
+        'all' | 'ready' | 'missing-extension' | 'disabled' | 'missing-mac'
+    >('all');
     const [editingResident, setEditingResident] = useState<Resident | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [rooms, setRooms] = useState<Room[]>([]);
@@ -60,10 +63,80 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     const [newPhoto, setNewPhoto] = useState<File | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
-    const filteredResidents = residents.filter(r =>
-        r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredResidents = residents.filter(r => {
+        const matchesSearch =
+            r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        switch (softphoneFilter) {
+            case 'ready':
+                return r.role === UserRole.RESIDENT && r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active;
+            case 'missing-extension':
+                return r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.softphone_extension;
+            case 'disabled':
+                return r.role === UserRole.RESIDENT && r.softphone_enabled === false;
+            case 'missing-mac':
+                return r.role === UserRole.RESIDENT && !r.mac_address;
+            default:
+                return true;
+        }
+    });
+    const softphoneReadyCount = residents.filter(
+        (r) => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active
+    ).length;
+    const softphoneMissingExtensionCount = residents.filter(
+        (r) => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.softphone_extension
+    ).length;
+    const softphoneDisabledCount = residents.filter(
+        (r) => r.role === UserRole.RESIDENT && r.softphone_enabled === false
+    ).length;
+    const softphoneMissingMacCount = residents.filter(
+        (r) => r.role === UserRole.RESIDENT && !r.mac_address
+    ).length;
+
+    const getSoftphoneBadge = (resident: Resident) => {
+        if (resident.role !== UserRole.RESIDENT) {
+            return {
+                label: 'Administrativo',
+                className: 'bg-indigo-100 text-indigo-700',
+            };
+        }
+
+        if (resident.softphone_enabled === false) {
+            return {
+                label: 'Desativado',
+                className: 'bg-slate-100 text-slate-600',
+            };
+        }
+
+        if (!resident.softphone_extension) {
+            return {
+                label: 'Sem ramal',
+                className: 'bg-amber-100 text-amber-700',
+            };
+        }
+
+        if (!resident.internet_active) {
+            return {
+                label: 'Internet inativa',
+                className: 'bg-sky-100 text-sky-700',
+            };
+        }
+
+        if (!resident.mac_address) {
+            return {
+                label: 'Sem MAC',
+                className: 'bg-violet-100 text-violet-700',
+            };
+        }
+
+        return {
+            label: 'Pronto',
+            className: 'bg-emerald-100 text-emerald-700',
+        };
+    };
 
     const handleEditClick = (resident: Resident) => {
         // Apenas admin ou o próprio usuário pode editar
@@ -215,15 +288,28 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-slate-900">Moradores</h2>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Buscar moradores..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full sm:w-64 bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20"
-                    />
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar moradores..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full sm:w-64 bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                    </div>
+                    <select
+                        value={softphoneFilter}
+                        onChange={(e) => setSoftphoneFilter(e.target.value as typeof softphoneFilter)}
+                        className="w-full sm:w-52 bg-white border border-slate-200 rounded-xl py-2 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20"
+                    >
+                        <option value="all">Todos os perfis</option>
+                        <option value="ready">Softphone pronto</option>
+                        <option value="missing-extension">Sem ramal</option>
+                        <option value="disabled">Softphone desativado</option>
+                        <option value="missing-mac">Sem MAC principal</option>
+                    </select>
                 </div>
                 {isAdmin && (
                     <div className="flex gap-2">
@@ -244,6 +330,31 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                     </div>
                 )}
             </div>
+
+            {isAdmin && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Prontos</div>
+                        <div className="mt-2 text-3xl font-bold text-emerald-900">{softphoneReadyCount}</div>
+                        <div className="mt-1 text-xs text-emerald-700">Com ramal e internet ativa</div>
+                    </div>
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Sem Ramal</div>
+                        <div className="mt-2 text-3xl font-bold text-amber-900">{softphoneMissingExtensionCount}</div>
+                        <div className="mt-1 text-xs text-amber-700">Precisam de ramal no cadastro</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Desativados</div>
+                        <div className="mt-2 text-3xl font-bold text-slate-900">{softphoneDisabledCount}</div>
+                        <div className="mt-1 text-xs text-slate-600">Softphone desligado no perfil</div>
+                    </div>
+                    <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-violet-700">Sem MAC</div>
+                        <div className="mt-2 text-3xl font-bold text-violet-900">{softphoneMissingMacCount}</div>
+                        <div className="mt-1 text-xs text-violet-700">Podem falhar na rede autenticada</div>
+                    </div>
+                </div>
+            )}
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
@@ -295,12 +406,23 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
+                                        {(() => {
+                                            const badge = getSoftphoneBadge(resident);
+                                            return (
                                         <div className="text-xs">
-                                            <div className={`font-bold ${resident.softphone_enabled === false ? 'text-slate-400' : 'text-emerald-600'}`}>
-                                                {resident.softphone_enabled === false ? 'Desativado' : 'Habilitado'}
+                                            <div className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase ${badge.className}`}>
+                                                {badge.label}
                                             </div>
-                                            <div className="text-slate-500">{resident.softphone_extension || 'Sem ramal definido'}</div>
+                                            <div className="mt-2 text-slate-500">{resident.softphone_extension || 'Sem ramal definido'}</div>
+                                            {resident.softphone_display_name && (
+                                                <div className="text-indigo-600 font-medium">{resident.softphone_display_name}</div>
+                                            )}
+                                            {!resident.mac_address && resident.role === UserRole.RESIDENT && (
+                                                <div className="text-violet-600 font-medium">Sem MAC principal</div>
+                                            )}
                                         </div>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         {(isAdmin || currentUser.id === resident.id) && (
@@ -392,10 +514,12 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Ramal do Softphone</label>
                                     <input type="text" value={editingResident.softphone_extension || ''} onChange={e => setEditingResident({ ...editingResident, softphone_extension: e.target.value })} placeholder="Ex: 201" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                    <p className="mt-1 text-xs text-slate-500">Sem ramal, o morador aparece como pendente no rollout do softphone.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Nome de ExibiÃ§Ã£o no Softphone</label>
                                     <input type="text" value={editingResident.softphone_display_name || ''} onChange={e => setEditingResident({ ...editingResident, softphone_display_name: e.target.value })} placeholder="Ex: Apto 201 - Joao" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20" />
+                                    <p className="mt-1 text-xs text-slate-500">Use um nome facil de reconhecer pela portaria, como quarto ou apartamento mais nome.</p>
                                 </div>
                                 <div className="border-t border-slate-100 pt-4 md:col-span-2">
                                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Valores Financeiros Mensais</h4>
@@ -614,10 +738,12 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Ramal do Softphone</label>
                                     <input type="text" value={newSoftphoneExtension} onChange={e => setNewSoftphoneExtension(e.target.value)} placeholder="Ex: 201" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" />
+                                    <p className="mt-1 text-xs text-slate-500">Preencha esse campo para o morador nao ficar pendente no rollout inicial.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Nome de ExibiÃ§Ã£o no Softphone</label>
                                     <input type="text" value={newSoftphoneDisplayName} onChange={e => setNewSoftphoneDisplayName(e.target.value)} placeholder="Ex: Apto 201 - Joao" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" />
+                                    <p className="mt-1 text-xs text-slate-500">Ajuda a identificar rapidamente o morador quando a portaria ou o interfone chamarem.</p>
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">

@@ -46,7 +46,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
         return (
             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
                 <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-2">
-                    Morona<span className="text-rose-600">Vila</span>
+                    MORONA<span className="text-rose-600">VILA</span>
                 </h1>
                 <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Aguardando configuração de página...</p>
                 <button
@@ -67,9 +67,11 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
 
     const heroMedia = main_media?.[0] || 'https://images.pexels.com/photos/5935228/pexels-photo-5935228.jpeg';
 
-    // Define o Título e Subtítulo fixos solicitados pelo usuário ignorando o DB para essa parte
-    const heroTitle = "Para morar, viver e estudar próximo das principais universidades e do trabalho";
-    const heroSubtitle = "A solução ideal para quem precisa de silencio, ordem e privacidade em quartos individuais com mobiliário básico completo, interfone com ramal exclusivo e banheiro privativo, ampla cozinha com armarios individuais, lavanderia, sala de TV, sala de estudo e muita area externa arborizada compartilhada, tudo com internet banda larga.";
+    // Lógica dinâmica para Título e Subtítulo baseada no main_text
+    // Primeira linha = Título, demais linhas = Subtítulo
+    const textLines = main_text ? main_text.split('\n').filter(line => line.trim() !== '') : [];
+    const heroTitle = textLines[0] || "Para morar, viver e estudar próximo das principais universidades e do trabalho";
+    const heroSubtitle = textLines.slice(1).join('\n') || null;
 
     const handleLeadSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -121,10 +123,8 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
             <header className="fixed top-0 inset-x-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-rose-500 to-rose-700 p-2.5 rounded-xl text-white shadow-lg shadow-rose-900/20">
-                            <Home size={24} />
-                        </div>
-                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">Morona<span className="text-rose-600">Vila</span></h1>
+                        <Home size={28} className="text-rose-600 drop-shadow-lg" />
+                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">MORONA<span className="text-rose-600">VILA</span></h1>
                     </div>
 
                     <nav className="hidden lg:flex items-center gap-8">
@@ -301,7 +301,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                     </div>
                     <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase italic mb-8">Nossa Filosofia</h2>
                     <p className="text-slate-300 text-lg leading-relaxed whitespace-pre-line text-left md:text-center p-8 md:p-12 bg-slate-900/40 backdrop-blur-sm shadow-xl rounded-[2.5rem] border border-slate-800">
-                        {rules_text || "Valorizamos o respeito, o silêncio após as 22h e a colaboração para manter o ambiente sempre agradável para todos."}
+                        {rules_text || "Valorizamos o respect, o silêncio após as 22h e a colaboração para manter o ambiente sempre agradável para todos."}
                     </p>
                 </div>
             </section>
@@ -423,8 +423,8 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
             <footer className="bg-slate-950 border-t border-white/5 py-12">
                 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 opacity-60 hover:opacity-100 transition-opacity">
                     <div className="flex items-center gap-2">
-                        <Home size={20} className="text-rose-600" />
-                        <span className="font-black text-white uppercase italic tracking-tighter">Morona<span className="text-rose-600">Vila</span></span>
+                        <Home size={24} className="text-rose-600" />
+                        <span className="font-black text-white uppercase italic tracking-tighter">MORONA<span className="text-rose-600">VILA</span></span>
                     </div>
                     <p className="text-slate-600 font-bold text-[10px] uppercase tracking-widest">
                         © {new Date().getFullYear()} MoronaVila. Todos os direitos reservados.

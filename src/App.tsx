@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+﻿import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 
 import { supabase } from './lib/supabase';
@@ -96,41 +96,22 @@ function App() {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      // 1. Carregar perfil do usuário primeiro (Independente)
+      // 1. Carregar perfil do usuÃ¡rio primeiro (Independente)
       const user = await fetchCurrentResident(userId);
-      // Buscar email diretamente do Auth para fallback de nome confiável
+      // Buscar email diretamente do Auth para fallback de nome confiÃ¡vel
       const { data: { user: authUser } } = await supabase.auth.getUser();
       const emailFallback = authUser?.email?.split('@')[0] || 'Administrador';
       if (user) {
-        // Fallback: se o nome for vazio, nulo ou genérico, usa o e-mail
+        // Fallback: se o nome for vazio, nulo ou generico, usa o e-mail
         if (!user.name || user.name.trim() === '' || user.name === 'Administrador') {
           user.name = emailFallback;
         }
 
-        // HEURÍSTICA DE EMERGÊNCIA: Se o usuário é o administrador mas o banco diz 'Morador',
-        // vamos forçar 'Administrador' no frontend para que ele recupere os botões.
-        // Isso permite que ele tente salvar o perfil novamente e corrija o banco.
-        if (user.role !== UserRole.ADMIN && (user.email.toLowerCase().includes('admin') || user.email === authUser?.email)) {
-          console.warn('Recuperação de Acesso: Forçando role Administrador para o e-mail:', user.email);
-          user.role = UserRole.ADMIN;
-        }
-
         setCurrentUser(user);
       } else {
-        // Se não encontrar o residente no banco, tratamos como Admin por padrão se estiver logado
-        // (Isso evita que o admin perca acesso às ferramentas se o registro no banco sumir/falhar)
-        const mockAdmin: Resident = {
-          id: userId,
-          name: emailFallback,
-          email: authUser?.email || '',
-          phone: '',
-          role: UserRole.ADMIN,
-          status: 'Ativo',
-          birth_date: '', entry_date: new Date().toISOString().split('T')[0],
-          origin_address: '', work_address: '',
-          internet_active: true
-        };
-        setCurrentUser(mockAdmin);
+        setCurrentUser(null);
+        await supabase.auth.signOut();
+        throw new Error('Cadastro do usuario nao encontrado na base de moradores.');
       }
 
       // 2. Carregar o restante dos dados
@@ -138,7 +119,7 @@ function App() {
     } catch (err: any) {
       console.error(err);
       if (!errorMsg) {
-        setErrorMsg('Erro ao carregar os dados iniciais. Verifique a conexão com o Supabase.');
+        setErrorMsg('Erro ao carregar os dados iniciais. Verifique a conexÃ£o com o Supabase.');
       }
     } finally {
       setIsLoading(false);
@@ -149,10 +130,10 @@ function App() {
   const refreshData = async () => {
     const errors: string[] = [];
     try {
-      try { setRooms(await fetchRooms()); } catch (e) { console.error('Rooms:', e); errors.push('Cômodos'); }
+      try { setRooms(await fetchRooms()); } catch (e) { console.error('Rooms:', e); errors.push('CÃ´modos'); }
       try { setPayments(await fetchPayments()); } catch (e) { console.error('Payments:', e); errors.push('Financeiro'); }
       try { setMaintenance(await fetchMaintenance()); } catch (e) { console.error('Maintenance:', e); errors.push('Reparos'); }
-      try { setComplaints(await fetchComplaints()); } catch (e) { console.error('Complaints:', e); errors.push('Reclamações'); }
+      try { setComplaints(await fetchComplaints()); } catch (e) { console.error('Complaints:', e); errors.push('ReclamaÃ§Ãµes'); }
       try { setNotices(await fetchNotices()); } catch (e) { console.error('Notices:', e); errors.push('Mural'); }
       try { setEvents(await fetchCalendarEvents()); } catch (e) { console.error('Events:', e); errors.push('Agenda'); }
       try { setLaundrySchedules(await fetchLaundrySchedules()); } catch (e) { console.error('Laundry:', e); }
@@ -161,16 +142,16 @@ function App() {
       try {
         const desc = await fetchPropertyDescription();
         setPropertyDescription(desc);
-      } catch (e) { console.error('PropertyDesc:', e); errors.push('Descrição da Propriedade'); }
+      } catch (e) { console.error('PropertyDesc:', e); errors.push('DescriÃ§Ã£o da Propriedade'); }
 
       if (errors.length > 0) {
-        setErrorMsg(`Aviso: Alguns dados principais (${errors.join(', ')}) não puderam ser carregados.`);
+        setErrorMsg(`Aviso: Alguns dados principais (${errors.join(', ')}) nÃ£o puderam ser carregados.`);
       } else {
         setErrorMsg('');
       }
     } catch (e) {
       console.error(e);
-      setErrorMsg('Aviso: Alguns dados podem não ter sido carregados.');
+      setErrorMsg('Aviso: Alguns dados podem nÃ£o ter sido carregados.');
     }
   };
 
@@ -296,3 +277,4 @@ function App() {
 }
 
 export default App;
+

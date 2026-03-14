@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import {
   DoorOpen,
   Loader2,
+  MessageSquare,
   Mic,
+  Package,
   Phone,
   PhoneCall,
   PhoneForwarded,
@@ -14,6 +16,9 @@ import type { Resident } from '../../types';
 import {
   fetchSoftphoneConfig,
   fetchSoftphoneDirectory,
+  fetchSoftphoneInbox,
+  markSoftphoneInboxItemAsRead,
+  triggerSoftphoneDoorOpen,
   fetchSoftphoneEnv,
   toSipCredentials,
 } from './api';
@@ -25,7 +30,13 @@ import {
   isSoftphoneProvisioned,
 } from './config';
 import { createSoftphoneTransport } from './transport';
-import type { SoftphoneRuntimeState, SoftphoneSipCredentials, SoftphoneTransport } from './types';
+import type {
+  SoftphoneInboxItem,
+  SoftphoneInboxSummary,
+  SoftphoneRuntimeState,
+  SoftphoneSipCredentials,
+  SoftphoneTransport,
+} from './types';
 
 interface SoftphoneDockProps {
   currentUser: Resident;
@@ -74,6 +85,7 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
     'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
   >('unknown');
   const [testingMicrophone, setTestingMicrophone] = useState(false);
+  const [openingDoor, setOpeningDoor] = useState(false);
   const [browserReadiness, setBrowserReadiness] = useState<{
     secureContext: boolean;
     mediaDevices: boolean;
@@ -83,19 +95,34 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
     mediaDevices: false,
     webRtc: false,
   });
+  const [browserOnline, setBrowserOnline] = useState(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [inboxSummary, setInboxSummary] = useState<SoftphoneInboxSummary>({
+    voiceUnreadCount: 0,
+    notesUnreadCount: 0,
+    pendingPackagesCount: 0,
+    totalAttentionItems: 0,
+  });
+  const [inboxItems, setInboxItems] = useState<SoftphoneInboxItem[]>([]);
   const transportRef = useRef<SoftphoneTransport>(createSoftphoneTransport(fallbackConfig));
+  const connectionAttemptRef = useRef<string | null>(null);
+  const connectedSessionRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  const syncFromServer = useEffectEvent(async (options?: { silent?: boolean }) => {
+    if (!currentUser.auth_id) return;
 
-    async function hydrateFromServer() {
-      const [envConfig, configResponse, directoryResponse] = await Promise.all([
+    if (!options?.silent) {
+      setIsRefreshing(true);
+    }
+
+    try {
+      const [envConfig, configResponse, directoryResponse, inboxResponse] = await Promise.all([
         fetchSoftphoneEnv(),
         fetchSoftphoneConfig(currentUser.auth_id),
         fetchSoftphoneDirectory(currentUser.auth_id),
+        fetchSoftphoneInbox(currentUser.auth_id),
       ]);
-
-      if (!active) return;
 
       const resolvedConfig = envConfig || fallbackConfig;
       setConfig(resolvedConfig);
@@ -120,19 +147,36 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
       } else {
         setDirectory(buildSoftphoneDirectory(currentUser, resolvedConfig));
       }
+
+      if (inboxResponse) {
+        setInboxSummary(inboxResponse.summary);
+        setInboxItems(inboxResponse.items);
+      }
+
+      setLastSyncedAt(new Date().toISOString());
+    } catch {
+      setState((previous) => ({
+        ...previous,
+        message:
+          'Nao foi possivel atualizar o softphone agora. O ultimo estado valido foi mantido no app.',
+      }));
+    } finally {
+      if (!options?.silent) {
+        setIsRefreshing(false);
+      }
     }
+  });
 
-    hydrateFromServer().catch(() => undefined);
-
-    return () => {
-      active = false;
-    };
-  }, [currentUser, fallbackConfig]);
+  useEffect(() => {
+    syncFromServer().catch(() => undefined);
+  }, [syncFromServer]);
 
   useEffect(() => {
     const nextTransport = createSoftphoneTransport(config);
     const previousTransport = transportRef.current;
     transportRef.current = nextTransport;
+    connectionAttemptRef.current = null;
+    connectedSessionRef.current = null;
 
     return () => {
       previousTransport.disconnect().catch(() => undefined);
@@ -142,6 +186,7 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    setBrowserOnline(window.navigator.onLine);
     setBrowserReadiness({
       secureContext: window.isSecureContext,
       mediaDevices: Boolean(navigator.mediaDevices?.getUserMedia),
@@ -199,12 +244,36 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
   }, [config, resolvedResident]);
 
   useEffect(() => {
-    if (!canResidentAutoStartSoftphone(resolvedResident, config)) return;
-    if (!isSoftphoneProvisioned(config)) return;
+    const autoStartAllowed = canResidentAutoStartSoftphone(resolvedResident, config);
+    const provisioned = isSoftphoneProvisioned(config);
+    const nextExtension = getInitialSoftphoneState(resolvedResident, config).activeExtension;
+    const displayName =
+      resolvedResident.softphone_display_name || resolvedResident.name || config.defaultDisplayName;
+    const sessionKey = JSON.stringify({
+      transport: config.transport,
+      extension: nextExtension || '',
+      displayName,
+      uri: sipCredentials?.uri || '',
+      username: sipCredentials?.authorizationUsername || '',
+      websocketServer: sipCredentials?.websocketServer || '',
+    });
 
+    if (!autoStartAllowed || !provisioned) {
+      connectionAttemptRef.current = null;
+      connectedSessionRef.current = null;
+      transportRef.current.disconnect().catch(() => undefined);
+      return;
+    }
+
+    if (connectedSessionRef.current === sessionKey || connectionAttemptRef.current === sessionKey) {
+      return;
+    }
+
+    connectionAttemptRef.current = sessionKey;
     setState((previous) => ({
       ...previous,
       connectionStatus: 'connecting',
+      activeExtension: nextExtension,
       message: `Sessao do softphone iniciada no app com transporte ${config.transport}.`,
     }));
 
@@ -212,19 +281,20 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
 
     transportRef.current
       .connect({
-        extension: getInitialSoftphoneState(resolvedResident, config).activeExtension,
-        displayName:
-          resolvedResident.softphone_display_name ||
-          resolvedResident.name ||
-          config.defaultDisplayName,
+        extension: nextExtension,
+        displayName,
         sip: sipCredentials,
       })
       .then((nextState) => {
         if (!active) return;
+        connectedSessionRef.current = sessionKey;
+        connectionAttemptRef.current = null;
         setState((previous) => ({ ...previous, ...nextState }));
       })
       .catch((error: Error) => {
         if (!active) return;
+        connectionAttemptRef.current = null;
+        connectedSessionRef.current = null;
         setState((previous) => ({
           ...previous,
           connectionStatus: 'error',
@@ -237,7 +307,158 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
     };
   }, [config, resolvedResident, sipCredentials]);
 
+  useEffect(() => {
+    if (!canResidentAutoStartSoftphone(resolvedResident, config) && !isOpen) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      syncFromServer({ silent: true });
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [config, isOpen, resolvedResident, syncFromServer]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setBrowserOnline(true);
+      syncFromServer({ silent: true });
+    };
+
+    const handleOffline = () => {
+      setBrowserOnline(false);
+      connectionAttemptRef.current = null;
+      connectedSessionRef.current = null;
+      transportRef.current.disconnect().catch(() => undefined);
+      setState((previous) => ({
+        ...previous,
+        connectionStatus: 'ready',
+        callStatus: 'idle',
+        message:
+          'Navegador offline no momento. O softphone vai tentar se reidratar quando a conexao voltar.',
+      }));
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncFromServer({ silent: true });
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [syncFromServer]);
+
   const canPlaceCalls = state.connectionStatus === 'active';
+  const canAttemptConnection =
+    canResidentAutoStartSoftphone(resolvedResident, config) && isSoftphoneProvisioned(config);
+  const readinessChecks = [
+    {
+      id: 'resident-enabled',
+      label: 'Softphone habilitado para o morador',
+      ok: resolvedResident.softphone_enabled !== false,
+    },
+    {
+      id: 'internet-active',
+      label: config.requireInternetActive
+        ? 'Internet do morador ativa'
+        : 'Internet ativa nao e obrigatoria neste ambiente',
+      ok: !config.requireInternetActive || resolvedResident.internet_active === true,
+    },
+    {
+      id: 'browser-online',
+      label: 'Navegador online',
+      ok: browserOnline,
+    },
+    {
+      id: 'pbx-config',
+      label: 'PBX provisionado no ambiente',
+      ok: isSoftphoneProvisioned(config),
+    },
+    {
+      id: 'browser-ready',
+      label: 'Navegador compativel com WebRTC',
+      ok:
+        browserReadiness.secureContext &&
+        browserReadiness.mediaDevices &&
+        browserReadiness.webRtc,
+    },
+    {
+      id: 'microphone',
+      label: 'Microfone liberado',
+      ok: microphonePermission === 'granted',
+    },
+  ];
+  const pendingChecks = readinessChecks.filter((item) => !item.ok);
+  const indicatorBadges = [
+    {
+      id: 'voice',
+      label: 'Voz',
+      count: inboxSummary.voiceUnreadCount,
+      icon: Mic,
+      activeClass: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/20',
+      idleClass: 'text-slate-500 bg-white/5 border-white/5',
+    },
+    {
+      id: 'notes',
+      label: 'Recados',
+      count: inboxSummary.notesUnreadCount,
+      icon: MessageSquare,
+      activeClass: 'text-sky-300 bg-sky-500/15 border-sky-500/20',
+      idleClass: 'text-slate-500 bg-white/5 border-white/5',
+    },
+    {
+      id: 'packages',
+      label: 'Encomendas',
+      count: inboxSummary.pendingPackagesCount,
+      icon: Package,
+      activeClass: 'text-amber-300 bg-amber-500/15 border-amber-500/20',
+      idleClass: 'text-slate-500 bg-white/5 border-white/5',
+    },
+  ];
+
+  const handleInboxItemClick = async (item: SoftphoneInboxItem) => {
+    if (item.source !== 'manual' || !item.unread) return;
+
+    const marked = await markSoftphoneInboxItemAsRead(item.id);
+    if (!marked) return;
+
+    setInboxItems((previous) =>
+      previous.map((entry) =>
+        entry.id === item.id
+          ? {
+              ...entry,
+              unread: false,
+              pending: entry.channel === 'package' ? entry.pending : false,
+            }
+          : entry
+      )
+    );
+    setInboxSummary((previous) => ({
+      ...previous,
+      voiceUnreadCount:
+        item.channel === 'voice'
+          ? Math.max(0, previous.voiceUnreadCount - 1)
+          : previous.voiceUnreadCount,
+      notesUnreadCount:
+        item.channel === 'note'
+          ? Math.max(0, previous.notesUnreadCount - 1)
+          : previous.notesUnreadCount,
+      totalAttentionItems:
+        item.channel === 'package'
+          ? previous.totalAttentionItems
+          : Math.max(0, previous.totalAttentionItems - 1),
+    }));
+  };
 
   const handleMicrophoneTest = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -296,6 +517,49 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
       });
   };
 
+  const handleDialInput = () => {
+    const sanitizedExtension = dialedNumber.trim();
+    if (!sanitizedExtension) {
+      setState((previous) => ({
+        ...previous,
+        message: 'Digite um ramal antes de iniciar a chamada.',
+      }));
+      return;
+    }
+
+    handleDial(sanitizedExtension);
+  };
+
+  const handleReconnect = async () => {
+    connectionAttemptRef.current = null;
+    connectedSessionRef.current = null;
+    await transportRef.current.disconnect().catch(() => undefined);
+    setState((previous) => ({
+      ...previous,
+      connectionStatus: canAttemptConnection ? 'ready' : previous.connectionStatus,
+      callStatus: 'idle',
+      message: canAttemptConnection
+        ? 'Reconexao solicitada. O dock vai buscar a configuracao mais recente.'
+        : previous.message,
+    }));
+    await syncFromServer();
+  };
+
+  const handleDoorOpen = async () => {
+    setOpeningDoor(true);
+    try {
+      const response = await triggerSoftphoneDoorOpen();
+      setState((previous) => ({
+        ...previous,
+        message:
+          response?.message ||
+          'Nao foi possivel consultar a integracao de abertura de porta neste momento.',
+      }));
+    } finally {
+      setOpeningDoor(false);
+    }
+  };
+
   return (
     <>
       <button
@@ -347,6 +611,11 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
               )}
               {formatStatusLabel(state.connectionStatus)}
             </div>
+            {!browserOnline && (
+              <div className="mt-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
+                Navegador offline. O softphone retomara a sincronizacao quando a rede voltar.
+              </div>
+            )}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
@@ -383,9 +652,30 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
                 <input
                   value={dialedNumber}
                   onChange={(event) => setDialedNumber(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleDialInput();
+                    }
+                  }}
                   placeholder="Digite o ramal"
                   className="w-full bg-transparent text-sm outline-none placeholder:text-slate-600"
                 />
+              </div>
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleDialInput}
+                  className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-100 transition hover:border-rose-400/50"
+                >
+                  Ligar numero digitado
+                </button>
+                <button
+                  onClick={handleReconnect}
+                  disabled={isRefreshing}
+                  className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm font-bold text-slate-100 transition hover:border-sky-500/30 disabled:opacity-60"
+                >
+                  {isRefreshing ? 'Atualizando...' : 'Reconectar'}
+                </button>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {directory.slice(0, 4).map((item) => (
@@ -416,7 +706,31 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
                 <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-3">
                   3. Depois da instalacao do PBX, a abertura de porta pode ser ligada por DTMF ou relay HTTP.
                 </div>
+                <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-3 text-xs text-slate-400">
+                  Modo configurado para porta: <span className="font-bold text-slate-200">{config.door.mode}</span>
+                  {config.door.mode === 'dtmf' && (
+                    <span> com DTMF {config.door.dtmf}</span>
+                  )}
+                </div>
+                <div
+                  className={`rounded-2xl border p-3 text-xs ${
+                    config.door.mode === 'none'
+                      ? 'border-amber-500/20 bg-amber-500/10 text-amber-100'
+                      : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-100'
+                  }`}
+                >
+                  {config.door.mode === 'none'
+                    ? 'Abertura de porta ainda esta em modo preparatorio. O botao serve como placeholder ate a configuracao real da infraestrutura.'
+                    : `Abertura de porta preparada no modo ${config.door.mode}. Quando a infraestrutura estiver ativa, este fluxo podera ser homologado sem mudar a interface do morador.`}
+                </div>
               </div>
+              <button
+                onClick={handleDoorOpen}
+                disabled={openingDoor}
+                className="mt-4 w-full rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-100 transition hover:bg-emerald-500/20 disabled:opacity-60"
+              >
+                {openingDoor ? 'Consultando porta...' : config.door.label}
+              </button>
             </div>
 
             <div className="rounded-2xl border border-white/5 bg-slate-900/70 p-4">
@@ -425,6 +739,62 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
                 Estado atual
               </div>
               <p className="text-sm leading-relaxed text-slate-300">{state.message}</p>
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                    Ultima sincronizacao
+                  </div>
+                  <div className="mt-1 text-sm font-bold text-slate-100">
+                    {lastSyncedAt
+                      ? new Date(lastSyncedAt).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'Aguardando primeira leitura'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => syncFromServer()}
+                  disabled={isRefreshing}
+                  className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold uppercase tracking-widest text-slate-200 transition hover:border-rose-500/30 disabled:opacity-60"
+                >
+                  {isRefreshing ? 'Sincronizando...' : 'Atualizar'}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/5 bg-slate-900/70 p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                <ShieldCheck size={16} />
+                Checklist de prontidao
+              </div>
+              <div className="space-y-2">
+                {readinessChecks.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3"
+                  >
+                    <span className="text-sm text-slate-300">{item.label}</span>
+                    <span
+                      className={`text-xs font-black uppercase tracking-widest ${
+                        item.ok ? 'text-emerald-400' : 'text-amber-400'
+                      }`}
+                    >
+                      {item.ok ? 'ok' : 'pendente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                {pendingChecks.length === 0
+                  ? 'Todos os pre-requisitos visiveis no navegador estao atendidos para tentar o softphone.'
+                  : `Ainda faltam ${pendingChecks.length} requisito(s) para o softphone ficar totalmente pronto neste dispositivo.`}
+              </p>
+              {pendingChecks.length === 0 && (
+                <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-200">
+                  Este dispositivo esta pronto para a primeira tentativa de registro SIP assim que o PBX estiver ativo.
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl border border-white/5 bg-slate-900/70 p-4">

@@ -1,7 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Users, CreditCard, Wrench, LayoutDashboard, CheckCircle2, AlertCircle, Wifi, Droplets, Plus, MessageSquare, X, Trello, Bed, PhoneCall } from 'lucide-react';
 import { Payment, MaintenanceRequest, Resident, Room, PaymentStatus, MaintenanceStatus, LaundrySchedule, UserRole, RoomType } from '../types';
 import { createMaintenanceRequest, createComplaint } from '../lib/database';
+import {
+    fetchSoftphoneHealth,
+    fetchSoftphoneRollout,
+    type SoftphoneHealthResponse,
+    type SoftphoneRolloutResponse
+} from '../modules/softphone/api';
 
 interface DashboardViewProps {
     payments: Payment[];
@@ -49,6 +55,8 @@ export function DashboardView({
 
     const [showComplaintModal, setShowComplaintModal] = useState(false);
     const [showRepairModal, setShowRepairModal] = useState(false);
+    const [softphoneRollout, setSoftphoneRollout] = useState<SoftphoneRolloutResponse | null>(null);
+    const [softphoneHealth, setSoftphoneHealth] = useState<SoftphoneHealthResponse | null>(null);
 
     // Form states
     const [repairTitle, setRepairTitle] = useState('');
@@ -58,6 +66,17 @@ export function DashboardView({
     const [complaintDesc, setComplaintDesc] = useState('');
     const [complaintAnon, setComplaintAnon] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (!isAdmin) return;
+
+        fetchSoftphoneRollout()
+            .then((data) => setSoftphoneRollout(data))
+            .catch(() => setSoftphoneRollout(null));
+        fetchSoftphoneHealth()
+            .then((data) => setSoftphoneHealth(data))
+            .catch(() => setSoftphoneHealth(null));
+    }, [isAdmin]);
 
     const stats = useMemo(() => {
         const myPayments = payments.filter(p => isAdmin || p.resident_id === currentUser.id);
@@ -70,6 +89,9 @@ export function DashboardView({
         const softphoneEnabled = residents.filter(r => r.softphone_enabled !== false).length;
         const softphoneProvisioned = residents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension)).length;
         const softphoneReadyOnNetwork = residents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active).length;
+        const softphoneMissingExtension = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.softphone_extension).length;
+        const softphoneBlockedByInternet = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.internet_active).length;
+        const softphoneDisabled = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled === false).length;
         const today = new Date().toISOString().split('T')[0];
         const todaysLaundry = laundrySchedules.filter(l => l.date === today).length;
         const myTodaysLaundry = laundrySchedules.filter(l => l.date === today && (isAdmin || l.resident_id === currentUser.id)).length;
@@ -85,11 +107,31 @@ export function DashboardView({
             softphoneEnabled,
             softphoneProvisioned,
             softphoneReadyOnNetwork,
+            softphoneMissingExtension,
+            softphoneBlockedByInternet,
+            softphoneDisabled,
             todaysLaundry,
             myTodaysLaundry,
             totalAvailableBeds
         };
     }, [payments, maintenance, residents, laundrySchedules, currentUser, isAdmin, rooms]);
+
+    const softphoneStats = {
+        enabled: softphoneRollout?.summary.enabled ?? stats.softphoneEnabled,
+        provisioned: softphoneRollout
+            ? softphoneRollout.items.filter((item) => Boolean(item.extension)).length
+            : stats.softphoneProvisioned,
+        ready: softphoneRollout?.summary.ready ?? stats.softphoneReadyOnNetwork,
+        missingExtension: softphoneRollout?.summary.missingExtension ?? stats.softphoneMissingExtension,
+        blockedByInternet: softphoneRollout?.summary.internetInactive ?? stats.softphoneBlockedByInternet,
+        disabled: softphoneRollout?.summary.disabled ?? stats.softphoneDisabled,
+        missingMac: softphoneRollout?.summary.missingMac ?? residents.filter(
+            (resident) => resident.role === UserRole.RESIDENT && !resident.mac_address
+        ).length,
+    };
+    const softphoneStatsSourceLabel = softphoneRollout?.generatedAt
+        ? `Resumo consolidado em ${new Date(softphoneRollout.generatedAt).toLocaleString('pt-BR')}`
+        : 'Resumo em fallback local';
 
     const handleCreateRepair = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -350,15 +392,15 @@ export function DashboardView({
                             <div className="grid grid-cols-3 gap-3 mb-6">
                                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                                     <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Habilitados</div>
-                                    <div className="mt-2 text-2xl font-black text-white">{stats.softphoneEnabled}</div>
+                                    <div className="mt-2 text-2xl font-black text-white">{softphoneStats.enabled}</div>
                                 </div>
                                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                                     <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Com Ramal</div>
-                                    <div className="mt-2 text-2xl font-black text-white">{stats.softphoneProvisioned}</div>
+                                    <div className="mt-2 text-2xl font-black text-white">{softphoneStats.provisioned}</div>
                                 </div>
                                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                                     <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Prontos</div>
-                                    <div className="mt-2 text-2xl font-black text-white">{stats.softphoneReadyOnNetwork}</div>
+                                    <div className="mt-2 text-2xl font-black text-white">{softphoneStats.ready}</div>
                                 </div>
                             </div>
 
@@ -366,12 +408,55 @@ export function DashboardView({
                                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
                                     Prontos = softphone habilitado, ramal definido e internet ativa para o morador.
                                 </div>
-                                <button
-                                    onClick={() => setActiveTab('internet')}
-                                    className="w-full rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-xs font-black uppercase tracking-widest text-indigo-300 transition hover:bg-indigo-500/20"
-                                >
-                                    Abrir painel técnico
-                                </button>
+                                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs text-slate-400">
+                                    {softphoneStatsSourceLabel}
+                                </div>
+                                {!softphoneRollout?.generatedAt && (
+                                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+                                        O card esta em fallback local. Confira a aba de Internet e o endpoint `/api/softphone/rollout` para validar o resumo consolidado.
+                                    </div>
+                                )}
+                                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+                                    Porta: <span className="font-black text-white">{softphoneHealth?.door.mode || 'none'}</span>
+                                    {' '}|{' '}
+                                    {softphoneHealth?.door.configured
+                                        ? softphoneHealth.door.dtmf
+                                            ? `DTMF ${softphoneHealth.door.dtmf}`
+                                            : softphoneHealth.door.label
+                                        : 'Aguardando configuracao'}
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                    <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3">
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-amber-300">Sem Ramal</div>
+                                        <div className="mt-2 text-xl font-black text-white">{softphoneStats.missingExtension}</div>
+                                    </div>
+                                    <div className="rounded-2xl border border-sky-500/10 bg-sky-500/5 p-3">
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-sky-300">Internet</div>
+                                        <div className="mt-2 text-xl font-black text-white">{softphoneStats.blockedByInternet}</div>
+                                    </div>
+                                    <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-3">
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Desativados</div>
+                                        <div className="mt-2 text-xl font-black text-white">{softphoneStats.disabled}</div>
+                                    </div>
+                                    <div className="rounded-2xl border border-violet-500/10 bg-violet-500/5 p-3">
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-violet-300">Sem MAC</div>
+                                        <div className="mt-2 text-xl font-black text-white">{softphoneStats.missingMac}</div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setActiveTab('internet')}
+                                        className="w-full rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-xs font-black uppercase tracking-widest text-indigo-300 transition hover:bg-indigo-500/20"
+                                    >
+                                        Abrir painel tecnico
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('residents')}
+                                        className="w-full rounded-2xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-200 transition hover:border-slate-500"
+                                    >
+                                        Abrir moradores
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

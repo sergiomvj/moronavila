@@ -62,6 +62,34 @@ export interface Resident {
   softphone_display_name?: string;
 }
 
+export type ResidentMessageChannel = 'note' | 'voice' | 'package';
+
+export type ResidentMessageCategory =
+  | 'payment'
+  | 'maintenance'
+  | 'cleaning'
+  | 'admin'
+  | 'internet'
+  | 'softphone'
+  | 'package'
+  | 'voice'
+  | 'general';
+
+export interface ResidentMessage {
+  id: string;
+  resident_id: string;
+  channel: ResidentMessageChannel;
+  category: ResidentMessageCategory;
+  title: string;
+  body: string;
+  created_at: string;
+  read_at?: string | null;
+  resolved_at?: string | null;
+  related_entity_type?: string | null;
+  related_entity_id?: string | null;
+  metadata?: Record<string, any> | null;
+}
+
 export interface Device {
   id: string;
   resident_id: string;

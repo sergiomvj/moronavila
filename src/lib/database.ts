@@ -3,7 +3,7 @@ import {
     Resident, Room, Payment, MaintenanceRequest,
     Complaint, Notice, NoticeComment, CalendarEvent,
     Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule, Device, MaintenanceStatus,
-    InternetConfig, PropertyDescription
+    InternetConfig, PropertyDescription, ResidentMessage
 } from '../types';
 
 // ── RESIDENTS ──────────────────────────────────────────────────────────────────
@@ -579,4 +579,42 @@ export async function updateLaundrySchedule(id: string, updates: Partial<Laundry
 export async function deleteLaundrySchedule(id: string): Promise<void> {
     const { error } = await supabase.from('laundry_schedules').delete().eq('id', id);
     if (error) throw error;
+}
+
+// resident messages
+export async function fetchResidentMessages(residentId: string): Promise<ResidentMessage[]> {
+    const { data, error } = await supabase
+        .from('resident_messages')
+        .select('*')
+        .eq('resident_id', residentId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as ResidentMessage[];
+}
+
+export async function createResidentMessage(
+    message: Omit<ResidentMessage, 'id' | 'created_at'>
+): Promise<ResidentMessage> {
+    const payload = toSnake(message);
+    const { data, error } = await supabase
+        .from('resident_messages')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as ResidentMessage;
+}
+
+export async function markResidentMessageAsRead(id: string): Promise<ResidentMessage> {
+    const { data, error } = await supabase
+        .from('resident_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data as ResidentMessage;
 }

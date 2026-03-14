@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -41,8 +41,72 @@ const SOFTPHONE_PORTARIA_EXTENSION = process.env.VITE_SOFTPHONE_PORTARIA_EXTENSI
 const SOFTPHONE_ADMIN_EXTENSION = process.env.VITE_SOFTPHONE_ADMIN_EXTENSION || '101';
 const SOFTPHONE_LAUNDRY_EXTENSION = process.env.VITE_SOFTPHONE_LAUNDRY_EXTENSION || '102';
 const SOFTPHONE_DELIVERY_EXTENSION = process.env.VITE_SOFTPHONE_DELIVERY_EXTENSION || '103';
+const SOFTPHONE_DOOR_MODE = process.env.VITE_SOFTPHONE_DOOR_MODE || 'none';
+const SOFTPHONE_DOOR_LABEL = process.env.VITE_SOFTPHONE_DOOR_LABEL || 'Abrir porta';
+const SOFTPHONE_DOOR_DTMF = process.env.VITE_SOFTPHONE_DOOR_DTMF || '9';
+const SOFTPHONE_DOOR_RELAY_URL = process.env.SOFTPHONE_DOOR_RELAY_URL || '';
 
 app.use(express.json());
+
+type AuthenticatedRequest = express.Request & {
+    authUser?: {
+        id: string;
+        email?: string | null;
+    };
+    authResident?: any;
+};
+
+async function requireAuthenticatedResident(
+    req: AuthenticatedRequest,
+    res: express.Response,
+    next: express.NextFunction
+) {
+    const authorizationHeader = req.headers.authorization || '';
+    const token = authorizationHeader.startsWith('Bearer ')
+        ? authorizationHeader.slice('Bearer '.length).trim()
+        : '';
+
+    if (!token) {
+        return res.status(401).json({ error: 'Autenticacao obrigatoria.' });
+    }
+
+    const authResult = await supabase.auth.getUser(token);
+    const authUser = authResult.data.user;
+
+    if (authResult.error || !authUser) {
+        return res.status(401).json({ error: 'Sessao invalida ou expirada.' });
+    }
+
+    const residentResult = await supabase
+        .from('residents')
+        .select('id, auth_id, name, email, role, room_id, mac_address, internet_active, softphone_enabled, softphone_extension, softphone_display_name, bed_identifier, phone')
+        .eq('auth_id', authUser.id)
+        .maybeSingle();
+
+    if (residentResult.error || !residentResult.data) {
+        return res.status(403).json({ error: 'Cadastro do morador nao encontrado.' });
+    }
+
+    req.authUser = {
+        id: authUser.id,
+        email: authUser.email
+    };
+    req.authResident = residentResult.data;
+
+    next();
+}
+
+function requireAdminRole(
+    req: AuthenticatedRequest,
+    res: express.Response,
+    next: express.NextFunction
+) {
+    if (req.authResident?.role !== 'Administrador') {
+        return res.status(403).json({ error: 'Acesso restrito a administradores.' });
+    }
+
+    next();
+}
 
 function buildSuggestedResidentExtension(resident: any): string | null {
     if (resident?.softphone_extension) return String(resident.softphone_extension);
@@ -55,6 +119,134 @@ function buildSuggestedResidentExtension(resident: any): string | null {
         if (digits) return `2${digits.padStart(3, '0').slice(-3)}`;
     }
     return null;
+}
+
+function getResidentSoftphoneBlockers(resident: any): string[] {
+    const blockers: string[] = [];
+
+    if (resident?.role !== 'Morador') return blockers;
+    if (resident?.softphone_enabled === false) blockers.push('Softphone desativado');
+    if (!buildSuggestedResidentExtension(resident)) blockers.push('Sem ramal definido');
+    if (SOFTPHONE_REQUIRE_INTERNET_ACTIVE && resident?.internet_active !== true) {
+        blockers.push('Internet inativa');
+    }
+    if (!resident?.mac_address) blockers.push('Sem MAC principal');
+
+    return blockers;
+}
+
+function isResidentMessageUnread(item: any): boolean {
+    return !item?.read_at;
+}
+
+function isResidentMessagePending(item: any): boolean {
+    return !item?.resolved_at;
+}
+
+function buildPaymentReminderMessage(payment: any) {
+    const isOverdue = payment?.status === 'Atrasado';
+    const dueDate = payment?.due_date
+        ? new Date(payment.due_date).toLocaleDateString('pt-BR')
+        : 'sem vencimento';
+
+    return {
+        id: `payment-${payment.id}`,
+        source: 'system',
+        channel: 'note',
+        category: 'payment',
+        title: isOverdue ? 'Pagamento atrasado' : 'Lembrete de pagamento',
+        body: isOverdue
+            ? `${payment.description || 'Cobranca em aberto'} venceu em ${dueDate}.`
+            : `${payment.description || 'Pagamento pendente'} com vencimento em ${dueDate}.`,
+        createdAt: payment?.due_date || new Date().toISOString(),
+        unread: true,
+        pending: true
+    };
+}
+
+function buildMaintenanceReminderMessage(item: any) {
+    return {
+        id: `maintenance-${item.id}`,
+        source: 'system',
+        channel: 'note',
+        category: 'maintenance',
+        title:
+            item?.status === 'Em Andamento'
+                ? 'Reparo em andamento'
+                : 'Reparo aberto',
+        body: item?.title
+            ? `${item.title}: ${item.description || 'Sua solicitacao segue em acompanhamento.'}`
+            : 'Existe uma manutencao vinculada ao seu ambiente.',
+        createdAt: item?.created_at || new Date().toISOString(),
+        unread: true,
+        pending: true
+    };
+}
+
+async function loadSoftphoneInboxData(resident: any) {
+    const [messagesResult, paymentsResult, maintenanceResult] = await Promise.all([
+        supabase
+            .from('resident_messages')
+            .select('*')
+            .eq('resident_id', resident.id)
+            .order('created_at', { ascending: false })
+            .limit(20),
+        supabase
+            .from('payments')
+            .select('id, due_date, status, description')
+            .eq('resident_id', resident.id)
+            .in('status', ['Pendente', 'Atrasado'])
+            .order('due_date', { ascending: true })
+            .limit(6),
+        resident.room_id
+            ? supabase
+                .from('maintenance_requests')
+                .select('id, title, description, status, created_at, room_id, requested_by')
+                .eq('room_id', resident.room_id)
+                .in('status', ['Aberto', 'Em Andamento'])
+                .order('created_at', { ascending: false })
+                .limit(6)
+            : Promise.resolve({ data: [], error: null } as any)
+    ]);
+
+    const persistedMessages = messagesResult.error ? [] : (messagesResult.data || []);
+    const syntheticPaymentMessages = paymentsResult.error
+        ? []
+        : (paymentsResult.data || []).map(buildPaymentReminderMessage);
+    const syntheticMaintenanceMessages = maintenanceResult.error
+        ? []
+        : (maintenanceResult.data || []).map(buildMaintenanceReminderMessage);
+
+    const persistedItems = persistedMessages.map((item: any) => ({
+        id: item.id,
+        source: 'manual',
+        channel: item.channel,
+        category: item.category,
+        title: item.title,
+        body: item.body,
+        createdAt: item.created_at,
+        unread: isResidentMessageUnread(item),
+        pending: item.channel === 'package' ? isResidentMessagePending(item) : isResidentMessageUnread(item)
+    }));
+
+    const items = [...persistedItems, ...syntheticPaymentMessages, ...syntheticMaintenanceMessages]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const summary = {
+        voiceUnreadCount: persistedItems.filter((item) => item.channel === 'voice' && item.unread).length,
+        notesUnreadCount: items.filter((item) => item.channel === 'note' && item.unread).length,
+        pendingPackagesCount: persistedItems.filter((item) => item.channel === 'package' && item.pending).length
+    };
+
+    return {
+        resident,
+        summary: {
+            ...summary,
+            totalAttentionItems:
+                summary.voiceUnreadCount + summary.notesUnreadCount + summary.pendingPackagesCount
+        },
+        items: items.slice(0, 10)
+    };
 }
 
 app.get('/api/softphone/env', async (_req, res) => {
@@ -73,156 +265,273 @@ app.get('/api/softphone/env', async (_req, res) => {
             administracao: SOFTPHONE_ADMIN_EXTENSION,
             lavanderia: SOFTPHONE_LAUNDRY_EXTENSION,
             encomendas: SOFTPHONE_DELIVERY_EXTENSION
+        },
+        door: {
+            mode: ['dtmf', 'http-relay', 'extension'].includes(SOFTPHONE_DOOR_MODE) ? SOFTPHONE_DOOR_MODE : 'none',
+            label: SOFTPHONE_DOOR_LABEL,
+            dtmf: SOFTPHONE_DOOR_DTMF
         }
     });
 });
 
 app.get('/api/softphone/directory', async (req, res) => {
-    const authId = typeof req.query.authId === 'string' ? req.query.authId : '';
-    let resident: any = null;
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        const resident = (req as AuthenticatedRequest).authResident;
+        const residentExtension = buildSuggestedResidentExtension(resident);
+        const directory = [
+            residentExtension ? {
+                id: 'meu-ramal',
+                extension: residentExtension,
+                name: resident?.softphone_display_name || resident?.name || 'Meu Ramal',
+                kind: 'resident',
+                description: 'Ramal sugerido para este morador'
+            } : null,
+            {
+                id: 'portaria',
+                extension: SOFTPHONE_PORTARIA_EXTENSION,
+                name: 'Portaria',
+                kind: 'doorphone',
+                description: 'Interfone e atendimento principal'
+            },
+            {
+                id: 'administracao',
+                extension: SOFTPHONE_ADMIN_EXTENSION,
+                name: 'Administracao',
+                kind: 'admin',
+                description: 'Equipe administrativa'
+            },
+            {
+                id: 'lavanderia',
+                extension: SOFTPHONE_LAUNDRY_EXTENSION,
+                name: 'Lavanderia',
+                kind: 'laundry',
+                description: 'Suporte da lavanderia'
+            },
+            {
+                id: 'encomendas',
+                extension: SOFTPHONE_DELIVERY_EXTENSION,
+                name: 'Encomendas',
+                kind: 'delivery',
+                description: 'Recebimento e entregas'
+            }
+        ].filter(Boolean);
 
-    if (authId) {
-        const result = await supabase
-            .from('residents')
-            .select('id, name, phone, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active')
-            .eq('auth_id', authId)
-            .maybeSingle();
-
-        if (!result.error) {
-            resident = result.data;
-        }
-    }
-
-    const residentExtension = buildSuggestedResidentExtension(resident);
-    const directory = [
-        residentExtension ? {
-            id: 'meu-ramal',
-            extension: residentExtension,
-            name: resident?.softphone_display_name || resident?.name || 'Meu Ramal',
-            kind: 'resident',
-            description: 'Ramal sugerido para este morador'
-        } : null,
-        {
-            id: 'portaria',
-            extension: SOFTPHONE_PORTARIA_EXTENSION,
-            name: 'Portaria',
-            kind: 'doorphone',
-            description: 'Interfone e atendimento principal'
-        },
-        {
-            id: 'administracao',
-            extension: SOFTPHONE_ADMIN_EXTENSION,
-            name: 'Administracao',
-            kind: 'admin',
-            description: 'Equipe administrativa'
-        },
-        {
-            id: 'lavanderia',
-            extension: SOFTPHONE_LAUNDRY_EXTENSION,
-            name: 'Lavanderia',
-            kind: 'laundry',
-            description: 'Suporte da lavanderia'
-        },
-        {
-            id: 'encomendas',
-            extension: SOFTPHONE_DELIVERY_EXTENSION,
-            name: 'Encomendas',
-            kind: 'delivery',
-            description: 'Recebimento e entregas'
-        }
-    ].filter(Boolean);
-
-    res.json({
-        resident: resident ? {
-            id: resident.id,
-            softphoneEnabled: resident.softphone_enabled !== false,
-            internetActive: resident.internet_active === true
-        } : null,
-        directory
+        return res.json({
+            resident: {
+                id: resident.id,
+                softphoneEnabled: resident.softphone_enabled !== false,
+                internetActive: resident.internet_active === true
+            },
+            directory
+        });
     });
 });
 
 app.get('/api/softphone/config', async (req, res) => {
-    const authId = typeof req.query.authId === 'string' ? req.query.authId : '';
-
-    if (!authId) {
-        return res.status(400).json({ error: 'authId é obrigatório' });
-    }
-
-    const result = await supabase
-        .from('residents')
-        .select('id, name, phone, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active')
-        .eq('auth_id', authId)
-        .maybeSingle();
-
-    if (result.error || !result.data) {
-        return res.status(404).json({ error: 'Morador não encontrado' });
-    }
-
-    const resident = result.data;
-    const extension = buildSuggestedResidentExtension(resident);
-    const canIssueSipConfig = Boolean(
-        extension &&
-        SOFTPHONE_PBX_DOMAIN &&
-        SOFTPHONE_PBX_WSS_URL &&
-        SOFTPHONE_PBX_DEFAULT_SECRET
-    );
-
-    return res.json({
-        enabled: SOFTPHONE_ENABLED && resident.softphone_enabled !== false,
-        autoConnect: SOFTPHONE_AUTO_CONNECT,
-        requireInternetActive: SOFTPHONE_REQUIRE_INTERNET_ACTIVE,
-        transport: SOFTPHONE_TRANSPORT,
-        configured: Boolean(SOFTPHONE_PBX_HOST && SOFTPHONE_PBX_DOMAIN && SOFTPHONE_PBX_WSS_URL),
-        resident: {
-            id: resident.id,
-            name: resident.name,
-            displayName: resident.softphone_display_name || resident.name || SOFTPHONE_DEFAULT_DISPLAY_NAME,
-            extension,
-            internetActive: resident.internet_active === true
-        },
-        sip: {
-            host: SOFTPHONE_PBX_HOST || null,
-            domain: SOFTPHONE_PBX_DOMAIN || null,
-            websocketServer: SOFTPHONE_PBX_WSS_URL || null,
-            uri: canIssueSipConfig ? `sip:${extension}@${SOFTPHONE_PBX_DOMAIN}` : null,
-            authorizationUsername: canIssueSipConfig ? extension : null,
-            authorizationPassword: canIssueSipConfig ? SOFTPHONE_PBX_DEFAULT_SECRET : null
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        const resident = (req as AuthenticatedRequest).authResident;
+        const extension = buildSuggestedResidentExtension(resident);
+        const canIssueSipConfig = Boolean(
+            extension &&
+            SOFTPHONE_PBX_DOMAIN &&
+            SOFTPHONE_PBX_WSS_URL &&
+            SOFTPHONE_PBX_DEFAULT_SECRET
+        );
+        return res.json({
+            enabled: SOFTPHONE_ENABLED && resident.softphone_enabled !== false,
+            autoConnect: SOFTPHONE_AUTO_CONNECT,
+            requireInternetActive: SOFTPHONE_REQUIRE_INTERNET_ACTIVE,
+            transport: SOFTPHONE_TRANSPORT,
+            configured: Boolean(SOFTPHONE_PBX_HOST && SOFTPHONE_PBX_DOMAIN && SOFTPHONE_PBX_WSS_URL),
+            resident: {
+                id: resident.id,
+                name: resident.name,
+                displayName: resident.softphone_display_name || resident.name || SOFTPHONE_DEFAULT_DISPLAY_NAME,
+                extension,
+                internetActive: resident.internet_active === true
+            },
+            sip: {
+                host: SOFTPHONE_PBX_HOST || null,
+                domain: SOFTPHONE_PBX_DOMAIN || null,
+                websocketServer: SOFTPHONE_PBX_WSS_URL || null,
+                uri: canIssueSipConfig ? `sip:${extension}@${SOFTPHONE_PBX_DOMAIN}` : null,
+                authorizationUsername: canIssueSipConfig ? extension : null,
+                authorizationPassword: canIssueSipConfig ? SOFTPHONE_PBX_DEFAULT_SECRET : null
+            }
+        });
+    });
+});
+app.get('/api/softphone/inbox', async (req, res) => {
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        const resident = (req as AuthenticatedRequest).authResident;
+        const payload = await loadSoftphoneInboxData(resident);
+        return res.json({
+            generatedAt: new Date().toISOString(),
+            resident: {
+                id: payload.resident.id,
+                name: payload.resident.name,
+                internetActive: payload.resident.internet_active === true,
+                softphoneEnabled: payload.resident.softphone_enabled !== false
+            },
+            summary: payload.summary,
+            items: payload.items
+        });
+    });
+});
+app.post('/api/softphone/inbox/:messageId/read', async (req, res) => {
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        const { messageId } = req.params;
+        const resident = (req as AuthenticatedRequest).authResident;
+        const result = await supabase
+            .from('resident_messages')
+            .update({ read_at: new Date().toISOString() })
+            .eq('id', messageId)
+            .eq('resident_id', resident.id)
+            .select('*')
+            .maybeSingle();
+        if (result.error) {
+            return res.status(500).json({ error: 'Nao foi possivel marcar o recado como lido.' });
         }
+        if (!result.data) {
+            return res.status(404).json({ error: 'Recado nao encontrado.' });
+        }
+        return res.json({
+            ok: true,
+            message: result.data
+        });
+    });
+});
+app.get('/api/softphone/health', async (req, res) => {
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        return requireAdminRole(req as AuthenticatedRequest, res, async () => {
+            const missing = [];
+            const supportedDoorModes = ['dtmf', 'http-relay', 'extension'];
+            const doorMode = supportedDoorModes.includes(SOFTPHONE_DOOR_MODE) ? SOFTPHONE_DOOR_MODE : 'none';
+            if (!SOFTPHONE_ENABLED) missing.push('VITE_SOFTPHONE_ENABLED');
+            if (!SOFTPHONE_PBX_HOST) missing.push('VITE_SOFTPHONE_PBX_HOST');
+            if (!SOFTPHONE_PBX_DOMAIN) missing.push('VITE_SOFTPHONE_PBX_DOMAIN');
+            if (!SOFTPHONE_PBX_WSS_URL) missing.push('VITE_SOFTPHONE_PBX_WSS_URL');
+            if (SOFTPHONE_TRANSPORT === 'sipjs' && !SOFTPHONE_PBX_DEFAULT_SECRET) {
+                missing.push('SOFTPHONE_PBX_DEFAULT_SECRET');
+            }
+            if (doorMode === 'http-relay' && !SOFTPHONE_DOOR_RELAY_URL) {
+                missing.push('SOFTPHONE_DOOR_RELAY_URL');
+            }
+            return res.json({
+                ok: missing.length === 0,
+                transport: SOFTPHONE_TRANSPORT,
+                enabled: SOFTPHONE_ENABLED,
+                configured: Boolean(SOFTPHONE_PBX_HOST && SOFTPHONE_PBX_DOMAIN && SOFTPHONE_PBX_WSS_URL),
+                door: {
+                    mode: doorMode,
+                    label: SOFTPHONE_DOOR_LABEL,
+                    configured: doorMode === 'none'
+                        ? false
+                        : doorMode === 'http-relay'
+                            ? Boolean(SOFTPHONE_DOOR_RELAY_URL)
+                            : true,
+                    dtmf: doorMode === 'dtmf' ? SOFTPHONE_DOOR_DTMF : null,
+                },
+                missing,
+                recommendations: missing.length === 0
+                    ? ['Softphone pronto para testes de registro SIP no navegador.']
+                    : [
+                        'Preencha as vari??veis ausentes no .env.local.',
+                        'Reinicie o mac-server depois de alterar as vari??veis.',
+                        'Use npm run softphone:doctor para conferir o ambiente local.'
+                    ]
+            });
+        });
+    });
+});
+app.get('/api/softphone/rollout', async (req, res) => {
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        return requireAdminRole(req as AuthenticatedRequest, res, async () => {
+            const result = await supabase
+                .from('residents')
+                .select('id, name, email, phone, role, mac_address, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active')
+                .order('name', { ascending: true });
+            if (result.error) {
+                return res.status(500).json({ error: 'Nao foi possivel carregar o rollout do softphone.' });
+            }
+            const residents = (result.data || []).filter((resident: any) => resident.role === 'Morador');
+            const items = residents.map((resident: any) => {
+                const suggestedExtension = buildSuggestedResidentExtension(resident);
+                const blockers = getResidentSoftphoneBlockers(resident);
+                return {
+                    id: resident.id,
+                    name: resident.name,
+                    email: resident.email,
+                    phone: resident.phone,
+                    extension: suggestedExtension,
+                    displayName: resident.softphone_display_name || resident.name || null,
+                    internetActive: resident.internet_active === true,
+                    softphoneEnabled: resident.softphone_enabled !== false,
+                    macAddress: resident.mac_address || null,
+                    ready: blockers.length === 0,
+                    blockers,
+                };
+            });
+            const summary = {
+                totalResidents: items.length,
+                ready: items.filter((item) => item.ready).length,
+                enabled: items.filter((item) => item.softphoneEnabled).length,
+                missingExtension: items.filter((item) => item.blockers.includes('Sem ramal definido')).length,
+                internetInactive: items.filter((item) => item.blockers.includes('Internet inativa')).length,
+                disabled: items.filter((item) => item.blockers.includes('Softphone desativado')).length,
+                missingMac: items.filter((item) => item.blockers.includes('Sem MAC principal')).length,
+            };
+            return res.json({
+                generatedAt: new Date().toISOString(),
+                requireInternetActive: SOFTPHONE_REQUIRE_INTERNET_ACTIVE,
+                summary,
+                items,
+            });
+        });
+    });
+});
+app.post('/api/softphone/door/open', async (req, res) => {
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        const supportedModes = ['dtmf', 'http-relay', 'extension'];
+        const mode = supportedModes.includes(SOFTPHONE_DOOR_MODE) ? SOFTPHONE_DOOR_MODE : 'none';
+        if (mode === 'none') {
+            return res.json({
+                ok: false,
+                supported: false,
+                mode,
+                label: SOFTPHONE_DOOR_LABEL,
+                message: 'Abertura de porta ainda nao configurada. Defina o modo no .env.local quando a infraestrutura estiver pronta.'
+            });
+        }
+        if (mode === 'http-relay' && !SOFTPHONE_DOOR_RELAY_URL) {
+            return res.json({
+                ok: false,
+                supported: false,
+                mode,
+                label: SOFTPHONE_DOOR_LABEL,
+                message: 'Modo HTTP relay selecionado, mas SOFTPHONE_DOOR_RELAY_URL ainda nao foi preenchida.'
+            });
+        }
+        return res.json({
+            ok: false,
+            supported: true,
+            mode,
+            label: SOFTPHONE_DOOR_LABEL,
+            dtmf: mode === 'dtmf' ? SOFTPHONE_DOOR_DTMF : null,
+            relayUrlConfigured: mode === 'http-relay' ? Boolean(SOFTPHONE_DOOR_RELAY_URL) : null,
+            message: mode === 'dtmf'
+                ? 'Fluxo de porta preparado para DTMF. Falta ligar o comando ao transporte SIP ativo.'
+                : mode === 'http-relay'
+                    ? 'Fluxo de porta preparado para relay HTTP. Falta executar a chamada real ao controlador de acesso.'
+                    : 'Fluxo de porta preparado para extensao dedicada. Falta ligar a acao ao PBX real.'
+        });
     });
 });
 
-app.get('/api/softphone/health', async (_req, res) => {
-    const missing = [];
-
-    if (!SOFTPHONE_ENABLED) missing.push('VITE_SOFTPHONE_ENABLED');
-    if (!SOFTPHONE_PBX_HOST) missing.push('VITE_SOFTPHONE_PBX_HOST');
-    if (!SOFTPHONE_PBX_DOMAIN) missing.push('VITE_SOFTPHONE_PBX_DOMAIN');
-    if (!SOFTPHONE_PBX_WSS_URL) missing.push('VITE_SOFTPHONE_PBX_WSS_URL');
-    if (SOFTPHONE_TRANSPORT === 'sipjs' && !SOFTPHONE_PBX_DEFAULT_SECRET) {
-        missing.push('SOFTPHONE_PBX_DEFAULT_SECRET');
-    }
-
-    res.json({
-        ok: missing.length === 0,
-        transport: SOFTPHONE_TRANSPORT,
-        enabled: SOFTPHONE_ENABLED,
-        configured: Boolean(SOFTPHONE_PBX_HOST && SOFTPHONE_PBX_DOMAIN && SOFTPHONE_PBX_WSS_URL),
-        missing,
-        recommendations: missing.length === 0
-            ? ['Softphone pronto para testes de registro SIP no navegador.']
-            : [
-                'Preencha as variáveis ausentes no .env.local.',
-                'Reinicie o mac-server depois de alterar as variáveis.',
-                'Use npm run softphone:doctor para conferir o ambiente local.'
-            ]
-    });
-});
-
-// Função para obter o MAC a partir do IP (Windows)obter o MAC a partir do IP (Windows)
+// FunÃ§Ã£o para obter o MAC a partir do IP (Windows)obter o MAC a partir do IP (Windows)
 async function getMacFromIp(ip: string): Promise<string | null> {
     try {
-        // Para localhost em Windows, o ARP não funciona da mesma forma, mas na rede sim.
+        // Para localhost em Windows, o ARP nÃ£o funciona da mesma forma, mas na rede sim.
         if (ip === '::1' || ip === '127.0.0.1') return 'Dispositivo Local (Servidor)';
 
         const { stdout } = await execPromise(`arp -a ${ip}`);
@@ -230,15 +539,15 @@ async function getMacFromIp(ip: string): Promise<string | null> {
         for (const line of lines) {
             if (line.includes(ip)) {
                 const parts = line.trim().split(/\s+/);
-                // O MAC costuma ser a segunda ou terceira coluna dependendo do SO/Versão
+                // O MAC costuma ser a segunda ou terceira coluna dependendo do SO/VersÃ£o
                 const macMatch = parts.find(p => /([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})/.test(p));
-                return macMatch || 'Não encontrado';
+                return macMatch || 'NÃ£o encontrado';
             }
         }
-        return 'Não mapeado no ARP';
+        return 'NÃ£o mapeado no ARP';
     } catch (error) {
         console.error('Erro ao buscar MAC:', error);
-        return 'Erro na detecção';
+        return 'Erro na detecÃ§Ã£o';
     }
 }
 
@@ -341,7 +650,7 @@ app.get('/mac', async (req, res) => {
         <div class="label">Seu IP na rede: ${ip}</div>
         <button class="btn" onclick="copyMac()">Copiar MAC Address</button>
         <p class="info">
-            Este código é necessário para liberar o acesso à internet na MoronaVila. 
+            Este cÃ³digo Ã© necessÃ¡rio para liberar o acesso Ã  internet na MoronaVila. 
             Copie e cole no seu perfil no aplicativo principal.
         </p>
     </div>
@@ -362,68 +671,101 @@ app.get('/mac', async (req, res) => {
 // --- ENDPOINTS DE PAGAMENTO PIX ---
 
 app.post('/api/payments/pix', async (req, res) => {
-    const { residentId, amount, description, paymentId } = req.body;
+    return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
+        const { residentId, paymentId } = req.body || {};
+        const authReq = req as AuthenticatedRequest;
+        const authResident = authReq.authResident;
+        const isAdmin = authResident?.role === 'Administrador';
+        const targetResidentId = isAdmin && residentId ? residentId : authResident.id;
 
-    try {
-        // 1. Buscar dados do residente no Supabase
-        const { data: resident, error: resError } = await supabase
-            .from('residents')
-            .select('name, email')
-            .eq('id', residentId)
-            .single();
+        if (!paymentId) {
+            return res.status(400).json({ success: false, error: 'paymentId obrigatorio.' });
+        }
 
-        if (resError || !resident) throw new Error('Residente não encontrado');
+        try {
+            const paymentResult = await supabase
+                .from('payments')
+                .select('id, resident_id, amount, due_date, description, month, external_id, pix_qr_code, pix_copy_paste, expiration_date')
+                .eq('id', paymentId)
+                .eq('resident_id', targetResidentId)
+                .maybeSingle();
 
-        // 2. Criar cobrança no Asaas
-        const response = await fetch(`${ASAAS_API_URL}/payments`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'access_token': ASAAS_API_KEY
-            },
-            body: JSON.stringify({
-                billingType: 'PIX',
-                customer: residentId, // No Asaas real, precisaríamos criar o client antes ou usar dados avulsos
-                name: resident.name,
-                email: resident.email,
-                value: amount,
-                description: description,
-                externalReference: paymentId,
-                dueDate: new Date().toISOString().split('T')[0]
-            })
-        });
+            if (paymentResult.error || !paymentResult.data) {
+                return res.status(404).json({ success: false, error: 'Pagamento nao encontrado para o residente autenticado.' });
+            }
 
-        const paymentData = await response.json();
-        if (!response.ok) throw new Error(paymentData.errors?.[0]?.description || 'Erro no Asaas');
+            const payment = paymentResult.data;
 
-        // 3. Buscar QR Code
-        const qrResponse = await fetch(`${ASAAS_API_URL}/payments/${paymentData.id}/pixQrCode`, {
-            headers: { 'access_token': ASAAS_API_KEY }
-        });
-        const qrData = await qrResponse.json();
+            if (payment.pix_qr_code && payment.pix_copy_paste) {
+                return res.json({
+                    success: true,
+                    qrCode: payment.pix_qr_code,
+                    copyPaste: payment.pix_copy_paste,
+                    expirationDate: payment.expiration_date || null
+                });
+            }
 
-        // 4. Atualizar o Supabase com os dados do PIX (Usando service_role)
-        await supabase
-            .from('payments')
-            .update({
-                external_id: paymentData.id,
-                pix_qr_code: qrData.encodedImage,
-                pix_copy_paste: qrData.payload,
-                expiration_date: qrData.expirationDate
-            })
-            .eq('id', paymentId);
+            const residentResult = await supabase
+                .from('residents')
+                .select('id, name, email')
+                .eq('id', targetResidentId)
+                .maybeSingle();
 
-        res.json({
-            success: true,
-            qrCode: qrData.encodedImage,
-            copyPaste: qrData.payload,
-            expirationDate: qrData.expirationDate
-        });
+            if (residentResult.error || !residentResult.data) {
+                return res.status(404).json({ success: false, error: 'Residente nao encontrado.' });
+            }
 
-    } catch (err: any) {
-        console.error('Erro PIX:', err);
-        res.status(500).json({ success: false, error: err.message });
-    }
+            const resident = residentResult.data;
+            const response = await fetch(`${ASAAS_API_URL}/payments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'access_token': ASAAS_API_KEY
+                },
+                body: JSON.stringify({
+                    billingType: 'PIX',
+                    customer: targetResidentId,
+                    name: resident.name,
+                    email: resident.email,
+                    value: payment.amount,
+                    description: payment.description || `VPR Manager - ${payment.month}`,
+                    externalReference: payment.id,
+                    dueDate: payment.due_date || new Date().toISOString().split('T')[0]
+                })
+            });
+
+            const paymentData = await response.json();
+            if (!response.ok) {
+                throw new Error(paymentData.errors?.[0]?.description || 'Erro no Asaas');
+            }
+
+            const qrResponse = await fetch(`${ASAAS_API_URL}/payments/${paymentData.id}/pixQrCode`, {
+                headers: { 'access_token': ASAAS_API_KEY }
+            });
+            const qrData = await qrResponse.json();
+
+            await supabase
+                .from('payments')
+                .update({
+                    external_id: paymentData.id,
+                    pix_qr_code: qrData.encodedImage,
+                    pix_copy_paste: qrData.payload,
+                    expiration_date: qrData.expirationDate
+                })
+                .eq('id', payment.id)
+                .eq('resident_id', targetResidentId);
+
+            return res.json({
+                success: true,
+                qrCode: qrData.encodedImage,
+                copyPaste: qrData.payload,
+                expirationDate: qrData.expirationDate
+            });
+        } catch (err: any) {
+            console.error('Erro PIX:', err);
+            return res.status(500).json({ success: false, error: err.message });
+        }
+    });
 });
 
 app.post('/api/payments/webhook', async (req, res) => {
@@ -452,12 +794,12 @@ app.post('/api/payments/webhook', async (req, res) => {
     res.status(200).send('OK');
 });
 
-// --- UTILITÁRIOS ---
+// --- UTILITÃRIOS ---
 
 async function sendWhatsAppNotification(name: string, phone: string) {
     const AISENSY_KEY = process.env.AISENSY_API_KEY;
     if (!AISENSY_KEY) {
-        console.warn('AISENSY_API_KEY não configurada no .env.local');
+        console.warn('AISENSY_API_KEY nÃ£o configurada no .env.local');
         return;
     }
 
@@ -470,7 +812,7 @@ async function sendWhatsAppNotification(name: string, phone: string) {
                 campaignName: 'lead_capture', // Placeholder: Alterar para o nome real da campanha no AiSensy
                 destination: phone,
                 userName: name,
-                templateParams: [name], // Exemplo: ["Olá {{1}}, recebemos seu interesse..."]
+                templateParams: [name], // Exemplo: ["OlÃ¡ {{1}}, recebemos seu interesse..."]
                 source: 'LandingPage'
             })
         });
@@ -486,47 +828,47 @@ async function sendWhatsAppNotification(name: string, phone: string) {
 app.post('/api/chat', async (req, res) => {
     const { message, name, phone, history = [] } = req.body;
 
-    // Se for a primeira mensagem, envia notificação de WhatsApp (Lead)
+    // Se for a primeira mensagem, envia notificaÃ§Ã£o de WhatsApp (Lead)
     if (history.length === 0 && name && phone) {
-        // Notificação via WhatsApp desativada devido às limitações do plano gratuito da AiSensy (API Outbound bloqueada).
-        // O contato agora é iniciado pelo usuário via botão no frontend.
+        // NotificaÃ§Ã£o via WhatsApp desativada devido Ã s limitaÃ§Ãµes do plano gratuito da AiSensy (API Outbound bloqueada).
+        // O contato agora Ã© iniciado pelo usuÃ¡rio via botÃ£o no frontend.
         console.log(`Novo lead capturado no chat: ${name} (${phone})`);
     }
 
     try {
         const systemPrompt = `
-            Você é o "Morona", o Agente Virtual acolhedor e elucidativo da MoronaVila. Sua missão é guiar interessados pela experiência de morar na Vila Isabel com silêncio, ordem e privacidade.
+            VocÃª Ã© o "Morona", o Agente Virtual acolhedor e elucidativo da MoronaVila. Sua missÃ£o Ã© guiar interessados pela experiÃªncia de morar na Vila Isabel com silÃªncio, ordem e privacidade.
 
             SOBRE A MORONAVILA:
-            - CONCEITO: Solução ideal para quem busca foco total em estudos e trabalho, com infraestrutura simples, funcional e muito tranquila.
-            - LOCALIZAÇÃO: Rua Torres Homem 886, no coração de Vila Isabel, Rio de Janeiro. 
-                - Referências: A 100 metros da quadra da Unidos de Vila Isabel, pertinho da Praça Sete e a apenas 200 metros do Shopping Boulevard.
-            - VIZINHANÇA ESTRATÉGICA: Vila Isabel é o reduto boêmio mais charmoso do Rio. Comércio farto 24h na porta: Food Trucks, Restaurantes, Academias, Supermercados, Farmácias 24h e Padarias a 2 minutos de distância.
+            - CONCEITO: SoluÃ§Ã£o ideal para quem busca foco total em estudos e trabalho, com infraestrutura simples, funcional e muito tranquila.
+            - LOCALIZAÃ‡ÃƒO: Rua Torres Homem 886, no coraÃ§Ã£o de Vila Isabel, Rio de Janeiro. 
+                - ReferÃªncias: A 100 metros da quadra da Unidos de Vila Isabel, pertinho da PraÃ§a Sete e a apenas 200 metros do Shopping Boulevard.
+            - VIZINHANÃ‡A ESTRATÃ‰GICA: Vila Isabel Ã© o reduto boÃªmio mais charmoso do Rio. ComÃ©rcio farto 24h na porta: Food Trucks, Restaurantes, Academias, Supermercados, FarmÃ¡cias 24h e Padarias a 2 minutos de distÃ¢ncia.
             - ACESSIBILIDADE E PROXIMIDADE:
-                - Estudo/Saúde: Localização privilegiada para quem estuda ou trabalha na UERJ (Campus Maracanã), Hospital Universitário Pedro Ernesto (HUPE), UVA (Tijuca), IFF e outras unidades na região do Maracanã/Tijuca.
-                - Mobilidade: Centenas de opções de transporte para todo o Rio. Estamos a 20 minutos do Centro e 30 minutos da Zona Sul.
+                - Estudo/SaÃºde: LocalizaÃ§Ã£o privilegiada para quem estuda ou trabalha na UERJ (Campus MaracanÃ£), Hospital UniversitÃ¡rio Pedro Ernesto (HUPE), UVA (Tijuca), IFF e outras unidades na regiÃ£o do MaracanÃ£/Tijuca.
+                - Mobilidade: Centenas de opÃ§Ãµes de transporte para todo o Rio. Estamos a 20 minutos do Centro e 30 minutos da Zona Sul.
 
-            INFRAESTRUTURA E ACOMODAÇÕES:
-            - Quartos: Simples, funcionais e focados no descanso e estudo. Mobiliário completo: cama, armários, mesa de estudo e instalação para antena de TV.
+            INFRAESTRUTURA E ACOMODAÃ‡Ã•ES:
+            - Quartos: Simples, funcionais e focados no descanso e estudo. MobiliÃ¡rio completo: cama, armÃ¡rios, mesa de estudo e instalaÃ§Ã£o para antena de TV.
             - Tipos e Valores:
                 - Individuais: R$ 850 + taxas (com banheiro privativo).
-                - Compartilhados: R$ 500 + taxas (até 3 pessoas, EXCLUSIVO para homens).
-            - Tecnologia e Conforto: Interfone com ramal exclusivo em cada quarto (privacidade total), internet de alta velocidade em toda a propriedade, controle de água e energia individualizados e sistema de climatização para o calor do Rio.
-            - Áreas Comuns: Copa-Cozinha equipada com armários individuais com chave (para mantimentos), geladeiras (uma para cada 4 pessoas), microondas e forno elétrico. Lavanderia, Sala de TV, Sala de Estudo e uma ampla área externa arborizada para relaxar.
+                - Compartilhados: R$ 500 + taxas (atÃ© 3 pessoas, EXCLUSIVO para homens).
+            - Tecnologia e Conforto: Interfone com ramal exclusivo em cada quarto (privacidade total), internet de alta velocidade em toda a propriedade, controle de Ã¡gua e energia individualizados e sistema de climatizaÃ§Ã£o para o calor do Rio.
+            - Ãreas Comuns: Copa-Cozinha equipada com armÃ¡rios individuais com chave (para mantimentos), geladeiras (uma para cada 4 pessoas), microondas e forno elÃ©trico. Lavanderia, Sala de TV, Sala de Estudo e uma ampla Ã¡rea externa arborizada para relaxar.
 
-            REGRAS DE CONVIVÊNCIA (SÍNTESE: "Mantenha o ambiente tão bom para os outros quanto você gostaria para você"):
-            - Proibições: NÃO é permitido visitas, NÃO é permitido fumar, NÃO é permitido animais.
-            - Ordem: Manter quarto, cozinha e lavanderia sempre limpos e arrumados após o uso.
-            - Silêncio: O barulho deve ser evitado a TODO momento (não apenas após as 22h) para não incomodar outros residentes. Som e TV apenas em limites razoáveis.
+            REGRAS DE CONVIVÃŠNCIA (SÃNTESE: "Mantenha o ambiente tÃ£o bom para os outros quanto vocÃª gostaria para vocÃª"):
+            - ProibiÃ§Ãµes: NÃƒO Ã© permitido visitas, NÃƒO Ã© permitido fumar, NÃƒO Ã© permitido animais.
+            - Ordem: Manter quarto, cozinha e lavanderia sempre limpos e arrumados apÃ³s o uso.
+            - SilÃªncio: O barulho deve ser evitado a TODO momento (nÃ£o apenas apÃ³s as 22h) para nÃ£o incomodar outros residentes. Som e TV apenas em limites razoÃ¡veis.
 
             PROCESSO DE ENTRADA:
-            1. Preenchimento de formulário completo para análise.
-            2. Se aprovado: Pagamento do aluguel do mês + 1 mês de depósito (caução) + Depósito das chaves (R$ 65).
+            1. Preenchimento de formulÃ¡rio completo para anÃ¡lise.
+            2. Se aprovado: Pagamento do aluguel do mÃªs + 1 mÃªs de depÃ³sito (cauÃ§Ã£o) + DepÃ³sito das chaves (R$ 65).
 
-            DIRETRIZES DE COMUNICAÇÃO:
-            - PERSONA: Seja acolhedor, empático e elucidativo. Use o nome (${name || 'Interessado'}).
-            - ESTILO: Explique as regras de forma positiva (foco no benefício do silêncio e ordem para quem estuda/trabalha).
-            - ENCERRAMENTO: Se o interesse for alto, peça para finalizarem os dados aqui no formulário ou sugerir o contato via WhatsApp para agendar visita.
+            DIRETRIZES DE COMUNICAÃ‡ÃƒO:
+            - PERSONA: Seja acolhedor, empÃ¡tico e elucidativo. Use o nome (${name || 'Interessado'}).
+            - ESTILO: Explique as regras de forma positiva (foco no benefÃ­cio do silÃªncio e ordem para quem estuda/trabalha).
+            - ENCERRAMENTO: Se o interesse for alto, peÃ§a para finalizarem os dados aqui no formulÃ¡rio ou sugerir o contato via WhatsApp para agendar visita.
         `;
 
         const completion = await openai.chat.completions.create({
@@ -549,19 +891,19 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
-// --- SERVIR FRONTEND ESTÁTICO EM PRODUÇÃO ---
+// --- SERVIR FRONTEND ESTÃTICO EM PRODUÃ‡ÃƒO ---
 
 // Servir arquivos da pasta dist
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Catch-all: qualquer rota que não seja API ou arquivo estático volta para o index.html
+// Catch-all: qualquer rota que nÃ£o seja API ou arquivo estÃ¡tico volta para o index.html
 // Isso permite que o React Router funcione corretamente ao dar refresh
 app.get('*', (req, res) => {
-    // Se não for uma rota de API, serve o index.html do frontend
+    // Se nÃ£o for uma rota de API, serve o index.html do frontend
     if (!req.path.startsWith('/api')) {
         res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
     } else {
-        res.status(404).json({ error: 'Endpoint de API não encontrado' });
+        res.status(404).json({ error: 'Endpoint de API nÃ£o encontrado' });
     }
 });
 
@@ -571,3 +913,5 @@ app.listen(port, () => {
     console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
     console.log(`--------------------------------------------------`);
 });
+
+

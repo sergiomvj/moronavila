@@ -23,7 +23,7 @@ const checks = [
     key: 'VITE_SOFTPHONE_TRANSPORT',
     required: true,
     validate: (value) => value === 'mock' || value === 'sipjs',
-    hint: 'Use mock antes do PBX e sipjs quando o PBX estiver disponível.',
+    hint: 'Use mock antes do PBX e sipjs quando o PBX estiver disponivel.',
   },
   {
     key: 'VITE_SOFTPHONE_PBX_HOST',
@@ -35,7 +35,7 @@ const checks = [
     key: 'VITE_SOFTPHONE_PBX_DOMAIN',
     required: false,
     validate: (value) => Boolean(value),
-    hint: 'Domínio SIP do PBX, ex: pbx.hostel.local.',
+    hint: 'Dominio SIP do PBX, ex: pbx.hostel.local.',
   },
   {
     key: 'VITE_SOFTPHONE_PBX_WSS_URL',
@@ -47,7 +47,31 @@ const checks = [
     key: 'SOFTPHONE_PBX_DEFAULT_SECRET',
     required: false,
     validate: (value) => Boolean(value),
-    hint: 'Senha padrão provisória usada pelo backend local para emitir credenciais SIP.',
+    hint: 'Senha padrao provisoria usada pelo backend local para emitir credenciais SIP.',
+  },
+  {
+    key: 'VITE_SOFTPHONE_DOOR_MODE',
+    required: false,
+    validate: (value) =>
+      value === '' ||
+      value === 'none' ||
+      value === 'dtmf' ||
+      value === 'http-relay' ||
+      value === 'extension',
+    hint: 'Use none, dtmf, http-relay ou extension para preparar a abertura de porta.',
+  },
+  {
+    key: 'VITE_SOFTPHONE_DOOR_DTMF',
+    required: false,
+    validate: (value) => value === '' || /^[0-9A-D#*]+$/i.test(value),
+    hint: 'Quando usar dtmf, defina o digito ou a sequencia esperada pelo PBX.',
+  },
+  {
+    key: 'SOFTPHONE_DOOR_RELAY_URL',
+    required: false,
+    validate: (value) =>
+      value === '' || value.startsWith('http://') || value.startsWith('https://'),
+    hint: 'Quando usar http-relay, informe a URL do controlador de acesso.',
   },
 ];
 
@@ -63,7 +87,7 @@ for (const check of checks) {
 
   if (!isValid) failures += 1;
 
-  console.log(`${status.padEnd(4)} ${check.key} ${isPresent ? `= ${value}` : '(não definido)'}`);
+  console.log(`${status.padEnd(4)} ${check.key} ${isPresent ? `= ${value}` : '(nao definido)'}`);
   if (!isValid || !isPresent) {
     console.log(`      ${check.hint}`);
   }
@@ -77,11 +101,23 @@ const runtimeReady =
   process.env.VITE_SOFTPHONE_PBX_WSS_URL &&
   process.env.SOFTPHONE_PBX_DEFAULT_SECRET;
 
+const doorMode = process.env.VITE_SOFTPHONE_DOOR_MODE || 'none';
+const doorReady =
+  doorMode === 'none' ||
+  doorMode === 'dtmf' ||
+  doorMode === 'extension' ||
+  (doorMode === 'http-relay' && Boolean(process.env.SOFTPHONE_DOOR_RELAY_URL));
+
 console.log('');
 console.log(
   runtimeReady
-    ? 'Softphone SIP ready: o projeto tem os parâmetros mínimos para tentar registro no PBX.'
-    : 'Softphone SIP pending: o shell funciona, mas ainda faltam dados para a conexão real.'
+    ? 'Softphone SIP ready: o projeto tem os parametros minimos para tentar registro no PBX.'
+    : 'Softphone SIP pending: o shell funciona, mas ainda faltam dados para a conexao real.'
+);
+console.log(
+  doorReady
+    ? `Door flow ready: modo ${doorMode} validado para a proxima etapa.`
+    : `Door flow pending: o modo ${doorMode} ainda precisa de configuracao complementar.`
 );
 
 process.exitCode = failures > 0 ? 1 : 0;

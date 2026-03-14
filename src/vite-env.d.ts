@@ -15,6 +15,9 @@ interface ImportMetaEnv {
   readonly VITE_SOFTPHONE_ADMIN_EXTENSION?: string;
   readonly VITE_SOFTPHONE_LAUNDRY_EXTENSION?: string;
   readonly VITE_SOFTPHONE_DELIVERY_EXTENSION?: string;
+  readonly VITE_SOFTPHONE_DOOR_MODE?: string;
+  readonly VITE_SOFTPHONE_DOOR_LABEL?: string;
+  readonly VITE_SOFTPHONE_DOOR_DTMF?: string;
 }
 
 interface ImportMeta {

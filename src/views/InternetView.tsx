@@ -2,7 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Wifi, Router, AlertTriangle, ShieldCheck, Laptop, Smartphone, Plus, Trash2, Edit, PhoneCall, RefreshCw } from 'lucide-react';
 import { Resident, Device, UserRole } from '../types';
 import { createDevice, updateDevice, deleteDevice } from '../lib/database';
-import { getLocalApiBase } from '../lib/localApi';
+import {
+    fetchSoftphoneHealth,
+    fetchSoftphoneRollout,
+    triggerSoftphoneDoorOpen,
+    type SoftphoneDoorResponse,
+    type SoftphoneHealthResponse,
+    type SoftphoneRolloutResponse
+} from '../modules/softphone/api';
 
 interface InternetViewProps {
     residents: Resident[];
@@ -13,15 +20,15 @@ interface InternetViewProps {
 
 export function InternetView({ residents, devices, currentUser, onUpdate }: InternetViewProps) {
     const isAdmin = currentUser.role === UserRole.ADMIN;
-    const [softphoneHealth, setSoftphoneHealth] = useState<{
-        ok: boolean;
-        transport: string;
-        enabled: boolean;
-        configured: boolean;
-        missing: string[];
-        recommendations: string[];
-    } | null>(null);
+    const [softphoneHealth, setSoftphoneHealth] = useState<SoftphoneHealthResponse | null>(null);
     const [loadingSoftphoneHealth, setLoadingSoftphoneHealth] = useState(false);
+    const [testingDoor, setTestingDoor] = useState(false);
+    const [doorTestResult, setDoorTestResult] = useState<SoftphoneDoorResponse | null>(null);
+    const [softphoneRollout, setSoftphoneRollout] = useState<SoftphoneRolloutResponse | null>(null);
+    const [softphoneRolloutSearch, setSoftphoneRolloutSearch] = useState('');
+    const [softphoneRolloutFilter, setSoftphoneRolloutFilter] = useState<
+        'all' | 'ready' | 'missing-extension' | 'internet-inactive' | 'disabled' | 'missing-mac'
+    >('all');
 
     // View state
     const [isAdding, setIsAdding] = useState(false);
@@ -39,27 +46,188 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
     const activeUsers = residents.filter(r => r.internet_active);
     const inactiveUsers = residents.filter(r => !r.internet_active && r.mac_address);
     const noMacUsers = residents.filter(r => !r.mac_address);
+    const softphoneEnabledResidents = residents.filter(r => r.softphone_enabled !== false);
+    const softphoneReadyResidents = softphoneEnabledResidents.filter(r => r.internet_active && Boolean(r.softphone_extension));
+    const softphoneMissingExtension = softphoneEnabledResidents.filter(r => !r.softphone_extension);
+    const softphoneBlockedByInternet = softphoneEnabledResidents.filter(r => !r.internet_active);
+    const softphoneDisabledResidents = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled === false);
+    const softphoneRolloutQueue = residents
+        .filter(r => r.role === UserRole.RESIDENT)
+        .map(resident => {
+            const blockers: string[] = [];
+            if (resident.softphone_enabled === false) blockers.push('Softphone desativado');
+            if (!resident.softphone_extension) blockers.push('Sem ramal definido');
+            if (!resident.internet_active) blockers.push('Internet inativa');
+            if (!resident.mac_address) blockers.push('Sem MAC principal');
+
+            return {
+                resident,
+                ready: blockers.length === 0,
+                blockers,
+            };
+        })
+        .sort((a, b) => {
+            if (a.ready === b.ready) return a.blockers.length - b.blockers.length;
+            return a.ready ? 1 : -1;
+        });
+    const rolloutSummary = softphoneRollout?.summary ?? {
+        totalResidents: softphoneRolloutQueue.length,
+        ready: softphoneReadyResidents.length,
+        enabled: softphoneEnabledResidents.filter((resident) => resident.role === UserRole.RESIDENT).length,
+        missingExtension: softphoneMissingExtension.length,
+        internetInactive: softphoneBlockedByInternet.length,
+        disabled: softphoneDisabledResidents.length,
+        missingMac: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Sem MAC principal')).length,
+    };
+    const rolloutItems = softphoneRollout?.items
+        ? softphoneRollout.items.map((item) => ({
+            resident: {
+                id: item.id,
+                name: item.name,
+                email: item.email,
+                phone: item.phone,
+                role: UserRole.RESIDENT,
+                entry_date: '',
+                status: 'Ativo',
+                internet_active: item.internetActive,
+                softphone_extension: item.extension || undefined,
+                softphone_enabled: item.softphoneEnabled,
+                softphone_display_name: item.displayName || undefined,
+                mac_address: item.macAddress || undefined,
+            } as Resident,
+            ready: item.ready,
+            blockers: item.blockers,
+        }))
+        : softphoneRolloutQueue;
+    const filteredSoftphoneRolloutQueue = rolloutItems.filter(({ resident, ready, blockers }) => {
+        const matchesSearch =
+            resident.name.toLowerCase().includes(softphoneRolloutSearch.toLowerCase()) ||
+            resident.email.toLowerCase().includes(softphoneRolloutSearch.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        switch (softphoneRolloutFilter) {
+            case 'ready':
+                return ready;
+            case 'missing-extension':
+                return blockers.includes('Sem ramal definido');
+            case 'internet-inactive':
+                return blockers.includes('Internet inativa');
+            case 'disabled':
+                return blockers.includes('Softphone desativado');
+            case 'missing-mac':
+                return blockers.includes('Sem MAC principal');
+            default:
+                return true;
+        }
+    });
+    const rolloutSourceLabel = softphoneRollout?.generatedAt
+        ? `Backend consolidado em ${new Date(softphoneRollout.generatedAt).toLocaleString('pt-BR')}`
+        : 'Fallback local';
+    const rolloutReadyPercentage = rolloutSummary.totalResidents > 0
+        ? Math.round((rolloutSummary.ready / rolloutSummary.totalResidents) * 100)
+        : 0;
 
     const activeDevices = devices.filter(d => d.status === 'Ativo');
     const pendingDevices = devices.filter(d => d.status === 'Pendente');
+    const residentSoftphoneChecklist = [
+        {
+            label: 'Softphone habilitado no perfil',
+            ok: currentUser.softphone_enabled !== false,
+            action: 'Abra seu perfil e mantenha a opcao de softphone habilitada.',
+        },
+        {
+            label: 'Ramal configurado',
+            ok: Boolean(currentUser.softphone_extension),
+            action: 'Peça para a administracao definir seu ramal do softphone.',
+        },
+        {
+            label: 'Internet ativa',
+            ok: currentUser.internet_active,
+            action: 'Regularize sua internet para liberar a ativacao automatica do softphone.',
+        },
+        {
+            label: 'MAC principal cadastrado',
+            ok: Boolean(currentUser.mac_address),
+            action: 'Cadastre seu dispositivo principal na aba de Internet para evitar bloqueios na rede autenticada.',
+        },
+    ];
+    const residentSoftphonePending = residentSoftphoneChecklist.filter(item => !item.ok).length;
+    const residentSoftphoneActions = residentSoftphoneChecklist.filter(item => !item.ok);
+
+    const handleExportSoftphoneRollout = () => {
+        const rows = [
+            ['nome', 'email', 'telefone', 'ramal', 'nome_exibicao', 'internet_ativa', 'softphone_habilitado', 'mac_principal', 'status_mac', 'bloqueios'].join(','),
+            ...rolloutItems.map(({ resident, blockers }) => [
+                resident.name,
+                resident.email,
+                resident.phone,
+                resident.softphone_extension || '',
+                resident.softphone_display_name || '',
+                resident.internet_active ? 'sim' : 'nao',
+                resident.softphone_enabled === false ? 'nao' : 'sim',
+                resident.mac_address || '',
+                resident.mac_address ? 'ok' : 'pendente',
+                blockers.join(' | ') || 'pronto para rollout',
+            ].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')),
+        ];
+
+        const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const dateStamp = new Date().toISOString().slice(0, 10);
+
+        link.href = url;
+        link.download = `softphone-rollout-${dateStamp}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
 
     useEffect(() => {
         if (!isAdmin) return;
         loadSoftphoneHealth();
+        loadSoftphoneRollout();
     }, [isAdmin]);
 
     const loadSoftphoneHealth = async () => {
         setLoadingSoftphoneHealth(true);
         try {
-            const response = await fetch(`${getLocalApiBase()}/api/softphone/health`);
-            if (!response.ok) throw new Error('Falha ao consultar saúde do softphone');
-            const data = await response.json();
+            const data = await fetchSoftphoneHealth();
+            if (!data) throw new Error('Falha ao consultar saude do softphone');
             setSoftphoneHealth(data);
         } catch (error) {
             console.error(error);
             setSoftphoneHealth(null);
         } finally {
             setLoadingSoftphoneHealth(false);
+        }
+    };
+
+    const loadSoftphoneRollout = async () => {
+        try {
+            const data = await fetchSoftphoneRollout();
+            if (!data) throw new Error('Falha ao consultar rollout do softphone');
+            setSoftphoneRollout(data);
+        } catch (error) {
+            console.error(error);
+            setSoftphoneRollout(null);
+        }
+    };
+
+    const handleRefreshSoftphoneAdmin = () => {
+        loadSoftphoneHealth();
+        loadSoftphoneRollout();
+    };
+
+    const handleTestDoor = async () => {
+        setTestingDoor(true);
+        try {
+            const response = await triggerSoftphoneDoorOpen();
+            setDoorTestResult(response);
+        } finally {
+            setTestingDoor(false);
         }
     };
 
@@ -194,6 +362,50 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     </div>
 
                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-left mt-6">
+                        <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                                    <PhoneCall size={18} />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-indigo-900">Meu status do softphone</h4>
+                                    <p className="text-xs text-indigo-700">
+                                        {residentSoftphonePending === 0
+                                            ? 'Seu cadastro esta pronto para a ativacao do softphone quando o PBX estiver disponivel.'
+                                            : `Ainda faltam ${residentSoftphonePending} ajuste(s) para sua ativacao completa.`}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                {residentSoftphoneChecklist.map((item) => (
+                                    <div
+                                        key={item.label}
+                                        className="flex items-center justify-between rounded-xl border border-indigo-100 bg-white px-4 py-3"
+                                    >
+                                        <span className="text-sm text-slate-700">{item.label}</span>
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${item.ok ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {item.ok ? 'ok' : 'pendente'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-4 text-xs text-indigo-800">
+                                Ramal atual: <span className="font-bold">{currentUser.softphone_extension || 'Nao definido'}</span>
+                            </div>
+                            {residentSoftphoneActions.length > 0 && (
+                                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-amber-700">
+                                        Proximos passos
+                                    </div>
+                                    <div className="mt-2 space-y-2 text-sm text-amber-900">
+                                        {residentSoftphoneActions.map((item) => (
+                                            <div key={`${item.label}-action`}>{item.action}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                             <ShieldCheck size={18} className="text-indigo-600" />
                             Como encontrar seu MAC Address?
@@ -323,7 +535,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <p className="text-xs text-slate-500">Diagnóstico local do ambiente antes da ativação do PBX.</p>
                     </div>
                     <button
-                        onClick={loadSoftphoneHealth}
+                        onClick={handleRefreshSoftphoneAdmin}
                         className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
                     >
                         <RefreshCw size={14} className={loadingSoftphoneHealth ? 'animate-spin' : ''} />
@@ -348,6 +560,28 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Shell</div>
                                 <div className={`mt-2 text-lg font-bold ${softphoneHealth.enabled ? 'text-emerald-600' : 'text-slate-400'}`}>
                                     {softphoneHealth.enabled ? 'Habilitado' : 'Desabilitado'}
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Porta</div>
+                                <div className={`mt-2 text-lg font-bold ${softphoneHealth.door.configured ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                    {softphoneHealth.door.mode}
+                                </div>
+                                <div className="mt-1 text-xs text-slate-500">
+                                    {softphoneHealth.door.configured
+                                        ? softphoneHealth.door.dtmf
+                                            ? `DTMF ${softphoneHealth.door.dtmf}`
+                                            : softphoneHealth.door.label
+                                        : 'Aguardando configuracao'}
+                                </div>
+                                <div className="mt-3 text-xs text-slate-500">
+                                    {softphoneHealth.door.mode === 'none'
+                                        ? 'Placeholder ativo: o fluxo existe no app, mas ainda nao executa abertura real.'
+                                        : softphoneHealth.door.mode === 'dtmf'
+                                            ? 'Modo DTMF: o transporte SIP devera enviar os tons para o PBX/interfone.'
+                                            : softphoneHealth.door.mode === 'http-relay'
+                                                ? 'Modo HTTP relay: o backend local devera chamar o controlador de acesso.'
+                                                : 'Modo extension: a abertura ficara ligada a um ramal ou fluxo dedicado no PBX.'}
                                 </div>
                             </div>
                         </div>
@@ -375,12 +609,190 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                                 ))}
                             </div>
                         </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <div className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                                    Teste de porta
+                                </div>
+                                <button
+                                    onClick={handleTestDoor}
+                                    disabled={testingDoor}
+                                    className="rounded-xl border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                                >
+                                    {testingDoor ? 'Consultando...' : 'Testar porta'}
+                                </button>
+                            </div>
+                            <div className="text-sm text-slate-600">
+                                {doorTestResult?.message || 'Use este teste para validar o modo configurado de abertura de porta no backend local.'}
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                         Não foi possível carregar o diagnóstico do softphone local.
                     </div>
                 )}
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                        <PhoneCall size={18} className="text-emerald-600" />
+                        Rollout do Softphone por Morador
+                    </h3>
+                    <button
+                        onClick={handleExportSoftphoneRollout}
+                        className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                    >
+                        Exportar CSV
+                    </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1 mb-5">
+                    Status operacional dos moradores para acelerar a ativacao quando o PBX estiver pronto.
+                </p>
+                <div className="mb-5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    <span>
+                        Resumo gerado em{' '}
+                        <span className="font-bold text-slate-700">
+                            {softphoneRollout?.generatedAt
+                                ? new Date(softphoneRollout.generatedAt).toLocaleString('pt-BR')
+                                : 'fallback local'}
+                        </span>
+                    </span>
+                    <span className={`rounded-full px-3 py-1 font-bold ${
+                        softphoneRollout?.generatedAt
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-600'
+                    }`}>
+                        {rolloutSourceLabel}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-600">
+                        Sem MAC principal: {rolloutSummary.missingMac}
+                    </span>
+                    <span className="rounded-full bg-indigo-50 px-3 py-1 font-bold text-indigo-700">
+                        Mostrando {Math.min(filteredSoftphoneRolloutQueue.length, 12)} de {rolloutItems.length}
+                    </span>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 font-bold text-emerald-700">
+                        Prontidao geral: {rolloutReadyPercentage}%
+                    </span>
+                </div>
+                {!softphoneRollout?.generatedAt && (
+                    <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        O resumo abaixo esta em fallback local. Para consolidar os dados pelo backend do `mac-server`, confira o endpoint `/api/softphone/rollout`.
+                    </div>
+                )}
+
+                <div className="mb-5 grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_220px] gap-3">
+                    <input
+                        type="text"
+                        value={softphoneRolloutSearch}
+                        onChange={(event) => setSoftphoneRolloutSearch(event.target.value)}
+                        placeholder="Buscar por nome ou email"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                    />
+                    <select
+                        value={softphoneRolloutFilter}
+                        onChange={(event) => setSoftphoneRolloutFilter(event.target.value as typeof softphoneRolloutFilter)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                    >
+                        <option value="all">Todos</option>
+                        <option value="ready">Prontos</option>
+                        <option value="missing-extension">Sem ramal</option>
+                        <option value="internet-inactive">Internet inativa</option>
+                        <option value="disabled">Desativados</option>
+                        <option value="missing-mac">Sem MAC</option>
+                    </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
+                    <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-700">Moradores</div>
+                        <div className="mt-2 text-3xl font-bold text-indigo-900">{rolloutSummary.totalResidents}</div>
+                        <div className="mt-1 text-xs text-indigo-700">Base total considerada no rollout</div>
+                    </div>
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-violet-700">Habilitados</div>
+                        <div className="mt-2 text-3xl font-bold text-violet-900">{rolloutSummary.enabled}</div>
+                        <div className="mt-1 text-xs text-violet-700">Moradores com softphone ligado</div>
+                    </div>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Prontos</div>
+                        <div className="mt-2 text-3xl font-bold text-emerald-900">{rolloutSummary.ready}</div>
+                        <div className="mt-1 text-xs text-emerald-700">Internet ativa e ramal definido</div>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Sem Ramal</div>
+                        <div className="mt-2 text-3xl font-bold text-amber-900">{rolloutSummary.missingExtension}</div>
+                        <div className="mt-1 text-xs text-amber-700">Precisam de ramal para provisionamento</div>
+                    </div>
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-sky-700">Internet Inativa</div>
+                        <div className="mt-2 text-3xl font-bold text-sky-900">{rolloutSummary.internetInactive}</div>
+                        <div className="mt-1 text-xs text-sky-700">Softphone automatico ainda bloqueado</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Desativados</div>
+                        <div className="mt-2 text-3xl font-bold text-slate-900">{rolloutSummary.disabled}</div>
+                        <div className="mt-1 text-xs text-slate-600">Moradores com softphone desligado</div>
+                    </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-slate-100">
+                    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-slate-100 bg-slate-50">
+                        <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Morador</div>
+                        <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Bloqueios</div>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {filteredSoftphoneRolloutQueue.slice(0, 12).map(({ resident, ready, blockers }) => (
+                            <div key={resident.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                                <div className="px-4 py-4">
+                                    <div className="font-bold text-slate-900">{resident.name}</div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                        {resident.softphone_extension || 'Sem ramal'} • {resident.internet_active ? 'Internet ativa' : 'Internet inativa'}
+                                    </div>
+                                    <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
+                                        <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-600">
+                                            {resident.softphone_display_name || 'Sem nome de exibicao'}
+                                        </span>
+                                        <span
+                                            className={`rounded-full px-2 py-1 font-medium ${
+                                                resident.mac_address
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : 'bg-violet-100 text-violet-700'
+                                            }`}
+                                        >
+                                            {resident.mac_address ? 'MAC ok' : 'Sem MAC principal'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="px-4 py-4">
+                                    {ready ? (
+                                        <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                                            Pronto para rollout
+                                        </span>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2">
+                                            {blockers.map((blocker) => (
+                                                <span
+                                                    key={`${resident.id}-${blocker}`}
+                                                    className="inline-flex rounded-full border border-amber-200 bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700"
+                                                >
+                                                    {blocker}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {filteredSoftphoneRolloutQueue.length === 0 && (
+                            <div className="px-4 py-6 text-sm text-slate-500">
+                                Nenhum morador encontrado para o filtro atual.
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
