@@ -298,7 +298,6 @@ export async function fetchPublicRooms(): Promise<Room[]> {
     const rooms = (roomsRes.data || []) as any[];
     const media = (mediaRes.data || []) as any[];
     return rooms
-        .filter(r => r.availability_status === 'Disponível' && !r.is_blocked_for_repairs && !r.is_common_area)
         .map(r => ({
             ...r,
             media: media.filter(m => m.room_id === r.id),
@@ -414,8 +413,7 @@ export async function signIn(email: string, password: string) {
     return data;
 }
 
-export async function signUpResident(email: string, password: string, name: string, phone: string, options?: { habilitado?: boolean }) {
-    const residentEnabled = options?.habilitado ?? false;
+export async function signUpResident(email: string, password: string, name: string, phone: string, options?: { status?: string, habilitado?: boolean }) {
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
     if (authError) throw authError;
     if (authData.user) {
@@ -423,9 +421,9 @@ export async function signUpResident(email: string, password: string, name: stri
             auth_id: authData.user.id,
             name, email, phone,
             role: UserRole.RESIDENT,
-            status: residentEnabled ? 'Ativo' : 'Pendente',
+            status: options?.status || (options?.habilitado ? 'Ativo' : 'Pendente'),
             entry_date: new Date().toISOString().split('T')[0],
-            habilitado: residentEnabled,
+            habilitado: options?.habilitado ?? false,
             internet_active: false
         });
     }

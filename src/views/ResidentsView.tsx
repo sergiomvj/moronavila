@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Edit2, Plus, Search, Shield, Trash2, User as UserIcon, Wifi, X } from 'lucide-react';
+import { 
+    Edit2, Plus, Search, Shield, Trash2, User as UserIcon, Wifi, X,
+    Users, Ban, CheckCircle2, XCircle, Phone, Mail, Calendar, MapPin, Briefcase, 
+    GraduationCap, Instagram, Info, ChevronRight, Wrench, ImageIcon, 
+    Lock, ExternalLink, ArrowRight
+} from 'lucide-react';
 import { Resident, UserRole } from '../types';
 import { deleteResident, fetchCurrentResident, signUpAdmin, signUpResident, updateResident } from '../lib/database';
 
@@ -218,8 +223,30 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     async function handleApproveCandidate(resident: Resident) {
         if (!isAdmin) return;
         if (!window.confirm(`Aprovar ${resident.name} como morador ativo?`)) return;
-        await updateResident(resident.id, { status: 'Ativo', habilitado: true, motivo_bloqueio: null });
-        onRefresh();
+        try {
+            await updateResident(resident.id, { 
+                status: 'Ativo', 
+                habilitado: true, 
+                motivo_bloqueio: null,
+                entry_date: new Date().toISOString().split('T')[0] 
+            });
+            onRefresh();
+            alert('Candidato aprovado com sucesso!');
+        } catch (error: any) {
+            alert(`Erro ao aprovar candidato: ${error.message}`);
+        }
+    }
+
+    async function handleRejectCandidate(resident: Resident) {
+        if (!isAdmin) return;
+        if (!window.confirm(`Tem certeza que deseja recusar a candidatura de ${resident.name}? O registro será excluído.`)) return;
+        try {
+            await deleteResident(resident.id);
+            onRefresh();
+            alert('Candidatura recusada e excluída.');
+        } catch (error: any) {
+            alert(`Erro ao recusar candidato: ${error.message}`);
+        }
     }
 
     return (
@@ -299,7 +326,55 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                                 <div className="space-y-1 text-xs"><div className="font-bold text-slate-700">Previsao: {resident.entry_date}</div><div className="text-slate-500">{resident.cpf || 'CPF nao informado'}</div></div>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-right"><div className="flex justify-end gap-2">{activeTab === 'residents' ? <><button onClick={() => setEditingResident(resident)} className="rounded-xl border border-slate-200 p-2 text-slate-400 hover:text-indigo-600"><Edit2 size={18} /></button>{isAdmin && resident.id !== currentUser.id && <button onClick={() => handleDelete(resident)} className="rounded-xl border border-rose-200 p-2 text-rose-600 hover:bg-rose-50"><Trash2 size={18} /></button>}</> : <>{isAdmin && <button onClick={() => handleApproveCandidate(resident)} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Aprovar</button>}{isAdmin && <button onClick={() => handleDelete(resident)} className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700">Recusar</button>}</>}</div></td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex justify-end gap-2">
+                                                {activeTab === 'candidates' && isAdmin && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setEditingResident(resident)}
+                                                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                            title="Ver Detalhes / Editar"
+                                                        >
+                                                            <Info size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleApproveCandidate(resident)}
+                                                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                            title="Aprovar Morador"
+                                                        >
+                                                            <CheckCircle2 size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRejectCandidate(resident)}
+                                                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                            title="Recusar"
+                                                        >
+                                                            <XCircle size={18} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {activeTab === 'residents' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setEditingResident(resident)}
+                                                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <Edit2 size={18} />
+                                                        </button>
+                                                        {isAdmin && resident.id !== currentUser.id && (
+                                                            <button
+                                                                onClick={() => handleDelete(resident)}
+                                                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                title="Excluir"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
                                     </tr>
                                 );
                             })}

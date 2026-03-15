@@ -293,8 +293,9 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                     const { updateResident } = await import('../lib/database');
                     await updateResident(user.id, {
                         ...regForm,
-                        status: 'Candidato', // Garante que entra como candidato
-                        room_id: registrationRoom.id
+                        status: 'Candidato',
+                        room_id: registrationRoom.id,
+                        entry_date: entryDate // Usa a data selecionada no simulador
                     });
                 }
                 
@@ -645,7 +646,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                             <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter uppercase italic mb-6">Acomodação Ideal</h2>
                         </div>
      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {rooms.map(room => (
+                            {rooms.filter(room => !room.is_common_area && room.availability_status === 'Disponível' && !room.is_blocked_for_repairs).map(room => (
                                 <div key={room.id} className="group bg-slate-900/40 border border-slate-800 rounded-[32px] overflow-hidden hover:border-rose-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-rose-900/20">
                                     <div className="relative aspect-[4/3] overflow-hidden">
                                         {room.media[0] ? (

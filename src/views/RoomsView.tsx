@@ -795,80 +795,112 @@ export function RoomsView({ rooms, maintenance, isAdmin, currentUser, onRefresh 
                     </form>
                 </div>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {rooms.map(room => (
-                    <div
-                        key={room.id}
-                        onClick={() => setSelectedRoomId(room.id)}
-                        className="bento-card group cursor-pointer border border-slate-800/50 hover:border-rose-500/40 hover:shadow-2xl hover:shadow-rose-900/10 transition-all duration-500 relative overflow-hidden flex flex-col h-full"
-                    >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-600/5 blur-[60px] -mr-16 -mt-16 group-hover:bg-rose-600/10 transition-all"></div>
-                        
-                        <div className="flex items-start justify-between mb-6 relative z-10">
-                            <div className="flex flex-col gap-1.5">
-                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{room.type}</span>
-                                <h3 className="text-xl font-black text-white tracking-tighter uppercase group-hover:text-rose-500 transition-colors">{room.name}</h3>
-                            </div>
-                            <div className="text-right flex flex-col items-end gap-1.5">
-                                <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-full border ${
-                                    room.availability_status === 'Disponível' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                    room.availability_status === 'Ocupado' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                    'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                }`}>
-                                    {room.availability_status}
-                                </span>
-                                {room.is_blocked_for_repairs && (
-                                    <span className="bg-rose-950/40 text-rose-500 text-[8px] font-black px-2 py-0.5 rounded-md border border-rose-500/20 flex items-center gap-1">
-                                        <Lock size={8} /> REPARO
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex-grow space-y-4 relative z-10 mb-6">
-                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-950/80 border border-slate-800/50">
-                                <div className="flex -space-x-2">
-                                    {room.residents?.map((r, i) => (
-                                        <div key={r.id} className="w-8 h-8 rounded-full border-2 border-slate-950 bg-rose-600 flex items-center justify-center text-[10px] font-black text-white shadow-lg overflow-hidden" title={r.name}>
-                                            {r.name.charAt(0)}
-                                        </div>
-                                    ))}
-                                    {Array.from({ length: Math.max(0, room.capacity - (room.residents?.length || 0)) }).map((_, i) => (
-                                        <div key={`empty-${i}`} className="w-8 h-8 rounded-full border-2 border-slate-950 bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-600 border-dashed">
-                                            -
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Ocupação</span>
-                                    <span className="text-xs font-black text-white">{room.residents?.length || 0} de {room.capacity} vagas</span>
-                                </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between px-2">
-                                <div className="flex items-center gap-2">
-                                    <ImageIcon size={14} className="text-slate-500" />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase">{room.media?.length || 0} Fotos</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Wrench size={14} className="text-slate-500" />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase">{room.furniture?.length || 0} Itens</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-6 border-t border-slate-800/50 flex justify-between items-center relative z-10">
-                            <span className="text-lg font-black text-white tracking-tighter">R$ {room.rent_value || '0,00'}</span>
-                            <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-slate-500 group-hover:bg-rose-600 group-hover:text-white transition-all">
-                                <ChevronRight size={18} />
-                            </div>
-                        </div>
-                        {room.is_common_area && (
-                            <div className="absolute bottom-0 left-0 w-full h-1 bg-indigo-600"></div>
-                        )}
+            <div className="space-y-12">
+                {/* Áreas Comuns Section */}
+                <section>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
+                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Infraestrutura & Áreas Comuns</h3>
                     </div>
-                ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {rooms.filter(r => r.is_common_area).map(room => (
+                            <div
+                                key={room.id}
+                                onClick={() => setSelectedRoomId(room.id)}
+                                className="group bento-card hover:border-indigo-500/30 transition-all cursor-pointer relative overflow-hidden h-full flex flex-col"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-[60px] -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-colors"></div>
+                                
+                                <div className="relative z-10 flex flex-col h-full">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <span className="bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-indigo-500/20">
+                                            {room.type}
+                                        </span>
+                                        {room.is_blocked_for_repairs && (
+                                            <span className="bg-amber-500/10 text-amber-500 p-1.5 rounded-lg border border-amber-500/20">
+                                                <Lock size={12} />
+                                            </span>
+                                        )}
+                                    </div>
+                                    
+                                    <h4 className="text-xl font-black text-white uppercase tracking-tighter group-hover:text-indigo-400 transition-colors mb-2">{room.name}</h4>
+                                    <p className="text-[10px] text-slate-500 font-medium line-clamp-2 mb-6 flex-1">{room.description || 'Sem descrição técnica.'}</p>
+                                    
+                                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-800/50">
+                                        <div className="flex items-center gap-2">
+                                            <Users size={12} className="text-slate-600" />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase">{room.residents?.length || 0} Ocupantes</span>
+                                        </div>
+                                        <ChevronRight size={16} className="text-slate-700 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Quartos Section */}
+                <section>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-1.5 h-6 bg-rose-600 rounded-full"></div>
+                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Unidades Habitacionais (Quartos)</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {rooms.filter(r => !r.is_common_area).map(room => (
+                            <div
+                                key={room.id}
+                                onClick={() => setSelectedRoomId(room.id)}
+                                className={`group bento-card hover:border-rose-500/30 transition-all cursor-pointer relative overflow-hidden h-full flex flex-col ${room.is_blocked_for_repairs ? 'border-amber-500/20' : ''}`}
+                            >
+                                <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] -mr-16 -mt-16 group-hover:opacity-100 transition-opacity ${room.is_blocked_for_repairs ? 'bg-amber-600/5' : 'bg-rose-600/5'}`}></div>
+                                
+                                <div className="relative z-10 flex flex-col h-full">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex gap-2">
+                                            <span className="bg-rose-500/10 text-rose-500 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-rose-500/20">
+                                                {room.type}
+                                            </span>
+                                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                                                room.availability_status === 'Disponível' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                                room.availability_status === 'Ocupado' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                                'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                                            }`}>
+                                                {room.availability_status}
+                                            </span>
+                                        </div>
+                                        {room.is_blocked_for_repairs && (
+                                            <span className="bg-amber-500/10 text-amber-500 px-2 py-1 rounded-lg border border-amber-500/20 text-[8px] font-black uppercase flex items-center gap-1">
+                                                <Lock size={10} /> REPARO
+                                            </span>
+                                        )}
+                                    </div>
+                                    
+                                    <h4 className="text-xl font-black text-white uppercase tracking-tighter group-hover:text-rose-500 transition-colors mb-1">{room.name}</h4>
+                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-4">R$ {room.rent_value || 0} /mês</p>
+                                    
+                                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-800/50">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex -space-x-2">
+                                                {room.residents?.map((res, i) => (
+                                                    <div key={res.id} className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-900 flex items-center justify-center text-[10px] font-black text-rose-500 uppercase">
+                                                        {res.name.charAt(0)}
+                                                    </div>
+                                                ))}
+                                                {Array.from({ length: Math.max(0, room.capacity - (room.residents?.length || 0)) }).map((_, i) => (
+                                                    <div key={i} className="w-6 h-6 rounded-lg bg-slate-950 border border-slate-900 border-dashed flex items-center justify-center text-[10px] font-black text-slate-700">
+                                                        +
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">{room.residents?.length || 0}/{room.capacity} Vagas</span>
+                                        </div>
+                                        <ChevronRight size={16} className="text-slate-700 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
             </div>
         </div>
     );
