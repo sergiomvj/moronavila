@@ -717,6 +717,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     <span className="rounded-full bg-rose-50 px-3 py-1 font-bold text-rose-700">
                         Morador bloqueado: {rolloutSummary.residentDisabled ?? 0}
                     </span>
+                    <span className="rounded-full bg-fuchsia-50 px-3 py-1 font-bold text-fuchsia-700">
+                        Com motivo: {rolloutSummary.blockedWithReason ?? 0}
+                    </span>
                     <span className="rounded-full bg-indigo-50 px-3 py-1 font-bold text-indigo-700">
                         Mostrando {Math.min(filteredSoftphoneRolloutQueue.length, 12)} de {rolloutItems.length}
                     </span>
@@ -754,7 +757,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4 mb-6">
                     <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
                         <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-700">Moradores</div>
                         <div className="mt-2 text-3xl font-bold text-indigo-900">{rolloutSummary.totalResidents}</div>
@@ -784,6 +787,11 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Desativados</div>
                         <div className="mt-2 text-3xl font-bold text-slate-900">{rolloutSummary.disabled}</div>
                         <div className="mt-1 text-xs text-slate-600">Moradores com softphone desligado</div>
+                    </div>
+                    <div className="rounded-xl border border-fuchsia-200 bg-fuchsia-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-700">Com Motivo</div>
+                        <div className="mt-2 text-3xl font-bold text-fuchsia-900">{rolloutSummary.blockedWithReason ?? 0}</div>
+                        <div className="mt-1 text-xs text-fuchsia-700">Bloqueios com justificativa registrada</div>
                     </div>
                 </div>
 

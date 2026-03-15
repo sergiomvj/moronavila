@@ -443,7 +443,7 @@ export function DashboardView({
                                             : softphoneHealth.door.label
                                         : 'Aguardando configuracao'}
                                 </div>
-                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
                                     <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-amber-300">Sem Ramal</div>
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.missingExtension}</div>
@@ -459,6 +459,10 @@ export function DashboardView({
                                     <div className="rounded-2xl border border-rose-500/10 bg-rose-500/5 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-rose-300">Bloqueados</div>
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.residentBlocked}</div>
+                                    </div>
+                                    <div className="rounded-2xl border border-fuchsia-500/10 bg-fuchsia-500/5 p-3">
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-fuchsia-300">Com Motivo</div>
+                                        <div className="mt-2 text-xl font-black text-white">{softphoneStats.blockedWithReason}</div>
                                     </div>
                                     <div className="rounded-2xl border border-violet-500/10 bg-violet-500/5 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-violet-300">Sem MAC</div>
