@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Wifi, Router, AlertTriangle, ShieldCheck, Laptop, Smartphone, Plus, Trash2, Edit, PhoneCall, RefreshCw } from 'lucide-react';
 import { Resident, Device, UserRole } from '../types';
 import { createDevice, updateDevice, deleteDevice } from '../lib/database';
@@ -27,7 +27,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
     const [softphoneRollout, setSoftphoneRollout] = useState<SoftphoneRolloutResponse | null>(null);
     const [softphoneRolloutSearch, setSoftphoneRolloutSearch] = useState('');
     const [softphoneRolloutFilter, setSoftphoneRolloutFilter] = useState<
-        'all' | 'ready' | 'missing-extension' | 'internet-inactive' | 'disabled' | 'missing-mac'
+        'all' | 'ready' | 'missing-extension' | 'internet-inactive' | 'disabled' | 'resident-disabled' | 'missing-mac'
     >('all');
 
     // View state
@@ -40,21 +40,23 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Para edição admin
+    // Para ediÃ§Ã£o admin
     const [editingDevice, setEditingDevice] = useState<string | null>(null);
 
-    const activeUsers = residents.filter(r => r.internet_active);
-    const inactiveUsers = residents.filter(r => !r.internet_active && r.mac_address);
-    const noMacUsers = residents.filter(r => !r.mac_address);
-    const softphoneEnabledResidents = residents.filter(r => r.softphone_enabled !== false);
+    const eligibleResidents = residents.filter(r => r.role === UserRole.RESIDENT && r.habilitado !== false);
+    const activeUsers = residents.filter(r => r.habilitado !== false && r.internet_active);
+    const inactiveUsers = residents.filter(r => r.habilitado !== false && !r.internet_active && r.mac_address);
+    const noMacUsers = residents.filter(r => r.habilitado !== false && !r.mac_address);
+    const softphoneEnabledResidents = eligibleResidents.filter(r => r.softphone_enabled !== false);
     const softphoneReadyResidents = softphoneEnabledResidents.filter(r => r.internet_active && Boolean(r.softphone_extension));
     const softphoneMissingExtension = softphoneEnabledResidents.filter(r => !r.softphone_extension);
     const softphoneBlockedByInternet = softphoneEnabledResidents.filter(r => !r.internet_active);
-    const softphoneDisabledResidents = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled === false);
+    const softphoneDisabledResidents = residents.filter(r => r.role === UserRole.RESIDENT && (r.habilitado === false || r.softphone_enabled === false));
     const softphoneRolloutQueue = residents
         .filter(r => r.role === UserRole.RESIDENT)
         .map(resident => {
             const blockers: string[] = [];
+            if (resident.habilitado === false) blockers.push('Residente desabilitado');
             if (resident.softphone_enabled === false) blockers.push('Softphone desativado');
             if (!resident.softphone_extension) blockers.push('Sem ramal definido');
             if (!resident.internet_active) blockers.push('Internet inativa');
@@ -77,6 +79,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
         missingExtension: softphoneMissingExtension.length,
         internetInactive: softphoneBlockedByInternet.length,
         disabled: softphoneDisabledResidents.length,
+        residentDisabled: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Residente desabilitado')).length,
         missingMac: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Sem MAC principal')).length,
     };
     const rolloutItems = softphoneRollout?.items
@@ -89,6 +92,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 role: UserRole.RESIDENT,
                 entry_date: '',
                 status: 'Ativo',
+                habilitado: (item as any).habilitado ?? true,
                 internet_active: item.internetActive,
                 softphone_extension: item.extension || undefined,
                 softphone_enabled: item.softphoneEnabled,
@@ -115,6 +119,8 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 return blockers.includes('Internet inativa');
             case 'disabled':
                 return blockers.includes('Softphone desativado');
+            case 'resident-disabled':
+                return blockers.includes('Residente desabilitado');
             case 'missing-mac':
                 return blockers.includes('Sem MAC principal');
             default:
@@ -132,6 +138,11 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
     const pendingDevices = devices.filter(d => d.status === 'Pendente');
     const residentSoftphoneChecklist = [
         {
+            label: 'Acesso habilitado no sistema',
+            ok: currentUser.habilitado !== false,
+            action: 'Procure a administracao para regularizar seu acesso ao app e ao softphone.',
+        },
+        {
             label: 'Softphone habilitado no perfil',
             ok: currentUser.softphone_enabled !== false,
             action: 'Abra seu perfil e mantenha a opcao de softphone habilitada.',
@@ -139,7 +150,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
         {
             label: 'Ramal configurado',
             ok: Boolean(currentUser.softphone_extension),
-            action: 'Peça para a administracao definir seu ramal do softphone.',
+            action: 'PeÃ§a para a administracao definir seu ramal do softphone.',
         },
         {
             label: 'Internet ativa',
@@ -157,7 +168,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
 
     const handleExportSoftphoneRollout = () => {
         const rows = [
-            ['nome', 'email', 'telefone', 'ramal', 'nome_exibicao', 'internet_ativa', 'softphone_habilitado', 'mac_principal', 'status_mac', 'bloqueios'].join(','),
+            ['nome', 'email', 'telefone', 'ramal', 'nome_exibicao', 'morador_habilitado', 'internet_ativa', 'softphone_habilitado', 'mac_principal', 'status_mac', 'bloqueios'].join(','),
             ...rolloutItems.map(({ resident, blockers }) => [
                 resident.name,
                 resident.email,
@@ -165,6 +176,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 resident.softphone_extension || '',
                 resident.softphone_display_name || '',
                 resident.internet_active ? 'sim' : 'nao',
+                resident.habilitado === false ? 'nao' : 'sim',
                 resident.softphone_enabled === false ? 'nao' : 'sim',
                 resident.mac_address || '',
                 resident.mac_address ? 'ok' : 'pendente',
@@ -284,13 +296,22 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <Wifi size={32} />
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Acesso à Internet</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Acesso Ã  Internet</h2>
                     <p className="text-slate-600 mb-6 max-w-lg mx-auto">
-                        Seu acesso à internet é renovado automaticamente a cada pagamento mensal confirmado.
-                        Você pode cadastrar até 2 dispositivos na rede interna.
+                        Seu acesso Ã  internet Ã© renovado automaticamente a cada pagamento mensal confirmado.
+                        VocÃª pode cadastrar atÃ© 2 dispositivos na rede interna.
                     </p>
 
-                    {/* Área de Dispositivos */}
+                    {currentUser.habilitado === false && (
+                        <div className="mx-auto mb-6 max-w-2xl rounded-2xl border border-rose-200 bg-rose-50 p-4 text-left text-rose-800">
+                            <div className="text-sm font-bold">Acesso desabilitado</div>
+                            <div className="mt-1 text-sm">
+                                Seu cadastro esta com habilitado = false. Nesse estado, o app do morador, o softphone e os fluxos operacionais ficam bloqueados.
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Ãrea de Dispositivos */}
                     <div className="text-left bg-slate-50 p-6 rounded-2xl border border-slate-200">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-slate-900 text-lg">Meus Dispositivos ({myDevices.length}/2)</h3>
@@ -413,34 +434,34 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-3">
                                 <div className="p-3 bg-white rounded-xl border border-slate-100">
-                                    <p className="text-xs font-bold text-indigo-600 mb-1">📱 Android</p>
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">ðŸ“± Android</p>
                                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                                        1. Abra as <strong>Configurações</strong>.<br />
-                                        2. Vá em <strong>Sobre o telefone</strong> ou <strong>Rede e Internet</strong>.<br />
+                                        1. Abra as <strong>ConfiguraÃ§Ãµes</strong>.<br />
+                                        2. VÃ¡ em <strong>Sobre o telefone</strong> ou <strong>Rede e Internet</strong>.<br />
                                         3. Toque em <strong>Status</strong> ou <strong>Ver mais</strong>.<br />
-                                        4. Procure por <strong>Endereço MAC Wi-Fi</strong>.
+                                        4. Procure por <strong>EndereÃ§o MAC Wi-Fi</strong>.
                                     </p>
                                 </div>
                                 <div className="p-3 bg-white rounded-xl border border-slate-100">
-                                    <p className="text-xs font-bold text-indigo-600 mb-1">🍎 iOS (iPhone/iPad)</p>
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">ðŸŽ iOS (iPhone/iPad)</p>
                                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                                        1. Vá em <strong>Ajustes</strong>.<br />
+                                        1. VÃ¡ em <strong>Ajustes</strong>.<br />
                                         2. Toque em <strong>Geral</strong> e depois em <strong>Sobre</strong>.<br />
-                                        3. O código está em <strong>Endereço Wi-Fi</strong>.
+                                        3. O cÃ³digo estÃ¡ em <strong>EndereÃ§o Wi-Fi</strong>.
                                     </p>
                                 </div>
                             </div>
                             <div className="space-y-3">
                                 <div className="p-3 bg-white rounded-xl border border-slate-100">
-                                    <p className="text-xs font-bold text-indigo-600 mb-1">🖥️ Windows</p>
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">ðŸ–¥ï¸ Windows</p>
                                     <p className="text-[11px] text-slate-600 leading-relaxed">
                                         1. Clique em <strong>Iniciar</strong> e digite <strong>cmd</strong>.<br />
                                         2. Digite <code>getmac</code> ou <code>ipconfig /all</code>.<br />
-                                        3. O <strong>Endereço Físico</strong> é o seu MAC.
+                                        3. O <strong>EndereÃ§o FÃ­sico</strong> Ã© o seu MAC.
                                     </p>
                                 </div>
                                 <div className="p-3 bg-white rounded-xl border border-slate-100">
-                                    <p className="text-xs font-bold text-indigo-600 mb-1">🐧 Linux</p>
+                                    <p className="text-xs font-bold text-indigo-600 mb-1">ðŸ§ Linux</p>
                                     <p className="text-[11px] text-slate-600 leading-relaxed">
                                         1. Abra o <strong>Terminal</strong>.<br />
                                         2. Digite <code>ip link show</code> ou <code>ifconfig</code>.<br />
@@ -450,7 +471,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                             </div>
                         </div>
                         <p className="mt-4 text-[10px] text-slate-400 italic">
-                            * O MAC Address é um código único composto por 12 caracteres hexadecimais (ex: 00:1A:2B:3C:4D:5E).
+                            * O MAC Address Ã© um cÃ³digo Ãºnico composto por 12 caracteres hexadecimais (ex: 00:1A:2B:3C:4D:5E).
                         </p>
                     </div>
 
@@ -458,7 +479,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-2xl text-white shadow-lg shadow-indigo-200 text-left relative overflow-hidden">
                             <div className="relative z-10">
                                 <h4 className="font-bold text-lg mb-1">Quer facilitar?</h4>
-                                <p className="text-white/80 text-sm mb-4">Use nosso detector automático para descobrir o seu MAC Address agora mesmo.</p>
+                                <p className="text-white/80 text-sm mb-4">Use nosso detector automÃ¡tico para descobrir o seu MAC Address agora mesmo.</p>
                                 <button
                                     onClick={() => window.open(`http://${window.location.hostname}:4000`, '_blank')}
                                     className="bg-white text-indigo-700 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-opacity-90 transition shadow-sm"
@@ -499,7 +520,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <h3 className="font-bold text-slate-900">Dispositivos Ativos</h3>
                     </div>
                     <h4 className="text-3xl font-bold text-slate-900 mb-2">{activeDevices.length}</h4>
-                    <p className="text-xs text-slate-500">Conectados à rede interna</p>
+                    <p className="text-xs text-slate-500">Conectados Ã  rede interna</p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
@@ -510,7 +531,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <h3 className="font-bold text-slate-900">Dispositivos Pendentes</h3>
                     </div>
                     <h4 className="text-3xl font-bold text-slate-900 mb-2">{pendingDevices.length}</h4>
-                    <p className="text-xs text-slate-500">Aguardando aprovação</p>
+                    <p className="text-xs text-slate-500">Aguardando aprovaÃ§Ã£o</p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
@@ -521,7 +542,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <h3 className="font-bold text-slate-900">Moradores Ativos</h3>
                     </div>
                     <h4 className="text-3xl font-bold text-slate-900 mb-2">{activeUsers.length}</h4>
-                    <p className="text-xs text-slate-500">Com plano de internet válido</p>
+                    <p className="text-xs text-slate-500">Com plano de internet vÃ¡lido</p>
                 </div>
             </div>
 
@@ -530,9 +551,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     <div>
                         <h3 className="font-bold text-slate-900 flex items-center gap-2">
                             <PhoneCall size={18} className="text-indigo-600" />
-                            Prontidão do Softphone
+                            ProntidÃ£o do Softphone
                         </h3>
-                        <p className="text-xs text-slate-500">Diagnóstico local do ambiente antes da ativação do PBX.</p>
+                        <p className="text-xs text-slate-500">DiagnÃ³stico local do ambiente antes da ativaÃ§Ã£o do PBX.</p>
                     </div>
                     <button
                         onClick={handleRefreshSoftphoneAdmin}
@@ -549,7 +570,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</div>
                                 <div className={`mt-2 text-lg font-bold ${softphoneHealth.ok ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                    {softphoneHealth.ok ? 'Pronto para teste' : 'Pendente de configuração'}
+                                    {softphoneHealth.ok ? 'Pronto para teste' : 'Pendente de configuraÃ§Ã£o'}
                                 </div>
                             </div>
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -588,7 +609,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
 
                         {softphoneHealth.missing.length > 0 && (
                             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                                <div className="mb-2 text-xs font-bold uppercase tracking-widest text-amber-700">Variáveis ausentes</div>
+                                <div className="mb-2 text-xs font-bold uppercase tracking-widest text-amber-700">VariÃ¡veis ausentes</div>
                                 <div className="flex flex-wrap gap-2">
                                     {softphoneHealth.missing.map(item => (
                                         <span key={item} className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase text-amber-700 border border-amber-200">
@@ -600,7 +621,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         )}
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                            <div className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">Recomendações</div>
+                            <div className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">RecomendaÃ§Ãµes</div>
                             <div className="space-y-2">
                                 {softphoneHealth.recommendations.map((item, index) => (
                                     <div key={`${item}-${index}`} className="text-sm text-slate-600">
@@ -630,7 +651,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     </div>
                 ) : (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                        Não foi possível carregar o diagnóstico do softphone local.
+                        NÃ£o foi possÃ­vel carregar o diagnÃ³stico do softphone local.
                     </div>
                 )}
             </div>
@@ -749,7 +770,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                                 <div className="px-4 py-4">
                                     <div className="font-bold text-slate-900">{resident.name}</div>
                                     <div className="mt-1 text-xs text-slate-500">
-                                        {resident.softphone_extension || 'Sem ramal'} • {resident.internet_active ? 'Internet ativa' : 'Internet inativa'}
+                                        {resident.softphone_extension || 'Sem ramal'} â€¢ {resident.internet_active ? 'Internet ativa' : 'Internet inativa'}
                                     </div>
                                     <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
                                         <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-600">
@@ -797,7 +818,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                    <h3 className="font-bold text-slate-900">Lista de Autorização MAC (Dispositivos)</h3>
+                    <h3 className="font-bold text-slate-900">Lista de AutorizaÃ§Ã£o MAC (Dispositivos)</h3>
                     <button className="text-sm font-bold text-indigo-600 hover:underline">Exportar Lista (.csv)</button>
                 </div>
                 <div className="p-0 overflow-x-auto">
@@ -808,9 +829,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Dispositivo</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">MAC Address</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Conectado (Tempo)</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tráfego Ocupado</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">TrÃ¡fego Ocupado</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ação</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">AÃ§Ã£o</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -876,3 +897,4 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
         </div>
     );
 }
+

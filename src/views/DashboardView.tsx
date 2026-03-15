@@ -84,14 +84,15 @@ export function DashboardView({
         const totalPayments = myPayments.reduce((acc, p) => acc + Number(p.amount), 0);
         const pendingPayments = myPayments.filter(p => p.status !== PaymentStatus.PAID).length;
         const openMaintenance = myMaintenance.filter(m => m.status === MaintenanceStatus.OPEN).length;
-        const internetEnabled = residents.filter(r => r.internet_active).length;
-        const internetBlocked = residents.filter(r => !r.internet_active).length;
-        const softphoneEnabled = residents.filter(r => r.softphone_enabled !== false).length;
-        const softphoneProvisioned = residents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension)).length;
-        const softphoneReadyOnNetwork = residents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active).length;
-        const softphoneMissingExtension = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.softphone_extension).length;
-        const softphoneBlockedByInternet = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.internet_active).length;
-        const softphoneDisabled = residents.filter(r => r.role === UserRole.RESIDENT && r.softphone_enabled === false).length;
+        const eligibleResidents = residents.filter(r => r.role === UserRole.RESIDENT && r.habilitado !== false);
+        const internetEnabled = residents.filter(r => r.habilitado !== false && r.internet_active).length;
+        const internetBlocked = residents.filter(r => r.habilitado !== false && !r.internet_active).length;
+        const softphoneEnabled = eligibleResidents.filter(r => r.softphone_enabled !== false).length;
+        const softphoneProvisioned = eligibleResidents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension)).length;
+        const softphoneReadyOnNetwork = eligibleResidents.filter(r => r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active).length;
+        const softphoneMissingExtension = eligibleResidents.filter(r => r.softphone_enabled !== false && !r.softphone_extension).length;
+        const softphoneBlockedByInternet = eligibleResidents.filter(r => r.softphone_enabled !== false && !r.internet_active).length;
+        const softphoneDisabled = residents.filter(r => r.role === UserRole.RESIDENT && (r.habilitado === false || r.softphone_enabled === false)).length;
         const today = new Date().toISOString().split('T')[0];
         const todaysLaundry = laundrySchedules.filter(l => l.date === today).length;
         const myTodaysLaundry = laundrySchedules.filter(l => l.date === today && (isAdmin || l.resident_id === currentUser.id)).length;
@@ -126,7 +127,7 @@ export function DashboardView({
         blockedByInternet: softphoneRollout?.summary.internetInactive ?? stats.softphoneBlockedByInternet,
         disabled: softphoneRollout?.summary.disabled ?? stats.softphoneDisabled,
         missingMac: softphoneRollout?.summary.missingMac ?? residents.filter(
-            (resident) => resident.role === UserRole.RESIDENT && !resident.mac_address
+            (resident) => resident.role === UserRole.RESIDENT && resident.habilitado !== false && !resident.mac_address
         ).length,
     };
     const softphoneStatsSourceLabel = softphoneRollout?.generatedAt
@@ -406,7 +407,7 @@ export function DashboardView({
 
                             <div className="space-y-3">
                                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
-                                    Prontos = softphone habilitado, ramal definido e internet ativa para o morador.
+                                            Prontos = morador habilitado, softphone habilitado, ramal definido e internet ativa.
                                 </div>
                                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs text-slate-400">
                                     {softphoneStatsSourceLabel}

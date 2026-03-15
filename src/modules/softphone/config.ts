@@ -52,6 +52,7 @@ export function canResidentAutoStartSoftphone(
   resident: Resident,
   config: SoftphoneEnvConfig
 ) {
+  if (resident.habilitado === false) return false;
   if (resident.softphone_enabled === false) return false;
   if (!config.enabled) return false;
   if (!config.autoConnect) return false;
@@ -128,6 +129,15 @@ export function getInitialSoftphoneState(
       connectionStatus: 'disabled',
       callStatus: 'idle',
       message: 'Softphone desativado no ambiente atual.',
+    };
+  }
+
+  if (resident.habilitado === false) {
+    return {
+      connectionStatus: 'disabled',
+      callStatus: 'idle',
+      activeExtension: buildResidentExtension(resident),
+      message: 'Acesso do morador desabilitado. O softphone permanece bloqueado neste login.',
     };
   }
 

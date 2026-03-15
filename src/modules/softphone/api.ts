@@ -33,6 +33,7 @@ interface SoftphoneEnvResponse {
 interface SoftphoneDirectoryResponse {
   resident: {
     id: string;
+    habilitado?: boolean;
     softphoneEnabled: boolean;
     internetActive: boolean;
   } | null;
@@ -50,6 +51,7 @@ interface SoftphoneConfigResponse {
     name: string;
     displayName: string;
     extension: string | null;
+    habilitado?: boolean;
     internetActive: boolean;
   };
   sip: {
@@ -84,6 +86,7 @@ export interface SoftphoneRolloutItem {
   phone: string;
   extension: string | null;
   displayName: string | null;
+  habilitado?: boolean;
   internetActive: boolean;
   softphoneEnabled: boolean;
   macAddress: string | null;
@@ -101,6 +104,7 @@ export interface SoftphoneRolloutResponse {
     missingExtension: number;
     internetInactive: number;
     disabled: number;
+    residentDisabled?: number;
     missingMac: number;
   };
   items: SoftphoneRolloutItem[];
@@ -121,6 +125,7 @@ export interface SoftphoneInboxResponse {
   resident: {
     id: string;
     name: string;
+    habilitado?: boolean;
     internetActive: boolean;
     softphoneEnabled: boolean;
   };

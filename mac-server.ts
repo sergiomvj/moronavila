@@ -364,6 +364,7 @@ app.get('/api/softphone/directory', async (req, res) => {
         return res.json({
             resident: {
                 id: resident.id,
+                habilitado: resident.habilitado !== false,
                 softphoneEnabled: resident.softphone_enabled !== false,
                 internetActive: resident.internet_active === true
             },
@@ -393,6 +394,7 @@ app.get('/api/softphone/config', async (req, res) => {
                 name: resident.name,
                 displayName: resident.softphone_display_name || resident.name || SOFTPHONE_DEFAULT_DISPLAY_NAME,
                 extension,
+                habilitado: resident.habilitado !== false,
                 internetActive: resident.internet_active === true
             },
             sip: {
@@ -415,6 +417,7 @@ app.get('/api/softphone/inbox', async (req, res) => {
             resident: {
                 id: payload.resident.id,
                 name: payload.resident.name,
+                habilitado: payload.resident.habilitado !== false,
                 internetActive: payload.resident.internet_active === true,
                 softphoneEnabled: payload.resident.softphone_enabled !== false
             },
@@ -494,7 +497,7 @@ app.get('/api/softphone/rollout', async (req, res) => {
         return requireAdminRole(req as AuthenticatedRequest, res, async () => {
             const result = await supabase
                 .from('residents')
-                .select('id, name, email, phone, role, mac_address, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active')
+                .select('id, name, email, phone, role, mac_address, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active, habilitado')
                 .order('name', { ascending: true });
             if (result.error) {
                 return res.status(500).json({ error: 'Nao foi possivel carregar o rollout do softphone.' });
@@ -510,6 +513,7 @@ app.get('/api/softphone/rollout', async (req, res) => {
                     phone: resident.phone,
                     extension: suggestedExtension,
                     displayName: resident.softphone_display_name || resident.name || null,
+                    habilitado: resident.habilitado !== false,
                     internetActive: resident.internet_active === true,
                     softphoneEnabled: resident.softphone_enabled !== false,
                     macAddress: resident.mac_address || null,
@@ -524,6 +528,7 @@ app.get('/api/softphone/rollout', async (req, res) => {
                 missingExtension: items.filter((item) => item.blockers.includes('Sem ramal definido')).length,
                 internetInactive: items.filter((item) => item.blockers.includes('Internet inativa')).length,
                 disabled: items.filter((item) => item.blockers.includes('Softphone desativado')).length,
+                residentDisabled: items.filter((item) => item.blockers.includes('Residente desabilitado')).length,
                 missingMac: items.filter((item) => item.blockers.includes('Sem MAC principal')).length,
             };
             return res.json({

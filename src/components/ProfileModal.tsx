@@ -17,6 +17,11 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const softphoneReadiness = [
         {
+            label: 'Acesso habilitado no sistema',
+            ok: editingResident.habilitado !== false,
+            action: 'Procure a administracao da casa para regularizar seu acesso ao app e ao softphone.',
+        },
+        {
             label: 'Softphone habilitado',
             ok: editingResident.softphone_enabled !== false,
             action: 'Mantenha a preferencia do softphone habilitada no perfil.',
@@ -103,6 +108,15 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
                 {message.text && (
                     <div className={`mb-6 p-4 rounded-xl border ${message.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
                         {message.text}
+                    </div>
+                )}
+
+                {editingResident.habilitado === false && (
+                    <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+                        <div className="text-sm font-bold">Acesso desabilitado</div>
+                        <div className="mt-1 text-sm">
+                            Seu cadastro esta com `habilitado = false`. Nesse estado, o app do morador e o softphone ficam bloqueados.
+                        </div>
                     </div>
                 )}
 

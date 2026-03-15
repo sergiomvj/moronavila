@@ -130,6 +130,7 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
       if (configResponse?.resident) {
         setResolvedResident((previous) => ({
           ...previous,
+          habilitado: configResponse.resident.habilitado ?? previous.habilitado,
           softphone_enabled: configResponse.enabled,
           softphone_extension: configResponse.resident.extension || previous.softphone_extension,
           softphone_display_name:
@@ -362,6 +363,11 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
   const canAttemptConnection =
     canResidentAutoStartSoftphone(resolvedResident, config) && isSoftphoneProvisioned(config);
   const readinessChecks = [
+    {
+      id: 'resident-access',
+      label: 'Morador habilitado no sistema',
+      ok: resolvedResident.habilitado !== false,
+    },
     {
       id: 'resident-enabled',
       label: 'Softphone habilitado para o morador',

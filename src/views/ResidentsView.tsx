@@ -60,6 +60,7 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     const [newSoftphoneExtension, setNewSoftphoneExtension] = useState('');
     const [newSoftphoneDisplayName, setNewSoftphoneDisplayName] = useState('');
     const [newSoftphoneEnabled, setNewSoftphoneEnabled] = useState(true);
+    const [newHabilitado, setNewHabilitado] = useState(true);
     const [newPhoto, setNewPhoto] = useState<File | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
@@ -72,28 +73,28 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
 
         switch (softphoneFilter) {
             case 'ready':
-                return r.role === UserRole.RESIDENT && r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active;
+                return r.role === UserRole.RESIDENT && r.habilitado !== false && r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active;
             case 'missing-extension':
-                return r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.softphone_extension;
+                return r.role === UserRole.RESIDENT && r.habilitado !== false && r.softphone_enabled !== false && !r.softphone_extension;
             case 'disabled':
-                return r.role === UserRole.RESIDENT && r.softphone_enabled === false;
+                return r.role === UserRole.RESIDENT && (r.habilitado === false || r.softphone_enabled === false);
             case 'missing-mac':
-                return r.role === UserRole.RESIDENT && !r.mac_address;
+                return r.role === UserRole.RESIDENT && r.habilitado !== false && !r.mac_address;
             default:
                 return true;
         }
     });
     const softphoneReadyCount = residents.filter(
-        (r) => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active
+        (r) => r.role === UserRole.RESIDENT && r.habilitado !== false && r.softphone_enabled !== false && Boolean(r.softphone_extension) && r.internet_active
     ).length;
     const softphoneMissingExtensionCount = residents.filter(
-        (r) => r.role === UserRole.RESIDENT && r.softphone_enabled !== false && !r.softphone_extension
+        (r) => r.role === UserRole.RESIDENT && r.habilitado !== false && r.softphone_enabled !== false && !r.softphone_extension
     ).length;
     const softphoneDisabledCount = residents.filter(
-        (r) => r.role === UserRole.RESIDENT && r.softphone_enabled === false
+        (r) => r.role === UserRole.RESIDENT && (r.habilitado === false || r.softphone_enabled === false)
     ).length;
     const softphoneMissingMacCount = residents.filter(
-        (r) => r.role === UserRole.RESIDENT && !r.mac_address
+        (r) => r.role === UserRole.RESIDENT && r.habilitado !== false && !r.mac_address
     ).length;
 
     const getSoftphoneBadge = (resident: Resident) => {
@@ -101,6 +102,13 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
             return {
                 label: 'Administrativo',
                 className: 'bg-indigo-100 text-indigo-700',
+            };
+        }
+
+        if (resident.habilitado === false) {
+            return {
+                label: 'Bloqueado',
+                className: 'bg-rose-100 text-rose-700',
             };
         }
 
@@ -170,6 +178,7 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                     birth_date: editingResident.birth_date,
                     entry_date: editingResident.entry_date,
                     status: editingResident.status,
+                    habilitado: editingResident.habilitado,
                     internet_active: editingResident.internet_active,
                 };
                 if (editingResident.room_id && editingResident.room_id.trim() !== '') {
@@ -232,6 +241,7 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                     instagram: newInstagram,
                     mac_address: newMacAddress,
                     mac_address_pc: newMacAddressPC,
+                    habilitado: newHabilitado,
                     softphone_extension: newSoftphoneExtension,
                     softphone_display_name: newSoftphoneDisplayName,
                     softphone_enabled: newSoftphoneEnabled,
@@ -252,7 +262,7 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
             setShowAddModal(false);
             setNewName(''); setNewEmail(''); setNewPassword(''); setNewPhone('');
             setNewBirthDate(''); setNewInstagram(''); setNewMacAddress(''); setNewMacAddressPC('');
-            setNewSoftphoneExtension(''); setNewSoftphoneDisplayName(''); setNewSoftphoneEnabled(true); setNewPhoto(null);
+            setNewSoftphoneExtension(''); setNewSoftphoneDisplayName(''); setNewSoftphoneEnabled(true); setNewHabilitado(true); setNewPhoto(null);
             alert('Morador cadastrado com sucesso!');
             onRefresh();
         } catch (err: any) {
@@ -567,6 +577,13 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                 {isAdmin && (
                                     <>
                                         <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">Acesso do Morador</label>
+                                            <div className="flex items-center gap-2 h-12">
+                                                <input type="checkbox" checked={editingResident.habilitado !== false} onChange={e => setEditingResident({ ...editingResident, habilitado: e.target.checked })} className="w-5 h-5 text-indigo-600 rounded" />
+                                                <span className="text-sm font-medium">Habilitado</span>
+                                            </div>
+                                        </div>
+                                        <div>
                                             <label className="block text-sm font-bold text-slate-700 mb-1">Status de Internet</label>
                                             <div className="flex items-center gap-2 h-12">
                                                 <input type="checkbox" checked={editingResident.internet_active || false} onChange={e => setEditingResident({ ...editingResident, internet_active: e.target.checked })} className="w-5 h-5 text-indigo-600 rounded" />
@@ -744,6 +761,15 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Nome de ExibiÃ§Ã£o no Softphone</label>
                                     <input type="text" value={newSoftphoneDisplayName} onChange={e => setNewSoftphoneDisplayName(e.target.value)} placeholder="Ex: Apto 201 - Joao" className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500/20" />
                                     <p className="mt-1 text-xs text-slate-500">Ajuda a identificar rapidamente o morador quando a portaria ou o interfone chamarem.</p>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <input type="checkbox" checked={newHabilitado} onChange={e => setNewHabilitado(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600" />
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-900">Morador habilitado para usar o sistema</div>
+                                            <div className="text-xs text-slate-500">Se desmarcado, o morador perde acesso ao app e ao softphone.</div>
+                                        </div>
+                                    </label>
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
