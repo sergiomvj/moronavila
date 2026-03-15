@@ -19,7 +19,7 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     }, [initialModal]);
     const [searchTerm, setSearchTerm] = useState('');
     const [softphoneFilter, setSoftphoneFilter] = useState<
-        'all' | 'ready' | 'missing-extension' | 'disabled' | 'missing-mac'
+        'all' | 'ready' | 'missing-extension' | 'disabled' | 'resident-disabled' | 'missing-mac'
     >('all');
     const [editingResident, setEditingResident] = useState<Resident | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,6 +78,8 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                 return r.role === UserRole.RESIDENT && r.habilitado !== false && r.softphone_enabled !== false && !r.softphone_extension;
             case 'disabled':
                 return r.role === UserRole.RESIDENT && (r.habilitado === false || r.softphone_enabled === false);
+            case 'resident-disabled':
+                return r.role === UserRole.RESIDENT && r.habilitado === false;
             case 'missing-mac':
                 return r.role === UserRole.RESIDENT && r.habilitado !== false && !r.mac_address;
             default:
@@ -92,6 +94,9 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     ).length;
     const softphoneDisabledCount = residents.filter(
         (r) => r.role === UserRole.RESIDENT && (r.habilitado === false || r.softphone_enabled === false)
+    ).length;
+    const residentBlockedCount = residents.filter(
+        (r) => r.role === UserRole.RESIDENT && r.habilitado === false
     ).length;
     const softphoneMissingMacCount = residents.filter(
         (r) => r.role === UserRole.RESIDENT && r.habilitado !== false && !r.mac_address
@@ -317,8 +322,9 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                         <option value="all">Todos os perfis</option>
                         <option value="ready">Softphone pronto</option>
                         <option value="missing-extension">Sem ramal</option>
-                        <option value="disabled">Softphone desativado</option>
-                        <option value="missing-mac">Sem MAC principal</option>
+                            <option value="disabled">Softphone desativado</option>
+                            <option value="resident-disabled">Morador bloqueado</option>
+                            <option value="missing-mac">Sem MAC principal</option>
                     </select>
                 </div>
                 {isAdmin && (
@@ -363,6 +369,11 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                         <div className="mt-2 text-3xl font-bold text-violet-900">{softphoneMissingMacCount}</div>
                         <div className="mt-1 text-xs text-violet-700">Podem falhar na rede autenticada</div>
                     </div>
+                    <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Bloqueados</div>
+                        <div className="mt-2 text-3xl font-bold text-rose-900">{residentBlockedCount}</div>
+                        <div className="mt-1 text-xs text-rose-700">Sem acesso ao app e ao softphone</div>
+                    </div>
                 </div>
             )}
 
@@ -401,10 +412,15 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
                                         <div className="text-xs text-slate-500">{resident.email}</div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${resident.status === 'Ativo' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                                            }`}>
-                                            {resident.status}
-                                        </span>
+                                        <div className="flex flex-wrap gap-2">
+                                            <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${resident.status === 'Ativo' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                                                }`}>
+                                                {resident.status}
+                                            </span>
+                                            <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${resident.habilitado === false ? 'bg-rose-100 text-rose-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                {resident.habilitado === false ? 'Bloqueado' : 'Habilitado'}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">

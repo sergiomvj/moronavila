@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Home, MapPin, Sparkles, Shield, ChevronRight, Play, ArrowRight, MessageCircle, Send } from 'lucide-react';
+import { Home, MapPin, Sparkles, Shield, ChevronRight, Play, ArrowRight, MessageCircle, Send, X, Sofa } from 'lucide-react';
 import { fetchPublicPropertyDescription, fetchPublicRooms } from '../lib/database';
 import { getLocalApiBase } from '../lib/localApi';
 import { PropertyDescription, Room } from '../types';
@@ -15,6 +15,7 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
     const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
     const [currentMessage, setCurrentMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
     useEffect(() => {
         const loadPublicData = async () => {
@@ -80,6 +81,125 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
         // Início automático do chat
         const welcomeMessage = `Olá ${leadForm.name}! Sou o Agente Virtual da MoronaVila. Como posso te ajudar hoje? Além de tirar dúvidas comigo, você pode clicar no botão verde abaixo para falar direto com um consultor no nosso WhatsApp e agendar sua visita!`;
         setChatMessages([{ role: 'assistant', content: welcomeMessage }]);
+    };
+
+    const RoomDetailsModal = ({ room, onClose }: { room: Room, onClose: () => void }) => {
+        const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+        
+        return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6">
+                <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onClick={onClose} />
+                <div className="relative w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+                    <button 
+                        onClick={onClose}
+                        className="absolute top-6 right-6 z-10 p-3 bg-slate-950/50 hover:bg-rose-600 text-white rounded-2xl transition-all border border-white/10"
+                    >
+                        <X size={24} />
+                    </button>
+
+                    <div className="flex flex-col lg:flex-row h-full overflow-y-auto lg:overflow-hidden">
+                        {/* Galeria de Mídia */}
+                        <div className="lg:w-3/5 relative bg-black aspect-video lg:aspect-auto flex flex-col">
+                            <div className="flex-1 relative overflow-hidden">
+                                {room.media[activeMediaIndex] ? (
+                                    room.media[activeMediaIndex].type === 'video' ? (
+                                        <video 
+                                            src={room.media[activeMediaIndex].url} 
+                                            className="w-full h-full object-contain" 
+                                            controls 
+                                            autoPlay 
+                                        />
+                                    ) : (
+                                        <img 
+                                            src={room.media[activeMediaIndex].url} 
+                                            alt={room.name} 
+                                            className="w-full h-full object-contain"
+                                        />
+                                    )
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                                        <Home size={64} className="text-slate-600" />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Miniaturas */}
+                            {room.media.length > 1 && (
+                                <div className="p-4 bg-slate-950/50 backdrop-blur-md flex gap-2 overflow-x-auto no-scrollbar justify-center">
+                                    {room.media.map((media, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setActiveMediaIndex(idx)}
+                                            className={`relative w-16 md:w-20 aspect-video rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                                                activeMediaIndex === idx ? 'border-rose-500 scale-105' : 'border-transparent opacity-50 hover:opacity-100'
+                                            }`}
+                                        >
+                                            <img src={media.url} className="w-full h-full object-cover" alt="" />
+                                            {media.type === 'video' && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                    <Play size={16} className="text-white" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Detalhes */}
+                        <div className="lg:w-2/5 p-8 md:p-12 flex flex-col h-full bg-slate-900 overflow-y-auto">
+                            <div className="mb-8">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <span className="px-3 py-1 bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-lg border border-rose-500/20">
+                                        {room.type}
+                                    </span>
+                                    <span className="text-white/30 text-[10px] uppercase font-bold tracking-widest">Acomodação</span>
+                                </div>
+                                <h3 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mb-4">{room.name}</h3>
+                                <div className="text-2xl font-black text-rose-500 mb-6">
+                                    R$ {room.rent_value} <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">/ mês</span>
+                                </div>
+                                <div className="h-px w-20 bg-gradient-to-r from-rose-600 to-transparent mb-8" />
+                                <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line font-medium">
+                                    {room.description || "Este quarto oferece um ambiente confortável e privativo, ideal para quem busca praticidade e um bom lugar para descansar e estudar."}
+                                </p>
+                            </div>
+
+                            {/* Mobiliário */}
+                            {room.furniture && room.furniture.length > 0 && (
+                                <div className="mb-10">
+                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">Mobiliário Incluso</h4>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {room.furniture.map(item => (
+                                            <div key={item.id} className="flex items-center gap-4 p-4 bg-slate-950/30 border border-slate-800/50 rounded-2xl group transition-all hover:border-slate-700">
+                                                <div className="p-3 bg-slate-800 rounded-xl text-slate-400 group-hover:text-rose-400 transition-colors">
+                                                    <Sofa size={18} />
+                                                </div>
+                                                <div>
+                                                    <div className="text-slate-200 text-sm font-bold tracking-tight uppercase">{item.name}</div>
+                                                    <div className="text-[9px] font-black text-rose-500/70 uppercase tracking-widest">{item.condition}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-auto pt-8">
+                                <a
+                                    href={`https://wa.me/?text=${encodeURIComponent(`Olá! Tenho interesse na vaga do ${room.name}. Poderia me dar mais detalhes?`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full flex items-center justify-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95"
+                                >
+                                    Enviar Mensagem <MessageCircle size={18} />
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -279,10 +399,10 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                                         </div>
                                         <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest mb-6">{room.type}</p>
                                         <button
-                                            onClick={() => window.open(`https://wa.me/?text=Olá! Tenho interesse na vaga do ${room.name}.`, '_blank')}
+                                            onClick={() => setSelectedRoom(room)}
                                             className="w-full py-4 rounded-2xl bg-white/5 hover:bg-rose-600 border border-white/10 hover:border-rose-500 text-white font-black text-[11px] uppercase tracking-widest transition-all"
                                         >
-                                            Tenho Interesse
+                                            Ver Detalhes
                                         </button>
                                     </div>
                                 </div>
@@ -290,6 +410,13 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                         </div>
                     </div>
                 </section>
+            )}
+
+            {selectedRoom && (
+                <RoomDetailsModal 
+                    room={selectedRoom} 
+                    onClose={() => setSelectedRoom(null)} 
+                />
             )}
 
             {/* Rules */}

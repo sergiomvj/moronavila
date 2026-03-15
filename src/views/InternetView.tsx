@@ -691,6 +691,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-slate-600">
                         Sem MAC principal: {rolloutSummary.missingMac}
                     </span>
+                    <span className="rounded-full bg-rose-50 px-3 py-1 font-bold text-rose-700">
+                        Morador bloqueado: {rolloutSummary.residentDisabled ?? 0}
+                    </span>
                     <span className="rounded-full bg-indigo-50 px-3 py-1 font-bold text-indigo-700">
                         Mostrando {Math.min(filteredSoftphoneRolloutQueue.length, 12)} de {rolloutItems.length}
                     </span>
@@ -722,6 +725,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <option value="missing-extension">Sem ramal</option>
                         <option value="internet-inactive">Internet inativa</option>
                         <option value="disabled">Desativados</option>
+                        <option value="resident-disabled">Morador bloqueado</option>
                         <option value="missing-mac">Sem MAC</option>
                     </select>
                 </div>
@@ -773,6 +777,15 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                                         {resident.softphone_extension || 'Sem ramal'} â€¢ {resident.internet_active ? 'Internet ativa' : 'Internet inativa'}
                                     </div>
                                     <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
+                                        <span
+                                            className={`rounded-full px-2 py-1 font-medium ${
+                                                resident.habilitado === false
+                                                    ? 'bg-rose-100 text-rose-700'
+                                                    : 'bg-emerald-100 text-emerald-700'
+                                            }`}
+                                        >
+                                            {resident.habilitado === false ? 'Morador bloqueado' : 'Morador habilitado'}
+                                        </span>
                                         <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-600">
                                             {resident.softphone_display_name || 'Sem nome de exibicao'}
                                         </span>

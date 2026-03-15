@@ -93,6 +93,7 @@ export function DashboardView({
         const softphoneMissingExtension = eligibleResidents.filter(r => r.softphone_enabled !== false && !r.softphone_extension).length;
         const softphoneBlockedByInternet = eligibleResidents.filter(r => r.softphone_enabled !== false && !r.internet_active).length;
         const softphoneDisabled = residents.filter(r => r.role === UserRole.RESIDENT && (r.habilitado === false || r.softphone_enabled === false)).length;
+        const residentBlocked = residents.filter(r => r.role === UserRole.RESIDENT && r.habilitado === false).length;
         const today = new Date().toISOString().split('T')[0];
         const todaysLaundry = laundrySchedules.filter(l => l.date === today).length;
         const myTodaysLaundry = laundrySchedules.filter(l => l.date === today && (isAdmin || l.resident_id === currentUser.id)).length;
@@ -111,6 +112,7 @@ export function DashboardView({
             softphoneMissingExtension,
             softphoneBlockedByInternet,
             softphoneDisabled,
+            residentBlocked,
             todaysLaundry,
             myTodaysLaundry,
             totalAvailableBeds
@@ -126,6 +128,7 @@ export function DashboardView({
         missingExtension: softphoneRollout?.summary.missingExtension ?? stats.softphoneMissingExtension,
         blockedByInternet: softphoneRollout?.summary.internetInactive ?? stats.softphoneBlockedByInternet,
         disabled: softphoneRollout?.summary.disabled ?? stats.softphoneDisabled,
+        residentBlocked: softphoneRollout?.summary.residentDisabled ?? stats.residentBlocked,
         missingMac: softphoneRollout?.summary.missingMac ?? residents.filter(
             (resident) => resident.role === UserRole.RESIDENT && resident.habilitado !== false && !resident.mac_address
         ).length,
@@ -426,7 +429,7 @@ export function DashboardView({
                                             : softphoneHealth.door.label
                                         : 'Aguardando configuracao'}
                                 </div>
-                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                                     <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-amber-300">Sem Ramal</div>
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.missingExtension}</div>
@@ -438,6 +441,10 @@ export function DashboardView({
                                     <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Desativados</div>
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.disabled}</div>
+                                    </div>
+                                    <div className="rounded-2xl border border-rose-500/10 bg-rose-500/5 p-3">
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-rose-300">Bloqueados</div>
+                                        <div className="mt-2 text-xl font-black text-white">{softphoneStats.residentBlocked}</div>
                                     </div>
                                     <div className="rounded-2xl border border-violet-500/10 bg-violet-500/5 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-violet-300">Sem MAC</div>

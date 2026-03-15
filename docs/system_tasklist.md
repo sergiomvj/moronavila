@@ -47,6 +47,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 
 - manter autenticacao e carregamento inicial estaveis
 - transformar `habilitado` na chave mestra de elegibilidade do residente
+- automatizar a origem desse campo a partir de permanencia e adimplencia
 - garantir consistencia dos dados entre Supabase, frontend e `mac-server`
 - revisar falhas silenciosas nas cargas parciais do `refreshData`
 - garantir que os modulos criticos tenham mensagens de erro claras para admin
@@ -110,6 +111,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - revisar CRUD completo de moradores
 - adicionar e consolidar o campo mestre `habilitado`
 - definir e exibir motivo operacional de bloqueio quando `habilitado = false`
+- registrar data e motivo da desabilitacao para auditoria operacional
 - validar consistencia de `auth_id`, `email` e `role`
 - revisar cadastro de telefone, cama, quarto e valores financeiros
 - padronizar estados operacionais do morador
@@ -131,6 +133,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - revisar status `Pago`, `Pendente` e `Atrasado`
 - definir quando inadimplencia deve desligar `habilitado`
 - automatizar desligamento de `habilitado` por inadimplencia conforme regra operacional
+- definir se o religamento de `habilitado` sera automatico ou manual apos regularizacao
 - revisar ligacao entre pagamento confirmado e internet ativa
 - criar trilha de recados automativos para lembretes de pagamento
 - avaliar eventos financeiros que devem alimentar avisos do morador
@@ -221,6 +224,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - concluir contadores de `voz`, `recados` e `encomendas`
 - concluir endpoint e consumo da inbox do softphone
 - bloquear autoativacao e uso do softphone quando `habilitado = false`
+- explicitar nos paineis administrativos quando o bloqueio vier de `habilitado`
 - revisar marcacao de leitura de recados manuais
 - definir quais eventos do sistema geram recados automaticos
 - manter placeholders seguros onde ainda nao houver infraestrutura real
