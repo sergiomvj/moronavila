@@ -117,6 +117,11 @@ export function ProfileModal({ currentUser, onClose, onUpdate }: ProfileModalPro
                         <div className="mt-1 text-sm">
                             Seu cadastro esta com `habilitado = false`. Nesse estado, o app do morador e o softphone ficam bloqueados.
                         </div>
+                        {editingResident.motivo_bloqueio?.trim() && (
+                            <div className="mt-2 text-sm font-medium">
+                                Motivo: {editingResident.motivo_bloqueio}
+                            </div>
+                        )}
                     </div>
                 )}
 

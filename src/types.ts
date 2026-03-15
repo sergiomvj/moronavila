@@ -4,7 +4,9 @@ export enum RoomType {
   LIVING_ROOM = 'Sala de Estar',
   BATHROOM = 'Banheiro',
   LAUNDRY = 'Lavanderia',
-  OTHER = 'Outro'
+  OTHER = 'Outro',
+  COMMON_AREA = 'Área Comum',
+  SUITE = 'Suíte'
 }
 
 export enum PaymentStatus {
@@ -42,16 +44,17 @@ export interface Resident {
   phone: string;
   birth_date?: string;
   entry_date: string;
-  origin_address?: string;
-  work_address?: string;
+  origin_address?: string; // Endereço anterior
+  work_address?: string;   // Endereço de trabalho (empresa)
   photo_url?: string;
   instagram?: string;
   mac_address?: string;
   mac_address_pc?: string;
   room_id?: string;
   role: UserRole;
-  status: string;
+  status: string; // 'Ativo', 'Inativo', 'Candidato'
   habilitado?: boolean;
+  motivo_bloqueio?: string;
   internet_active: boolean;
   internet_renewal_date?: string;
   rent_value?: number;
@@ -61,6 +64,17 @@ export interface Resident {
   softphone_extension?: string;
   softphone_enabled?: boolean;
   softphone_display_name?: string;
+  
+  // Novos campos para Prospecção/Pré-cadastro
+  cpf?: string;
+  rg?: string;
+  family_address?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  occupation?: string;
+  company?: string;
+  university?: string;
+  course?: string;
 }
 
 export type ResidentMessageChannel = 'note' | 'voice' | 'package';
@@ -124,6 +138,11 @@ export interface Room {
   rent_value: number;
   cleaning_fee?: number;
   extras_value?: number;
+  
+  // Novos campos para Prospecção
+  is_common_area: boolean;
+  is_blocked_for_repairs: boolean;
+  availability_status: 'Disponível' | 'Ocupado' | 'Indisponível';
 }
 
 export interface Payment {
@@ -226,5 +245,16 @@ export interface PropertyDescription {
   amenities_text: string;
   amenities_media: string[];
   rules_text: string; // Código de conduta
+  updated_at?: string;
+}
+
+export interface RentalConditions {
+  id: string;
+  property_id?: string;
+  deposit_months: number; // Qtd meses de calção
+  cleaning_fee_fixed: number;
+  pro_rata_enabled: boolean;
+  rules_summary: string; // Resumo das regras de aluguel
+  calculation_instructions: string; // Texto instrutivo no form
   updated_at?: string;
 }

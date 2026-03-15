@@ -3,8 +3,23 @@ import {
     Resident, Room, Payment, MaintenanceRequest,
     Complaint, Notice, NoticeComment, CalendarEvent,
     Furniture, RoomMedia, PaymentStatus, UserRole, LaundrySchedule, Device, MaintenanceStatus,
-    InternetConfig, PropertyDescription, ResidentMessage
+    InternetConfig, PropertyDescription, ResidentMessage, RentalConditions
 } from '../types';
+
+// ── UTILS ──────────────────────────────────────────────────────────────────────
+function toSnake(obj: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const key in obj) {
+        const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        let val = obj[key];
+        // Prevents empty strings from crashing Postgres 'uuid' and 'date' types
+        if (val === '' && (snakeKey.includes('date') || snakeKey.includes('id'))) {
+            val = null;
+        }
+        result[snakeKey] = val;
+    }
+    return result;
+}
 
 // ── RESIDENTS ──────────────────────────────────────────────────────────────────
 export async function fetchResidents(): Promise<Resident[]> {
@@ -20,17 +35,29 @@ export async function createResident(resident: Partial<Resident>): Promise<Resid
     return data as Resident;
 }
 
+export async function fetchCandidates(): Promise<Resident[]> {
+    const { data, error } = await supabase.from('residents')
+        .select('*')
+        .eq('status', 'Candidato')
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as Resident[];
+}
+
 export async function updateResident(id: string, updates: Partial<Resident>): Promise<Resident> {
     const rawPayload = toSnake(updates);
 
-    // Whitelist de colunas permitidas no banco de dados (Baseado no schema real)
+    // Whitelist de colunas permitidas no banco de dados
     const allowedColumns = [
         'name', 'phone', 'photo_url', 'instagram', 'role', 'status',
-        'entry_date', 'birth_date', 'cpf', 'document_number',
+        'entry_date', 'birth_date', 'cpf', 'document_number', 'rg',
         'origin_address', 'work_address', 'room_id', 'mac_address',
         'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email', 'habilitado',
+        'motivo_bloqueio',
         'rent_value', 'cleaning_fee', 'extras_value', 'bed_identifier',
-        'softphone_extension', 'softphone_enabled', 'softphone_display_name'
+        'softphone_extension', 'softphone_enabled', 'softphone_display_name',
+        'family_address', 'emergency_contact_name', 'emergency_contact_phone',
+        'occupation', 'company', 'university', 'course'
     ];
 
     const payload: Record<string, any> = {};
@@ -40,29 +67,17 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         }
     });
 
-    // Certifique-se de que room_id seja null se for string vazia
     if (payload.room_id === '') {
         payload.room_id = null;
     }
 
-    // Se o banco ainda não tiver as colunas novas, o Supabase retornará erro.
-    // O try/catch no frontend lidará com o fallback para o 'mínimo necessário'.
-    console.log('Enviando persistência para resident:', id, payload);
-
-    // Tenta primeiro um UPDATE convencional por ID
     let { data, error } = await supabase.from('residents').update(payload).eq('id', id).select().maybeSingle();
 
-    // Se falhou (não encontrou) e o ID parece um UUID de auth, tentamos um UPSERT usando auth_id como chave
     if (!data && !error && (payload.auth_id || (id && id.length > 30))) {
         const targetAuthId = payload.auth_id || id;
-        console.log('Tentando UPSERT por auth_id para:', targetAuthId);
-
-        // Remove 'id' do payload para evitar conflitos se for o UUID do auth
         const { id: _, ...upsertPayload } = payload;
         if (!upsertPayload.auth_id) upsertPayload.auth_id = targetAuthId;
 
-        // Se o email estiver faltando no payload mas o ID for o AuthID, 
-        // tentamos recuperar o email do usuário logado se possível ou usar o contexto
         if (!upsertPayload.email) {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (authUser?.email) upsertPayload.email = authUser.email;
@@ -77,11 +92,8 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         error = upsertError;
     }
 
-    if (error) {
-        console.error('Erro na resposta do Supabase:', error);
-        throw error;
-    }
-    if (!data) throw new Error('Nenhum registro encontrado para atualizar ou permissão negada. (ID: ' + id + ')');
+    if (error) throw error;
+    if (!data) throw new Error('Nenhum registro encontrado para atualizar ou permissão negada.');
     return data as Resident;
 }
 
@@ -131,14 +143,8 @@ export async function fetchRooms(): Promise<Room[]> {
 }
 
 export async function addFurniture(roomId: string, item: Partial<Furniture>): Promise<Furniture> {
-    const payload = toSnake({
-        ...item,
-        room_id: roomId
-    });
-    const { data, error } = await supabase
-        .from('furniture')
-        .insert(payload)
-        .select().single();
+    const payload = toSnake({ ...item, room_id: roomId });
+    const { data, error } = await supabase.from('furniture').insert(payload).select().single();
     if (error) throw error;
     return data as Furniture;
 }
@@ -149,9 +155,13 @@ export async function updateFurniture(id: string, updates: Partial<Furniture>): 
     return data as Furniture;
 }
 
+export async function deleteFurniture(id: string): Promise<void> {
+    const { error } = await supabase.from('furniture').delete().eq('id', id);
+    if (error) throw error;
+}
+
 export async function createRoom(room: Partial<Room>): Promise<Room> {
     const payload = toSnake(room);
-    // Garantir que os campos numéricos sejam tratados corretamente
     if ('rent_value' in room) payload.rent_value = Number(room.rent_value) || 0;
     if ('cleaning_fee' in room) payload.cleaning_fee = Number(room.cleaning_fee) || 0;
     if ('extras_value' in room) payload.extras_value = Number(room.extras_value) || 0;
@@ -159,11 +169,6 @@ export async function createRoom(room: Partial<Room>): Promise<Room> {
     const { data, error } = await supabase.from('rooms').insert(payload).select().single();
     if (error) throw error;
     return data as Room;
-}
-
-export async function deleteFurniture(id: string): Promise<void> {
-    const { error } = await supabase.from('furniture').delete().eq('id', id);
-    if (error) throw error;
 }
 
 export async function updateRoom(id: string, updates: Partial<Room>): Promise<Room> {
@@ -178,16 +183,11 @@ export async function updateRoom(id: string, updates: Partial<Room>): Promise<Ro
     return data as Room;
 }
 
-
 // ── DEVICES ────────────────────────────────────────────────────────────────
 export async function fetchDevices(): Promise<Device[]> {
-    try {
-        const { data: devices, error } = await supabase.from('devices').select('*').order('created_at', { ascending: false });
-        if (error) return [];
-        return devices as Device[];
-    } catch (e) {
-        return [];
-    }
+    const { data, error } = await supabase.from('devices').select('*').order('created_at', { ascending: false });
+    if (error) return [];
+    return data as Device[];
 }
 
 export async function createDevice(device: Omit<Device, 'id' | 'created_at'>): Promise<Device> {
@@ -207,9 +207,7 @@ export async function deleteDevice(id: string) {
 }
 
 // ── ROOM MEDIA ─────────────────────────────────────────────────────────────────
-export async function uploadRoomMedia(
-    roomId: string, file: File
-): Promise<RoomMedia> {
+export async function uploadRoomMedia(roomId: string, file: File): Promise<RoomMedia> {
     const ext = file.name.split('.').pop();
     const path = `rooms/${roomId}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from('room-media').upload(path, file);
@@ -224,9 +222,7 @@ export async function uploadRoomMedia(
 }
 
 export async function deleteRoomMedia(id: string, storagePath?: string): Promise<void> {
-    if (storagePath) {
-        await supabase.storage.from('room-media').remove([storagePath]);
-    }
+    if (storagePath) await supabase.storage.from('room-media').remove([storagePath]);
     const { error } = await supabase.from('room_media').delete().eq('id', id);
     if (error) throw error;
 }
@@ -245,21 +241,16 @@ export async function fetchPayments(): Promise<Payment[]> {
 
 export async function updatePaymentStatus(id: string, status: PaymentStatus, residentId: string): Promise<Payment> {
     const updates: any = { status };
-    if (status === PaymentStatus.PAID) {
-        updates.payment_date = new Date().toISOString().split('T')[0];
-    }
+    if (status === PaymentStatus.PAID) updates.payment_date = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase.from('payments').update(updates).eq('id', id).select().maybeSingle();
     if (error) throw error;
-    if (status === PaymentStatus.PAID) {
-        await renewInternetAccess(residentId);
-    }
+    if (status === PaymentStatus.PAID) await renewInternetAccess(residentId);
     return data as Payment;
 }
 
 export async function createPayment(payment: Partial<Payment>): Promise<Payment> {
     const payload = toSnake(payment);
     if ('amount' in payment) payload.amount = Number(payment.amount) || 0;
-
     const { data, error } = await supabase.from('payments').insert(payload).select().single();
     if (error) throw error;
     return data as Payment;
@@ -278,11 +269,23 @@ export async function updatePropertyDescription(updates: Partial<PropertyDescrip
     return data as PropertyDescription;
 }
 
-// ── PUBLIC ENDPOINTS FOR LANDING PAGE ──────────────────────────────────────────
+// ── RENTAL CONDITIONS ──────────────────────────────────────────────────────
+export async function fetchRentalConditions(): Promise<RentalConditions> {
+    const { data, error } = await supabase.from('rental_conditions').select('*').maybeSingle();
+    if (error) throw error;
+    return data as RentalConditions;
+}
 
+export async function updateRentalConditions(updates: Partial<RentalConditions>): Promise<RentalConditions> {
+    const { data, error } = await supabase.from('rental_conditions').upsert({ id: 'default', ...updates }).select().single();
+    if (error) throw error;
+    return data as RentalConditions;
+}
+
+// ── PUBLIC ENDPOINTS FOR LANDING PAGE ──────────────────────────────────────────
 export async function fetchPublicPropertyDescription(): Promise<PropertyDescription> {
-    const { data, error } = await supabase.from('property_description').select('*').single();
-    if (error && error.code !== 'PGRST116') throw error;
+    const { data, error } = await supabase.from('property_description').select('*').maybeSingle();
+    if (error) throw error;
     return data as PropertyDescription;
 }
 
@@ -292,16 +295,19 @@ export async function fetchPublicRooms(): Promise<Room[]> {
         supabase.from('room_media').select('*').order('created_at'),
     ]);
     if (roomsRes.error) throw roomsRes.error;
-
     const rooms = (roomsRes.data || []) as any[];
     const media = (mediaRes.data || []) as any[];
-
-    return rooms.map(r => ({
-        ...r,
-        media: media.filter(m => m.room_id === r.id),
-        furniture: [], // não exibir móveis publicamente
-        residentIds: [], // não exibir moradores publicamente
-    })) as Room[];
+    return rooms
+        .filter(r => r.availability_status === 'Disponível' && !r.is_blocked_for_repairs && !r.is_common_area)
+        .map(r => ({
+            ...r,
+            media: media.filter(m => m.room_id === r.id),
+            furniture: [],
+            residentIds: [],
+            is_common_area: r.is_common_area,
+            is_blocked_for_repairs: r.is_blocked_for_repairs,
+            availability_status: r.availability_status
+        })) as Room[];
 }
 
 // ── MAINTENANCE ────────────────────────────────────────────────────────────────
@@ -346,10 +352,7 @@ export async function updateComplaintStatus(id: string, status: string): Promise
 
 // ── NOTICES ────────────────────────────────────────────────────────────────────
 export async function fetchNotices(): Promise<Notice[]> {
-    const { data, error } = await supabase
-        .from('notices')
-        .select('*, notice_comments(*)')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('notices').select('*, notice_comments(*)').order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as Notice[];
 }
@@ -396,18 +399,11 @@ export async function createCalendarEvent(event: Partial<CalendarEvent>): Promis
         location: event.location,
         type: event.type
     }).select().single();
-
     if (error) throw error;
-
-    // Se houver moradores vinculados (opcional na criação simples)
     if (event.residentIds && event.residentIds.length > 0) {
-        const links = event.residentIds.map(rid => ({
-            event_id: data.id,
-            resident_id: rid
-        }));
+        const links = event.residentIds.map(rid => ({ event_id: data.id, resident_id: rid }));
         await supabase.from('calendar_event_residents').insert(links);
     }
-
     return { ...data, residentIds: event.residentIds || [] } as CalendarEvent;
 }
 
@@ -418,24 +414,18 @@ export async function signIn(email: string, password: string) {
     return data;
 }
 
-export async function signUpResident(email: string, password: string, name: string, phone: string) {
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-    });
+export async function signUpResident(email: string, password: string, name: string, phone: string, options?: { habilitado?: boolean }) {
+    const residentEnabled = options?.habilitado ?? false;
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
     if (authError) throw authError;
-
     if (authData.user) {
-        // Create an initial resident record linked to the auth user.
         await createResident({
             auth_id: authData.user.id,
-            name,
-            email,
-            phone,
+            name, email, phone,
             role: UserRole.RESIDENT,
-            status: 'Ativo',
+            status: residentEnabled ? 'Ativo' : 'Pendente',
             entry_date: new Date().toISOString().split('T')[0],
-            habilitado: true,
+            habilitado: residentEnabled,
             internet_active: false
         });
     }
@@ -444,23 +434,13 @@ export async function signUpResident(email: string, password: string, name: stri
 
 export async function signUpAdmin(email: string, password: string, name: string, phone: string) {
     const { createClient } = await import('@supabase/supabase-js');
-    const tempClient = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-        { auth: { persistSession: false, autoRefreshToken: false } }
-    );
-    const { data: authData, error: authError } = await tempClient.auth.signUp({
-        email,
-        password,
-    });
+    const tempClient = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: authData, error: authError } = await tempClient.auth.signUp({ email, password });
     if (authError) throw authError;
-
     if (authData.user) {
         await createResident({
             auth_id: authData.user.id,
-            name,
-            email,
-            phone,
+            name, email, phone,
             role: UserRole.ADMIN,
             status: 'Ativo',
             entry_date: new Date().toISOString().split('T')[0],
@@ -476,9 +456,7 @@ export async function signOut() {
 }
 
 export async function resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
     if (error) throw error;
 }
 
@@ -489,21 +467,12 @@ export async function updatePassword(password: string) {
 
 export async function fetchCurrentResident(authId: string): Promise<Resident | null> {
     const { data, error } = await supabase.from('residents').select('*').eq('auth_id', authId).maybeSingle();
-
     if (!data || error) {
-        // Tenta buscar pelo e-mail como fallback
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
-            const { data: emailData } = await supabase.from('residents')
-                .select('*')
-                .eq('email', user.email)
-                .maybeSingle();
-
+            const { data: emailData } = await supabase.from('residents').select('*').eq('email', user.email).maybeSingle();
             if (emailData) {
-                // Se encontrou por e-mail mas não tinha auth_id, vamos vincular agora
-                if (!emailData.auth_id) {
-                    await supabase.from('residents').update({ auth_id: authId }).eq('id', emailData.id);
-                }
+                if (!emailData.auth_id) await supabase.from('residents').update({ auth_id: authId }).eq('id', emailData.id);
                 return emailData as Resident;
             }
         }
@@ -514,46 +483,19 @@ export async function fetchCurrentResident(authId: string): Promise<Resident | n
 
 export async function uploadProfilePhoto(residentId: string, file: File): Promise<string> {
     const fileExt = file.name.split('.').pop();
-
-    // Garante que o path sempre use um identificador seguro (UUID do auth ou timestamp aleatório)
-    // O residentId da tabela residents pode ser um inteiro, não um UUID válido.
     let safeId = residentId;
     try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user?.id) {
-            safeId = user.id; // Sempre um UUID válido do Supabase Auth
-        }
+        if (user?.id) safeId = user.id;
     } catch {
-        // fallback: usa timestamp para garantir unicidade
         safeId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
-
     const fileName = `${safeId}-${Date.now()}.${fileExt}`;
     const filePath = `profiles/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-        .from('room-media') // Usando o bucket existente para simplificar
-        .upload(filePath, file);
-
+    const { error: uploadError } = await supabase.storage.from('room-media').upload(filePath, file);
     if (uploadError) throw uploadError;
-
     const { data } = supabase.storage.from('room-media').getPublicUrl(filePath);
     return data.publicUrl;
-}
-
-// ── UTILS ──────────────────────────────────────────────────────────────────────
-function toSnake(obj: Record<string, any>): Record<string, any> {
-    const result: Record<string, any> = {};
-    for (const key in obj) {
-        const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        let val = obj[key];
-        // Prevents empty strings from crashing Postgres 'uuid' and 'date' types
-        if (val === '' && (snakeKey.includes('date') || snakeKey.includes('id'))) {
-            val = null;
-        }
-        result[snakeKey] = val;
-    }
-    return result;
 }
 
 // ── LAUNDRY SCHEDULES ──────────────────────────────────────────────────────────
@@ -582,40 +524,22 @@ export async function deleteLaundrySchedule(id: string): Promise<void> {
     if (error) throw error;
 }
 
-// resident messages
+// ── MESSAGES ───────────────────────────────────────────────────────────────────
 export async function fetchResidentMessages(residentId: string): Promise<ResidentMessage[]> {
-    const { data, error } = await supabase
-        .from('resident_messages')
-        .select('*')
-        .eq('resident_id', residentId)
-        .order('created_at', { ascending: false });
-
+    const { data, error } = await supabase.from('resident_messages').select('*').eq('resident_id', residentId).order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as ResidentMessage[];
 }
 
-export async function createResidentMessage(
-    message: Omit<ResidentMessage, 'id' | 'created_at'>
-): Promise<ResidentMessage> {
+export async function createResidentMessage(message: Omit<ResidentMessage, 'id' | 'created_at'>): Promise<ResidentMessage> {
     const payload = toSnake(message);
-    const { data, error } = await supabase
-        .from('resident_messages')
-        .insert(payload)
-        .select()
-        .single();
-
+    const { data, error } = await supabase.from('resident_messages').insert(payload).select().single();
     if (error) throw error;
     return data as ResidentMessage;
 }
 
 export async function markResidentMessageAsRead(id: string): Promise<ResidentMessage> {
-    const { data, error } = await supabase
-        .from('resident_messages')
-        .update({ read_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
+    const { data, error } = await supabase.from('resident_messages').update({ read_at: new Date().toISOString() }).eq('id', id).select().single();
     if (error) throw error;
     return data as ResidentMessage;
 }

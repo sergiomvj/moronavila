@@ -131,6 +131,7 @@ export function SoftphoneDock({ currentUser }: SoftphoneDockProps) {
         setResolvedResident((previous) => ({
           ...previous,
           habilitado: configResponse.resident.habilitado ?? previous.habilitado,
+          motivo_bloqueio: configResponse.resident.motivoBloqueio || previous.motivo_bloqueio,
           softphone_enabled: configResponse.enabled,
           softphone_extension: configResponse.resident.extension || previous.softphone_extension,
           softphone_display_name:

@@ -24,6 +24,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - o acesso do morador ao app e ao softphone depende de um unico campo mestre `habilitado`
 - residente com `habilitado = false` perde acesso ao app do morador e ao softphone
 - `habilitado` deve ser desligado automaticamente quando o residente sair da casa ou ficar inadimplente
+- quando `habilitado = false`, a gestao deve registrar `motivo_bloqueio` para o app e o softphone exibirem um bloqueio claro ao morador
 - o softphone e um modulo interno do sistema
 - o softphone e focado no uso dentro da area da casa
 - o softphone deve cobrir ligacoes internas, interfone, abertura de portas, recados, voz e alertas operacionais
@@ -90,6 +91,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 
 - bloquear o login funcional do morador quando `habilitado = false`
 - garantir autobloqueio do app quando o residente perder elegibilidade durante a sessao
+- manter auto cadastro publico em estado pendente ate liberacao administrativa
 - revisar fallback de perfil quando o `resident` nao e encontrado
 - revisar heuristica emergencial de admin no frontend
 - definir estrategia definitiva de permissao por `role`

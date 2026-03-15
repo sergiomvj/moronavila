@@ -119,7 +119,7 @@ async function requireAuthenticatedResident(
 
     const residentResult = await supabase
         .from('residents')
-        .select('id, auth_id, name, email, role, room_id, mac_address, internet_active, softphone_enabled, softphone_extension, softphone_display_name, bed_identifier, phone, habilitado')
+        .select('id, auth_id, name, email, role, room_id, mac_address, internet_active, softphone_enabled, softphone_extension, softphone_display_name, bed_identifier, phone, habilitado, motivo_bloqueio')
         .eq('auth_id', authUser.id)
         .maybeSingle();
 
@@ -128,7 +128,10 @@ async function requireAuthenticatedResident(
     }
 
     if (residentResult.data.role === 'Morador' && residentResult.data.habilitado === false) {
-        return res.status(403).json({ error: 'Acesso desabilitado para este morador.' });
+        const reason = residentResult.data.motivo_bloqueio
+            ? ` Motivo: ${residentResult.data.motivo_bloqueio}`
+            : '';
+        return res.status(403).json({ error: `Acesso desabilitado para este morador.${reason}` });
     }
 
     req.authUser = {
@@ -365,6 +368,7 @@ app.get('/api/softphone/directory', async (req, res) => {
             resident: {
                 id: resident.id,
                 habilitado: resident.habilitado !== false,
+                motivoBloqueio: resident.motivo_bloqueio || null,
                 softphoneEnabled: resident.softphone_enabled !== false,
                 internetActive: resident.internet_active === true
             },
@@ -395,6 +399,7 @@ app.get('/api/softphone/config', async (req, res) => {
                 displayName: resident.softphone_display_name || resident.name || SOFTPHONE_DEFAULT_DISPLAY_NAME,
                 extension,
                 habilitado: resident.habilitado !== false,
+                motivoBloqueio: resident.motivo_bloqueio || null,
                 internetActive: resident.internet_active === true
             },
             sip: {
@@ -418,6 +423,7 @@ app.get('/api/softphone/inbox', async (req, res) => {
                 id: payload.resident.id,
                 name: payload.resident.name,
                 habilitado: payload.resident.habilitado !== false,
+                motivoBloqueio: payload.resident.motivo_bloqueio || null,
                 internetActive: payload.resident.internet_active === true,
                 softphoneEnabled: payload.resident.softphone_enabled !== false
             },
@@ -497,7 +503,7 @@ app.get('/api/softphone/rollout', async (req, res) => {
         return requireAdminRole(req as AuthenticatedRequest, res, async () => {
             const result = await supabase
                 .from('residents')
-                .select('id, name, email, phone, role, mac_address, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active, habilitado')
+                .select('id, name, email, phone, role, mac_address, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active, habilitado, motivo_bloqueio')
                 .order('name', { ascending: true });
             if (result.error) {
                 return res.status(500).json({ error: 'Nao foi possivel carregar o rollout do softphone.' });
@@ -514,6 +520,7 @@ app.get('/api/softphone/rollout', async (req, res) => {
                     extension: suggestedExtension,
                     displayName: resident.softphone_display_name || resident.name || null,
                     habilitado: resident.habilitado !== false,
+                    motivoBloqueio: resident.motivo_bloqueio || null,
                     internetActive: resident.internet_active === true,
                     softphoneEnabled: resident.softphone_enabled !== false,
                     macAddress: resident.mac_address || null,

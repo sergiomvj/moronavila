@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Home, LogIn, UserPlus, Mail, Lock, User, Phone, ArrowRight, Heart } from 'lucide-react';
 import { signIn, signUpResident, resetPassword } from '../lib/database';
 
-export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, onBack?: () => void }) {
+export function Login({
+    onLogin,
+    onBack,
+    externalMessage
+}: {
+    onLogin: (authId: string) => void,
+    onBack?: () => void,
+    externalMessage?: string
+}) {
     const [isLogin, setIsLogin] = useState(true);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [name, setName] = useState('');
@@ -21,7 +29,7 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
         try {
             if (isForgotPassword) {
                 await resetPassword(email);
-                setSuccessMessage('Instruções de recuperação de senha foram enviadas!');
+                setSuccessMessage('InstruÃ§Ãµes de recuperaÃ§Ã£o de senha foram enviadas!');
                 setIsForgotPassword(false);
             } else if (isLogin) {
                 const { user } = await signIn(email, password);
@@ -29,7 +37,7 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
             } else {
                 const { user } = await signUpResident(email, password, name, phone);
                 if (user) {
-                    setSuccessMessage('Cadastro realizado! Faça login agora.');
+                    setSuccessMessage('Cadastro recebido! Aguarde a liberacao da administracao antes do primeiro acesso.');
                     setIsLogin(true);
                     setPassword('');
                 }
@@ -72,7 +80,7 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
                             <span className="text-rose-600">perto de tudo</span>
                         </h2>
                         <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-[280px]">
-                            A gestão inteligente que você precisava para sua república, com a harmonia que você merece.
+                            A gestÃ£o inteligente que vocÃª precisava para sua repÃºblica, com a harmonia que vocÃª merece.
                         </p>
 
                         {onBack && (
@@ -89,7 +97,7 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
 
                     <div className="flex items-center gap-4 text-white/40">
                         <Heart size={16} className="text-rose-600 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Feito com carinho para você</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Feito com carinho para vocÃª</span>
                     </div>
                 </div>
 
@@ -123,10 +131,10 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
                         </p>
                     </div>
 
-                    {(error || successMessage) && (
+                    {(error || successMessage || externalMessage) && (
                         <div className={`p-4 rounded-2xl mb-8 flex items-center gap-3 animate-in slide-in-from-top-2 
-                            ${error ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'}`}>
-                            <span className="text-xs font-black uppercase tracking-widest italic">{error || successMessage}</span>
+                            ${error || externalMessage ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'}`}>
+                            <span className="text-xs font-black uppercase tracking-widest italic">{error || externalMessage || successMessage}</span>
                         </div>
                     )}
 
@@ -141,7 +149,7 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
                                             type="text" required
                                             value={name} onChange={(e) => setName(e.target.value)}
                                             className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all placeholder:text-slate-700"
-                                            placeholder="Ex: João Silva"
+                                            placeholder="Ex: JoÃ£o Silva"
                                         />
                                     </div>
                                 </div>
@@ -157,6 +165,12 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
                                         />
                                     </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {!isLogin && !isForgotPassword && (
+                            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-amber-200">
+                                Cadastros publicos entram como pendentes e dependem de liberacao da administracao.
                             </div>
                         )}
 
@@ -182,7 +196,7 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
                                         type="password" required minLength={6}
                                         value={password} onChange={(e) => setPassword(e.target.value)}
                                         className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all placeholder:text-slate-700"
-                                        placeholder="••••••••"
+                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                     />
                                 </div>
                                 {isLogin && (
@@ -224,7 +238,7 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
                                 }}
                                 className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto group"
                             >
-                                {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça Login'}
+                                {isLogin ? 'NÃ£o tem conta? Cadastre-se' : 'JÃ¡ tem conta? FaÃ§a Login'}
                                 <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
@@ -234,4 +248,5 @@ export function Login({ onLogin, onBack }: { onLogin: (authId: string) => void, 
         </div>
     );
 }
+
 

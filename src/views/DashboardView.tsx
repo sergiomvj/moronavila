@@ -136,6 +136,17 @@ export function DashboardView({
     const softphoneStatsSourceLabel = softphoneRollout?.generatedAt
         ? `Resumo consolidado em ${new Date(softphoneRollout.generatedAt).toLocaleString('pt-BR')}`
         : 'Resumo em fallback local';
+    const topBlockedReasons = softphoneRollout?.items
+        ? Object.entries(
+            softphoneRollout.items.reduce<Record<string, number>>((accumulator, item) => {
+                if (!item.motivoBloqueio) return accumulator;
+                accumulator[item.motivoBloqueio] = (accumulator[item.motivoBloqueio] || 0) + 1;
+                return accumulator;
+            }, {})
+        )
+            .sort((left, right) => right[1] - left[1])
+            .slice(0, 3)
+        : [];
 
     const handleCreateRepair = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -451,6 +462,23 @@ export function DashboardView({
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.missingMac}</div>
                                     </div>
                                 </div>
+                                {topBlockedReasons.length > 0 && (
+                                    <div className="rounded-2xl border border-rose-500/10 bg-rose-500/5 p-4 text-sm text-rose-100">
+                                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-300">
+                                            Motivos de bloqueio
+                                        </div>
+                                        <div className="mt-3 space-y-2">
+                                            {topBlockedReasons.map(([reason, count]) => (
+                                                <div key={reason} className="flex items-center justify-between gap-3">
+                                                    <span className="truncate text-rose-50">{reason}</span>
+                                                    <span className="rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-rose-200">
+                                                        {count}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <button
                                         onClick={() => setActiveTab('internet')}

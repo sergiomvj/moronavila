@@ -34,6 +34,7 @@ interface SoftphoneDirectoryResponse {
   resident: {
     id: string;
     habilitado?: boolean;
+    motivoBloqueio?: string | null;
     softphoneEnabled: boolean;
     internetActive: boolean;
   } | null;
@@ -52,6 +53,7 @@ interface SoftphoneConfigResponse {
     displayName: string;
     extension: string | null;
     habilitado?: boolean;
+    motivoBloqueio?: string | null;
     internetActive: boolean;
   };
   sip: {
@@ -87,6 +89,7 @@ export interface SoftphoneRolloutItem {
   extension: string | null;
   displayName: string | null;
   habilitado?: boolean;
+  motivoBloqueio?: string | null;
   internetActive: boolean;
   softphoneEnabled: boolean;
   macAddress: string | null;
@@ -126,6 +129,7 @@ export interface SoftphoneInboxResponse {
     id: string;
     name: string;
     habilitado?: boolean;
+    motivoBloqueio?: string | null;
     internetActive: boolean;
     softphoneEnabled: boolean;
   };

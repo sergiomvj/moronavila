@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Save, Image as ImageIcon, Video, MapPin, Home, Info, CheckCircle2, ChevronRight, Plus, X, Layout, Sparkles, Shield, Play, Trash2, Sofa, Edit3, Type } from 'lucide-react';
-import { PropertyDescription, Room, RoomType, Furniture, RoomMedia } from '../types';
-import { updatePropertyDescription, toggleRoomMediaMarketing, updateRoom, addFurniture, deleteFurniture, updateFurniture, deleteRoomMedia } from '../lib/database';
+import { Save, Image as ImageIcon, Video, MapPin, Home, Info, CheckCircle2, ChevronRight, Plus, X, Layout, Sparkles, Shield, Play, Trash2, Sofa, Edit3, Type, CreditCard, Lock, Unlock } from 'lucide-react';
+import { PropertyDescription, Room, RoomType, Furniture, RoomMedia, RentalConditions } from '../types';
+import { updatePropertyDescription, toggleRoomMediaMarketing, updateRoom, addFurniture, deleteFurniture, updateFurniture, deleteRoomMedia, fetchRentalConditions, updateRentalConditions } from '../lib/database';
 
 interface PropertyDescriptionViewProps {
     data: PropertyDescription;
@@ -11,18 +11,34 @@ interface PropertyDescriptionViewProps {
 
 export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionViewProps) {
     const [formData, setFormData] = useState<PropertyDescription>(data);
+    const [rentalConditions, setRentalConditions] = useState<RentalConditions | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'general' | 'rooms' | 'location' | 'amenities' | 'rules'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'rooms' | 'location' | 'amenities' | 'rules' | 'rental'>('general');
+
+    React.useEffect(() => {
+        const loadRental = async () => {
+            try {
+                const rc = await fetchRentalConditions();
+                setRentalConditions(rc);
+            } catch (err) {
+                console.error('Erro ao carregar condições:', err);
+            }
+        };
+        loadRental();
+    }, []);
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
             await updatePropertyDescription(formData);
-            alert('Descrição da propriedade atualizada com sucesso!');
+            if (rentalConditions) {
+                await updateRentalConditions(rentalConditions);
+            }
+            alert('Configurações atualizadas com sucesso!');
             onUpdate();
         } catch (error) {
             console.error(error);
-            alert('Erro ao atualizar descrição.');
+            alert('Erro ao atualizar configurações.');
         } finally {
             setIsSaving(false);
         }
@@ -210,6 +226,34 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                                 </div>
                             </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Status de Disponibilidade</label>
+                                <select
+                                    value={editingRoom.availability_status}
+                                    onChange={(e) => setEditingRoom({ ...editingRoom, availability_status: e.target.value as any })}
+                                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 px-4 text-white text-sm font-bold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500/50 transition-all appearance-none"
+                                >
+                                    <option value="Disponível">Disponível</option>
+                                    <option value="Ocupado">Ocupado</option>
+                                    <option value="Indisponível">Indisponível</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Bloqueado para Reparos?</label>
+                                <button
+                                    onClick={() => setEditingRoom({ ...editingRoom, is_blocked_for_repairs: !editingRoom.is_blocked_for_repairs })}
+                                    className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                                        editingRoom.is_blocked_for_repairs
+                                            ? 'bg-amber-600/20 text-amber-500 border-amber-600/30'
+                                            : 'bg-emerald-600/20 text-emerald-500 border-emerald-600/30'
+                                    }`}
+                                >
+                                    {editingRoom.is_blocked_for_repairs ? <Lock size={14} /> : <Unlock size={14} />}
+                                    {editingRoom.is_blocked_for_repairs ? 'Bloqueado (Em reparos)' : 'Liberado'}
+                                </button>
+                            </div>
+                        </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Descrição do Marketing (O que o cliente vê)</label>
                             <textarea
@@ -371,6 +415,7 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                     { id: 'location', label: 'Localização', icon: MapPin },
                     { id: 'amenities', label: 'Comodidades', icon: Sparkles },
                     { id: 'rules', label: 'Conduta', icon: Shield },
+                    { id: 'rental', label: 'Aluguel', icon: CreditCard },
                 ].map((tab) => (
                     <button
                         key={tab.id}
@@ -432,15 +477,42 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 gap-8">
-                                {rooms.map((room) => (
-                                    <RoomEditor
-                                        key={room.id}
-                                        room={room}
-                                        onUpdate={onUpdate}
-                                        onToggleMarketing={handleToggleRoomMediaMarketing}
-                                    />
-                                ))}
+                            <div className="grid grid-cols-1 gap-12">
+                                {/* Seção de Quartos */}
+                                <div className="space-y-6">
+                                    <h3 className="text-xl font-black text-white uppercase italic tracking-tight flex items-center gap-3">
+                                        <div className="w-1.5 h-8 bg-rose-600 rounded-full" />
+                                        Quartos e Suítes
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-8">
+                                        {rooms.filter(r => !r.is_common_area).map((room) => (
+                                            <RoomEditor
+                                                key={room.id}
+                                                room={room}
+                                                onUpdate={onUpdate}
+                                                onToggleMarketing={handleToggleRoomMediaMarketing}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Seção de Áreas Comuns */}
+                                <div className="space-y-6">
+                                    <h3 className="text-xl font-black text-white uppercase italic tracking-tight flex items-center gap-3">
+                                        <div className="w-1.5 h-8 bg-indigo-600 rounded-full" />
+                                        Áreas Comuns e Lazer
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-8">
+                                        {rooms.filter(r => r.is_common_area).map((room) => (
+                                            <RoomEditor
+                                                key={room.id}
+                                                room={room}
+                                                onUpdate={onUpdate}
+                                                onToggleMarketing={handleToggleRoomMediaMarketing}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -502,6 +574,66 @@ export function PropertyDescView({ data, onUpdate, rooms }: PropertyDescriptionV
                                     <Shield className="text-indigo-400" size={20} />
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Este texto será usado como base para o contrato e guia do morador.</p>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Aba Condições de Aluguel */}
+                    {activeTab === 'rental' && rentalConditions && (
+                        <div className="bg-slate-900/40 border border-slate-800/60 rounded-[40px] p-10 space-y-10 shadow-inner animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 italic">Meses de Calção (Depósito)</label>
+                                    <input
+                                        type="number"
+                                        value={rentalConditions.deposit_months}
+                                        onChange={(e) => setRentalConditions({ ...rentalConditions, deposit_months: parseInt(e.target.value) || 0 })}
+                                        className="w-full bg-slate-950/50 border border-slate-800 rounded-[24px] p-6 text-slate-200 text-base focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 italic">Taxa de Limpeza Fixa (R$)</label>
+                                    <input
+                                        type="number"
+                                        value={rentalConditions.cleaning_fee_fixed}
+                                        onChange={(e) => setRentalConditions({ ...rentalConditions, cleaning_fee_fixed: parseFloat(e.target.value) || 0 })}
+                                        className="w-full bg-slate-950/50 border border-slate-800 rounded-[24px] p-6 text-slate-200 text-base focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 p-6 bg-slate-950/50 border border-slate-800 rounded-[24px]">
+                                <input
+                                    type="checkbox"
+                                    id="pro-rata"
+                                    checked={rentalConditions.pro_rata_enabled}
+                                    onChange={(e) => setRentalConditions({ ...rentalConditions, pro_rata_enabled: e.target.checked })}
+                                    className="w-6 h-6 rounded-lg border-slate-700 text-rose-600 focus:ring-rose-500 bg-slate-900"
+                                />
+                                <div className="space-y-1">
+                                    <label htmlFor="pro-rata" className="text-sm font-black text-slate-200 uppercase tracking-tight cursor-pointer">Habilitar cálculo Pró-Rata</label>
+                                    <p className="text-[10px] font-medium text-slate-500">Calcula o valor do primeiro mês baseado nos dias restantes.</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 italic">Resumo das Regras de Aluguel</label>
+                                <textarea
+                                    value={rentalConditions.rules_summary}
+                                    onChange={(e) => setRentalConditions({ ...rentalConditions, rules_summary: e.target.value })}
+                                    placeholder="Ex: Pagamento até dia 05, permanência mínima de 6 meses..."
+                                    className="w-full bg-slate-950/50 border border-slate-800 rounded-[24px] p-6 text-slate-200 text-sm leading-relaxed focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all min-h-[120px]"
+                                />
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 italic">Instruções de Cálculo (Exibidas no Formulário)</label>
+                                <textarea
+                                    value={rentalConditions.calculation_instructions}
+                                    onChange={(e) => setRentalConditions({ ...rentalConditions, calculation_instructions: e.target.value })}
+                                    placeholder="Explique ao candidato como o cálculo é feito..."
+                                    className="w-full bg-slate-950/50 border border-slate-800 rounded-[24px] p-6 text-slate-200 text-sm leading-relaxed focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all min-h-[120px]"
+                                />
                             </div>
                         </div>
                     )}

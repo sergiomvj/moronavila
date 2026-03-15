@@ -57,6 +57,23 @@ function App() {
   const [propertyDescription, setPropertyDescription] = useState<PropertyDescription | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [authNotice, setAuthNotice] = useState('');
+
+  const buildResidentDisabledMessage = (resident?: Resident | null, fallback?: string) => {
+    const reason = resident?.motivo_bloqueio?.trim();
+    if (reason) {
+      return `Seu acesso ao aplicativo esta desabilitado no momento. Motivo: ${reason}`;
+    }
+    return fallback || 'Seu acesso ao aplicativo esta desabilitado no momento. Procure a administracao da casa.';
+  };
+
+  const handleResidentAccessDisabled = async (message: string) => {
+    setCurrentUser(null);
+    setResidents([]);
+    setAuthNotice(message);
+    setErrorMsg('');
+    await supabase.auth.signOut();
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -95,6 +112,7 @@ function App() {
   const loadAllData = async (userId: string) => {
     setIsLoading(true);
     setErrorMsg('');
+    setAuthNotice('');
     try {
       // 1. Carregar perfil do usuÃ¡rio primeiro (Independente)
       const user = await fetchCurrentResident(userId);
@@ -108,9 +126,9 @@ function App() {
         }
 
         if (user.role === UserRole.RESIDENT && user.habilitado === false) {
-          setCurrentUser(null);
-          await supabase.auth.signOut();
-          throw new Error('Seu acesso ao aplicativo esta desabilitado no momento. Procure a administracao da casa.');
+          const disabledMessage = buildResidentDisabledMessage(user);
+          await handleResidentAccessDisabled(disabledMessage);
+          throw new Error(disabledMessage);
         }
 
         setCurrentUser(user);
@@ -124,6 +142,9 @@ function App() {
       await refreshData();
     } catch (err: any) {
       console.error(err);
+      if (err?.message) {
+        setAuthNotice(err.message);
+      }
       if (!errorMsg) {
         setErrorMsg('Erro ao carregar os dados iniciais. Verifique a conexÃ£o com o Supabase.');
       }
@@ -132,6 +153,52 @@ function App() {
       setLoadingInitial(false);
     }
   };
+
+  useEffect(() => {
+    if (!session?.user || !currentUser || currentUser.role !== UserRole.RESIDENT) {
+      return;
+    }
+
+    let active = true;
+
+    const revalidateResidentAccess = async () => {
+      try {
+        const resident = await fetchCurrentResident(session.user.id);
+        if (!active || !resident) return;
+
+        if (resident.habilitado === false) {
+          await handleResidentAccessDisabled(
+            buildResidentDisabledMessage(
+              resident,
+              'Seu acesso foi desabilitado durante esta sessao. Procure a administracao da casa.'
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Falha ao revalidar elegibilidade do morador:', error);
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      revalidateResidentAccess().catch(() => undefined);
+    }, 60000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        revalidateResidentAccess().catch(() => undefined);
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [session, currentUser]);
 
   const refreshData = async () => {
     const errors: string[] = [];
@@ -171,7 +238,7 @@ function App() {
 
   if (!session || !currentUser) {
     if (showLogin) {
-      return <Login onLogin={loadAllData} onBack={() => setShowLogin(false)} />;
+      return <Login onLogin={loadAllData} onBack={() => setShowLogin(false)} externalMessage={authNotice} />;
     }
     return <LandingPage onLoginClick={() => setShowLogin(true)} />;
   }
@@ -215,7 +282,7 @@ function App() {
 
           {activeTab === 'rooms' && (
             <RoomsView
-              rooms={rooms} residents={residents} maintenance={maintenance}
+              rooms={rooms} maintenance={maintenance}
               isAdmin={isAdmin} currentUser={currentUser} onRefresh={refreshData}
             />
           )}

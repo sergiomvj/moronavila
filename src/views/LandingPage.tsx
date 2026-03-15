@@ -1,31 +1,89 @@
 import React, { useEffect, useState } from 'react';
-import { Home, MapPin, Sparkles, Shield, ChevronRight, Play, ArrowRight, MessageCircle, Send, X, Sofa } from 'lucide-react';
-import { fetchPublicPropertyDescription, fetchPublicRooms } from '../lib/database';
+import { Home, MapPin, Sparkles, Shield, ChevronRight, Play, ArrowRight, MessageCircle, Send, X, Sofa, Check, Info, Calendar, CreditCard } from 'lucide-react';
+import { fetchPublicPropertyDescription, fetchPublicRooms, fetchRentalConditions, signUpResident } from '../lib/database';
 import { getLocalApiBase } from '../lib/localApi';
-import { PropertyDescription, Room } from '../types';
+import { PropertyDescription, Room, RentalConditions } from '../types';
 
 export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
     const [propertyDesc, setPropertyDesc] = useState<PropertyDescription | null>(null);
+    const [rentalConditions, setRentalConditions] = useState<RentalConditions | null>(null);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
     const [leadForm, setLeadForm] = useState({ name: '', phone: '', email: '' });
     const [leadSubmitted, setLeadSubmitted] = useState(false);
+    
+    // Estados para o novo fluxo
+    const [showRegisterForm, setShowRegisterForm] = useState(false);
+    const [registrationStep, setRegistrationStep] = useState<'simulator' | 'form' | 'success'>('simulator');
+    const [entryDate, setEntryDate] = useState('');
+    const [calculation, setCalculation] = useState<{ proRata: number; deposit: number; cleaning: number; total: number } | null>(null);
+    
+    const [regForm, setRegForm] = useState({
+        name: '',
+        cpf: '',
+        rg: '',
+        phone: '',
+        email: '',
+        origin_address: '',
+        family_address: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        occupation: '',
+        company: '',
+        university: '',
+        course: '',
+        instagram: '',
+        room_id: '',
+        entry_date: ''
+    });
 
     // Chat state - Moved to top to follow Rules of Hooks
     const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
     const [currentMessage, setCurrentMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+    const [registrationRoom, setRegistrationRoom] = useState<Room | null>(null);
+
+    useEffect(() => {
+        if (entryDate && rentalConditions && (selectedRoom || registrationRoom)) {
+            const room = selectedRoom || registrationRoom;
+            if (!room) return;
+
+            const date = new Date(entryDate);
+            const day = date.getDate();
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            let proRata = room.rent_value;
+            if (rentalConditions.pro_rata_enabled) {
+                const daysRemaining = daysInMonth - day + 1;
+                proRata = (room.rent_value / daysInMonth) * daysRemaining;
+            }
+
+            const deposit = (rentalConditions.deposit_months || 0) * room.rent_value;
+            const cleaning = rentalConditions.cleaning_fee_fixed || 0;
+            
+            setCalculation({
+                proRata: Math.round(proRata),
+                deposit: Math.round(deposit),
+                cleaning: Math.round(cleaning),
+                total: Math.round(proRata + deposit + cleaning)
+            });
+        }
+    }, [entryDate, rentalConditions, selectedRoom, registrationRoom]);
 
     useEffect(() => {
         const loadPublicData = async () => {
             try {
-                const desc = await fetchPublicPropertyDescription();
-                const publicRooms = await fetchPublicRooms();
+                const [desc, publicRooms, conditions] = await Promise.all([
+                    fetchPublicPropertyDescription(),
+                    fetchPublicRooms(),
+                    fetchRentalConditions()
+                ]);
                 setPropertyDesc(desc);
-                // Exibe todos os quartos para evitar que quartos recém-cadastrados sumam
-                // Se houver mídias marketing, elas serão prioridade no componente
                 setRooms(publicRooms);
+                setRentalConditions(conditions);
             } catch (error) {
                 console.error('Failed to load public data:', error);
             } finally {
@@ -186,16 +244,233 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                             )}
 
                             <div className="mt-auto pt-8">
-                                <a
-                                    href={`https://wa.me/?text=${encodeURIComponent(`Olá! Tenho interesse na vaga do ${room.name}. Poderia me dar mais detalhes?`)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-full flex items-center justify-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95"
-                                >
-                                    Enviar Mensagem <MessageCircle size={18} />
-                                </a>
+                                <div className="flex flex-col gap-4">
+                                    <a
+                                        href={`https://wa.me/?text=${encodeURIComponent(`Olá! Tenho interesse na vaga do ${room.name}. Poderia me dar mais detalhes?`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full flex items-center justify-center gap-3 border border-rose-500/30 hover:bg-rose-500/10 text-rose-500 px-8 py-4 rounded-full font-black text-[11px] uppercase tracking-[0.2em] transition-all"
+                                    >
+                                        Conversar no WhatsApp
+                                    </a>
+                                    <button
+                                        onClick={() => {
+                                            setRegistrationRoom(room);
+                                            setShowRegisterForm(true);
+                                            setRegistrationStep('simulator');
+                                            setSelectedRoom(null);
+                                        }}
+                                        className="w-full flex items-center justify-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-5 rounded-full font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-105 active:scale-95"
+                                    >
+                                        Fazer Reserva <ArrowRight size={18} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const RegistrationModal = () => {
+        if (!registrationRoom || !rentalConditions) return null;
+
+        const handleSignUp = async (e: React.FormEvent) => {
+            e.preventDefault();
+            try {
+                // Criar senha temporária baseada no CPF (apenas os 6 primeiros dígitos)
+                const tempPassword = regForm.cpf.replace(/\D/g, '').slice(0, 6) || 'morona123';
+                const { user } = await signUpResident(
+                    regForm.email, 
+                    tempPassword, 
+                    regForm.name, 
+                    regForm.phone
+                );
+                
+                if (user) {
+                    // Atualizar o registro do residente com todos os campos (via updateResident)
+                    const { updateResident } = await import('../lib/database');
+                    await updateResident(user.id, {
+                        ...regForm,
+                        status: 'Candidato', // Garante que entra como candidato
+                        room_id: registrationRoom.id
+                    });
+                }
+                
+                setRegistrationStep('success');
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao realizar cadastro. Tente novamente.');
+            }
+        };
+
+        return (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 md:p-6">
+                <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-2xl" onClick={() => setShowRegisterForm(false)} />
+                <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 max-h-[95vh] flex flex-col">
+                    <button 
+                        onClick={() => setShowRegisterForm(false)}
+                        className="absolute top-6 right-6 z-10 p-3 bg-slate-950/50 hover:bg-rose-600 text-white rounded-2xl transition-all border border-white/10"
+                    >
+                        <X size={24} />
+                    </button>
+
+                    <div className="p-8 md:p-12 overflow-y-auto">
+                        {registrationStep === 'simulator' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="text-center space-y-4">
+                                    <div className="inline-flex items-center justify-center p-4 bg-rose-500/10 text-rose-500 rounded-2xl">
+                                        <CreditCard size={32} />
+                                    </div>
+                                    <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Condições para Alugar</h3>
+                                    <p className="text-slate-400 text-sm max-w-lg mx-auto">
+                                        {rentalConditions.calculation_instructions || "Informe a data prevista de entrada para simular os valores do seu primeiro mês."}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                                    <div className="space-y-6">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Data Prevista de Entrada</label>
+                                            <div className="relative">
+                                                <Calendar size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" />
+                                                <input 
+                                                    type="date"
+                                                    value={entryDate}
+                                                    onChange={(e) => {
+                                                        setEntryDate(e.target.value);
+                                                        setRegForm({ ...regForm, entry_date: e.target.value });
+                                                    }}
+                                                    className="w-full bg-slate-950/50 border border-slate-800 rounded-full py-5 pl-16 pr-8 text-white focus:ring-2 focus:ring-rose-500/50 outline-none transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="p-6 bg-slate-950/50 border border-slate-800 rounded-3xl space-y-4">
+                                            <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                <Info size={14} /> Regras Gerais
+                                            </h4>
+                                            <p className="text-xs text-slate-400 leading-relaxed italic">
+                                                {rentalConditions.rules_summary || "O pagamento é mensal e antecipado. A reserva é confirmada mediante o pagamento do caução."}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950/80 border border-slate-800 rounded-[2rem] p-8 space-y-6 relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-3xl" />
+                                        
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Primeiro Aluguel {rentalConditions.pro_rata_enabled && '(Pró-Rata)'}</span>
+                                                <span className="text-white font-black">R$ {calculation?.proRata || 0}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Depósito Caução</span>
+                                                <span className="text-white font-black">R$ {calculation?.deposit || 0}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Taxa de Limpeza Entrada</span>
+                                                <span className="text-white font-black">R$ {calculation?.cleaning || 0}</span>
+                                            </div>
+                                            <div className="h-px bg-slate-800 my-2" />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-rose-500 font-black uppercase tracking-widest text-xs">Total para Entrada</span>
+                                                <span className="text-3xl font-black text-white tracking-tighter">R$ {calculation?.total || 0}</span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            disabled={!entryDate}
+                                            onClick={() => setRegistrationStep('form')}
+                                            className="w-full flex items-center justify-center gap-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-8 py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40"
+                                        >
+                                            Estou de Acordo <Check size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {registrationStep === 'form' && (
+                            <form onSubmit={handleSignUp} className="space-y-10 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="text-center space-y-4">
+                                    <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Pré-Cadastro de Residente</h3>
+                                    <p className="text-slate-400 text-sm">Preencha todos os dados obrigatórios para garantir sua reserva no <span className="text-rose-500 font-bold underline">{registrationRoom.name}</span>.</p>
+                                </div>
+
+                                <div className="space-y-8">
+                                    {/* Seção Dados Pessoais */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] border-b border-rose-500/20 pb-2">1. Dados Pessoais</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <input required placeholder="Nome Completo *" value={regForm.name} onChange={e => setRegForm({...regForm, name: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="CPF *" value={regForm.cpf} onChange={e => setRegForm({...regForm, cpf: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Identidade (RG) *" value={regForm.rg} onChange={e => setRegForm({...regForm, rg: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Telefone (WhatsApp) *" value={regForm.phone} onChange={e => setRegForm({...regForm, phone: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required type="email" placeholder="Seu melhor e-mail *" value={regForm.email} onChange={e => setRegForm({...regForm, email: e.target.value})} className="w-full md:col-span-2 bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                        </div>
+                                    </div>
+
+                                    {/* Seção Endereços */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] border-b border-rose-500/20 pb-2">2. Localização</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <input required placeholder="Endereço Anterior (Completo) *" value={regForm.origin_address} onChange={e => setRegForm({...regForm, origin_address: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Endereço Familiar *" value={regForm.family_address} onChange={e => setRegForm({...regForm, family_address: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                        </div>
+                                    </div>
+
+                                    {/* Emergência */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] border-b border-rose-500/20 pb-2">3. Contato de Emergência</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <input required placeholder="Nome do Contato *" value={regForm.emergency_contact_name} onChange={e => setRegForm({...regForm, emergency_contact_name: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Telefone do Contato *" value={regForm.emergency_contact_phone} onChange={e => setRegForm({...regForm, emergency_contact_phone: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                        </div>
+                                    </div>
+
+                                    {/* Profissional/Acadêmico */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] border-b border-rose-500/20 pb-2">4. Perfil Profissional & Redes</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <input required placeholder="Ocupação Atual *" value={regForm.occupation} onChange={e => setRegForm({...regForm, occupation: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Empresa / Instituição *" value={regForm.company} onChange={e => setRegForm({...regForm, company: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Universidade *" value={regForm.university} onChange={e => setRegForm({...regForm, university: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Curso *" value={regForm.course} onChange={e => setRegForm({...regForm, course: e.target.value})} className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                            <input required placeholder="Perfil no Instagram (URL ou @) *" value={regForm.instagram} onChange={e => setRegForm({...regForm, instagram: e.target.value})} className="w-full md:col-span-2 bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-rose-500" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full flex items-center justify-center gap-3 bg-rose-600 hover:bg-rose-700 text-white px-8 py-6 rounded-full font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/40 hover:scale-[1.02] active:scale-95"
+                                >
+                                    Finalizar Pré-Reserva <ArrowRight size={20} />
+                                </button>
+                            </form>
+                        )}
+
+                        {registrationStep === 'success' && (
+                            <div className="text-center py-16 space-y-8 animate-in zoom-in-95">
+                                <div className="inline-flex items-center justify-center w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full border border-emerald-500/20 shadow-lg shadow-emerald-900/10">
+                                    <Check size={48} />
+                                </div>
+                                <div className="space-y-4">
+                                    <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">Reserva Solicitada!</h3>
+                                    <p className="text-slate-400 text-lg max-w-xl mx-auto leading-relaxed">
+                                        Seu pré-cadastro foi enviado com sucesso. Analisaremos seu perfil e entraremos em contato no seu WhatsApp em breve!
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowRegisterForm(false)}
+                                    className="px-12 py-5 bg-white/5 hover:bg-white/10 text-white font-black text-xs uppercase tracking-widest rounded-full border border-white/10 transition-all"
+                                >
+                                    Voltar ao Início
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -411,6 +686,8 @@ export function LandingPage({ onLoginClick }: { onLoginClick: () => void }) {
                     </div>
                 </section>
             )}
+
+            {showRegisterForm && <RegistrationModal />}
 
             {selectedRoom && (
                 <RoomDetailsModal 

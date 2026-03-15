@@ -137,7 +137,9 @@ export function getInitialSoftphoneState(
       connectionStatus: 'disabled',
       callStatus: 'idle',
       activeExtension: buildResidentExtension(resident),
-      message: 'Acesso do morador desabilitado. O softphone permanece bloqueado neste login.',
+      message: resident.motivo_bloqueio?.trim()
+        ? `Acesso do morador desabilitado. Motivo: ${resident.motivo_bloqueio.trim()}`
+        : 'Acesso do morador desabilitado. O softphone permanece bloqueado neste login.',
     };
   }
 

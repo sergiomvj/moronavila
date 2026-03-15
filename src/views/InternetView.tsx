@@ -93,6 +93,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 entry_date: '',
                 status: 'Ativo',
                 habilitado: (item as any).habilitado ?? true,
+                motivo_bloqueio: (item as any).motivoBloqueio || undefined,
                 internet_active: item.internetActive,
                 softphone_extension: item.extension || undefined,
                 softphone_enabled: item.softphoneEnabled,
@@ -168,15 +169,16 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
 
     const handleExportSoftphoneRollout = () => {
         const rows = [
-            ['nome', 'email', 'telefone', 'ramal', 'nome_exibicao', 'morador_habilitado', 'internet_ativa', 'softphone_habilitado', 'mac_principal', 'status_mac', 'bloqueios'].join(','),
+            ['nome', 'email', 'telefone', 'ramal', 'nome_exibicao', 'morador_habilitado', 'motivo_bloqueio', 'internet_ativa', 'softphone_habilitado', 'mac_principal', 'status_mac', 'bloqueios'].join(','),
             ...rolloutItems.map(({ resident, blockers }) => [
                 resident.name,
                 resident.email,
                 resident.phone,
                 resident.softphone_extension || '',
                 resident.softphone_display_name || '',
-                resident.internet_active ? 'sim' : 'nao',
                 resident.habilitado === false ? 'nao' : 'sim',
+                resident.motivo_bloqueio || '',
+                resident.internet_active ? 'sim' : 'nao',
                 resident.softphone_enabled === false ? 'nao' : 'sim',
                 resident.mac_address || '',
                 resident.mac_address ? 'ok' : 'pendente',
@@ -308,6 +310,11 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                             <div className="mt-1 text-sm">
                                 Seu cadastro esta com habilitado = false. Nesse estado, o app do morador, o softphone e os fluxos operacionais ficam bloqueados.
                             </div>
+                            {currentUser.motivo_bloqueio?.trim() && (
+                                <div className="mt-2 text-sm font-medium">
+                                    Motivo: {currentUser.motivo_bloqueio}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -789,6 +796,11 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                                         <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-600">
                                             {resident.softphone_display_name || 'Sem nome de exibicao'}
                                         </span>
+                                        {resident.habilitado === false && resident.motivo_bloqueio?.trim() && (
+                                            <span className="rounded-full bg-rose-50 px-2 py-1 font-medium text-rose-700">
+                                                {resident.motivo_bloqueio}
+                                            </span>
+                                        )}
                                         <span
                                             className={`rounded-full px-2 py-1 font-medium ${
                                                 resident.mac_address
