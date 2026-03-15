@@ -119,12 +119,16 @@ async function requireAuthenticatedResident(
 
     const residentResult = await supabase
         .from('residents')
-        .select('id, auth_id, name, email, role, room_id, mac_address, internet_active, softphone_enabled, softphone_extension, softphone_display_name, bed_identifier, phone')
+        .select('id, auth_id, name, email, role, room_id, mac_address, internet_active, softphone_enabled, softphone_extension, softphone_display_name, bed_identifier, phone, habilitado')
         .eq('auth_id', authUser.id)
         .maybeSingle();
 
     if (residentResult.error || !residentResult.data) {
         return res.status(403).json({ error: 'Cadastro do morador nao encontrado.' });
+    }
+
+    if (residentResult.data.role === 'Morador' && residentResult.data.habilitado === false) {
+        return res.status(403).json({ error: 'Acesso desabilitado para este morador.' });
     }
 
     req.authUser = {
@@ -165,6 +169,7 @@ function getResidentSoftphoneBlockers(resident: any): string[] {
     const blockers: string[] = [];
 
     if (resident?.role !== 'Morador') return blockers;
+    if (resident?.habilitado === false) blockers.push('Residente desabilitado');
     if (resident?.softphone_enabled === false) blockers.push('Softphone desativado');
     if (!buildSuggestedResidentExtension(resident)) blockers.push('Sem ramal definido');
     if (SOFTPHONE_REQUIRE_INTERNET_ACTIVE && resident?.internet_active !== true) {

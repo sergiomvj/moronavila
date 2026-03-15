@@ -21,6 +21,9 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 ## Premissas de produto
 
 - o app principal continua sendo o centro da operacao
+- o acesso do morador ao app e ao softphone depende de um unico campo mestre `habilitado`
+- residente com `habilitado = false` perde acesso ao app do morador e ao softphone
+- `habilitado` deve ser desligado automaticamente quando o residente sair da casa ou ficar inadimplente
 - o softphone e um modulo interno do sistema
 - o softphone e focado no uso dentro da area da casa
 - o softphone deve cobrir ligacoes internas, interfone, abertura de portas, recados, voz e alertas operacionais
@@ -43,6 +46,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 ### P0 - Operacao essencial
 
 - manter autenticacao e carregamento inicial estaveis
+- transformar `habilitado` na chave mestra de elegibilidade do residente
 - garantir consistencia dos dados entre Supabase, frontend e `mac-server`
 - revisar falhas silenciosas nas cargas parciais do `refreshData`
 - garantir que os modulos criticos tenham mensagens de erro claras para admin
@@ -83,6 +87,8 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 
 ### 1. Autenticacao e sessao
 
+- bloquear o login funcional do morador quando `habilitado = false`
+- garantir autobloqueio do app quando o residente perder elegibilidade durante a sessao
 - revisar fallback de perfil quando o `resident` nao e encontrado
 - revisar heuristica emergencial de admin no frontend
 - definir estrategia definitiva de permissao por `role`
@@ -102,6 +108,8 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 ### 3. Moradores
 
 - revisar CRUD completo de moradores
+- adicionar e consolidar o campo mestre `habilitado`
+- definir e exibir motivo operacional de bloqueio quando `habilitado = false`
 - validar consistencia de `auth_id`, `email` e `role`
 - revisar cadastro de telefone, cama, quarto e valores financeiros
 - padronizar estados operacionais do morador
@@ -121,6 +129,8 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - revisar fluxo administrativo de cobranca
 - revisar fluxo do morador para visualizacao e pagamento
 - revisar status `Pago`, `Pendente` e `Atrasado`
+- definir quando inadimplencia deve desligar `habilitado`
+- automatizar desligamento de `habilitado` por inadimplencia conforme regra operacional
 - revisar ligacao entre pagamento confirmado e internet ativa
 - criar trilha de recados automativos para lembretes de pagamento
 - avaliar eventos financeiros que devem alimentar avisos do morador
@@ -163,6 +173,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - consolidar estado de internet ativa por morador
 - validar acoplamento entre internet ativa e autoativacao do softphone
 - definir claramente o que depende da rede interna da casa
+- garantir que internet operacional do morador respeite `habilitado`
 
 ### 11. Landing page e descricao da propriedade
 
@@ -189,6 +200,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - nao depender de uso fora da area da casa
 - nao expandir para fluxos de custo extra sem necessidade
 - nao obrigar integracao com avisos globais se isso piorar o modelo de dados
+- permitir uso do softphone apenas para moradores com `habilitado = true`
 
 ### Softphone - base ja pronta
 
@@ -208,6 +220,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - concluir integracao visual do novo layout ao `SoftphoneDock`
 - concluir contadores de `voz`, `recados` e `encomendas`
 - concluir endpoint e consumo da inbox do softphone
+- bloquear autoativacao e uso do softphone quando `habilitado = false`
 - revisar marcacao de leitura de recados manuais
 - definir quais eventos do sistema geram recados automaticos
 - manter placeholders seguros onde ainda nao houver infraestrutura real

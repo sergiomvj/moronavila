@@ -1,19 +1,19 @@
-Perfeito. Vamos seguir pelo caminho prático e montar o **esqueleto real do módulo Telecom em Next.js**.
+﻿Perfeito. Vamos seguir pelo caminho prÃ¡tico e montar o **esqueleto real do mÃ³dulo Telecom em Next.js**.
 
-Vou estruturar isso como um módulo pronto para crescer, com:
+Vou estruturar isso como um mÃ³dulo pronto para crescer, com:
 
-* páginas
+* pÃ¡ginas
 * tipos
 * mocks
 * hooks
-* serviços
+* serviÃ§os
 * componentes
 * layout inicial do dashboard
 * base pronta para ligar depois ao ARI, PBX e banco real
 
 ---
 
-# 1. Estrutura real do módulo
+# 1. Estrutura real do mÃ³dulo
 
 ```text
 src/
@@ -230,7 +230,7 @@ export const extensionItemsMock: ExtensionItem[] = [
   {
     id: "2",
     extension: "101",
-    name: "Administração",
+    name: "AdministraÃ§Ã£o",
     type: "admin",
     status: "online",
     lastSeenAt: new Date().toISOString()
@@ -286,7 +286,7 @@ export const liveCallItemsMock: LiveCallItem[] = [
     from: "201",
     fromName: "Apto 201",
     to: "101",
-    toName: "Administração",
+    toName: "AdministraÃ§Ã£o",
     direction: "internal",
     startedAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
     status: "connected",
@@ -306,9 +306,9 @@ export const doorphoneEventsMock: DoorphoneEvent[] = [
     createdAt: new Date().toISOString(),
     extension: "100",
     apartment: "203",
-    visitorName: "João",
+    visitorName: "JoÃ£o",
     status: "waiting",
-    note: "Visitante aguardando confirmação"
+    note: "Visitante aguardando confirmaÃ§Ã£o"
   },
   {
     id: "d2",
@@ -360,21 +360,21 @@ export const automationRulesMock: AutomationRule[] = [
     name: "Fallback portaria",
     eventType: "doorphone.missed",
     isActive: true,
-    description: "Se ninguém atender em 20 segundos, tocar administração."
+    description: "Se ninguÃ©m atender em 20 segundos, tocar administraÃ§Ã£o."
   },
   {
     id: "a2",
     name: "Fluxo noturno",
     eventType: "doorphone.after_hours",
     isActive: true,
-    description: "Após 22h, redirecionar para segurança."
+    description: "ApÃ³s 22h, redirecionar para seguranÃ§a."
   }
 ];
 ```
 
 ---
 
-# 4. API client do módulo
+# 4. API client do mÃ³dulo
 
 ## `src/modules/telecom/services/api/telecomApi.ts`
 
@@ -523,7 +523,7 @@ export async function POST(req: NextRequest) {
 
 ---
 
-# 6. Hooks do módulo
+# 6. Hooks do mÃ³dulo
 
 ## `src/modules/telecom/hooks/useTelecomOverview.ts`
 
@@ -665,7 +665,7 @@ export function useAutomationRules() {
 
 ---
 
-# 7. Utilitários
+# 7. UtilitÃ¡rios
 
 ## `src/modules/telecom/utils/formatDuration.ts`
 
@@ -775,11 +775,11 @@ export function TelecomHeader() {
     <header className="flex flex-col gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
       <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Telecom</div>
       <h1 className="text-2xl font-semibold text-zinc-100">
-        Central de Telefonia e Operações
+        Central de Telefonia e OperaÃ§Ãµes
       </h1>
       <p className="max-w-3xl text-sm text-zinc-400">
-        Monitore ramais, chamadas, eventos da portaria e automações da propriedade
-        em um único painel operacional.
+        Monitore ramais, chamadas, eventos da portaria e automaÃ§Ãµes da propriedade
+        em um Ãºnico painel operacional.
       </p>
     </header>
   );
@@ -788,7 +788,7 @@ export function TelecomHeader() {
 
 ---
 
-# 9. Componentes da visão geral
+# 9. Componentes da visÃ£o geral
 
 ## `TelecomOverviewCards.tsx`
 
@@ -908,7 +908,7 @@ export function LiveCallTable() {
   return (
     <SectionCard
       title="Chamadas em tempo real"
-      subtitle="Monitoramento das ligações ativas"
+      subtitle="Monitoramento das ligaÃ§Ãµes ativas"
     >
       {loading ? (
         <div className="text-sm text-zinc-400">Carregando chamadas...</div>
@@ -919,7 +919,7 @@ export function LiveCallTable() {
               <tr>
                 <th className="pb-3">Origem</th>
                 <th className="pb-3">Destino</th>
-                <th className="pb-3">Início</th>
+                <th className="pb-3">InÃ­cio</th>
                 <th className="pb-3">Status</th>
               </tr>
             </thead>
@@ -973,21 +973,21 @@ export function GateControlCard() {
 
   return (
     <SectionCard
-      title="Controle de portão"
-      subtitle="Ações rápidas da portaria"
+      title="Controle de portÃ£o"
+      subtitle="AÃ§Ãµes rÃ¡pidas da portaria"
     >
       <div className="flex flex-wrap gap-3">
         <button
           onClick={() => handleOpen("main")}
           className="rounded-xl border border-zinc-700 px-4 py-2 text-zinc-100"
         >
-          Abrir portão principal
+          Abrir portÃ£o principal
         </button>
         <button
           onClick={() => handleOpen("service")}
           className="rounded-xl border border-zinc-700 px-4 py-2 text-zinc-100"
         >
-          Abrir portão de serviço
+          Abrir portÃ£o de serviÃ§o
         </button>
       </div>
 
@@ -1013,7 +1013,7 @@ export function DoorphoneEventPanel() {
   return (
     <SectionCard
       title="Eventos do porteiro"
-      subtitle="Chamadas e interações recentes da portaria"
+      subtitle="Chamadas e interaÃ§Ãµes recentes da portaria"
     >
       {loading ? (
         <div className="text-sm text-zinc-400">Carregando eventos...</div>
@@ -1027,10 +1027,10 @@ export function DoorphoneEventPanel() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-medium text-zinc-100">
-                    {event.visitorName || "Visitante não identificado"}
+                    {event.visitorName || "Visitante nÃ£o identificado"}
                   </div>
                   <div className="text-sm text-zinc-400">
-                    Apto {event.apartment || "-"} • {formatDateTime(event.createdAt)}
+                    Apto {event.apartment || "-"} â€¢ {formatDateTime(event.createdAt)}
                   </div>
                   {event.note ? (
                     <div className="mt-1 text-sm text-zinc-500">{event.note}</div>
@@ -1052,7 +1052,7 @@ export function DoorphoneEventPanel() {
 
 ---
 
-# 13. Componentes de logs e automações
+# 13. Componentes de logs e automaÃ§Ãµes
 
 ## `CallLogTable.tsx`
 
@@ -1069,11 +1069,11 @@ export function CallLogTable() {
 
   return (
     <SectionCard
-      title="Histórico de chamadas"
+      title="HistÃ³rico de chamadas"
       subtitle="Logs operacionais recentes"
     >
       {loading ? (
-        <div className="text-sm text-zinc-400">Carregando histórico...</div>
+        <div className="text-sm text-zinc-400">Carregando histÃ³rico...</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -1082,7 +1082,7 @@ export function CallLogTable() {
                 <th className="pb-3">Data</th>
                 <th className="pb-3">Origem</th>
                 <th className="pb-3">Destino</th>
-                <th className="pb-3">Duração</th>
+                <th className="pb-3">DuraÃ§Ã£o</th>
                 <th className="pb-3">Resultado</th>
               </tr>
             </thead>
@@ -1119,11 +1119,11 @@ export function AutomationRuleList() {
 
   return (
     <SectionCard
-      title="Automações"
+      title="AutomaÃ§Ãµes"
       subtitle="Regras operacionais ativas da telefonia"
     >
       {loading ? (
-        <div className="text-sm text-zinc-400">Carregando automações...</div>
+        <div className="text-sm text-zinc-400">Carregando automaÃ§Ãµes...</div>
       ) : (
         <div className="space-y-3">
           {data.map((rule) => (
@@ -1155,7 +1155,7 @@ export function AutomationRuleList() {
 
 ---
 
-# 14. Página principal do dashboard
+# 14. PÃ¡gina principal do dashboard
 
 ## `src/app/dashboard/telecom/page.tsx`
 
@@ -1196,7 +1196,7 @@ export default function TelecomDashboardPage() {
 
 ---
 
-# 15. Loading da página
+# 15. Loading da pÃ¡gina
 
 ## `src/app/dashboard/telecom/loading.tsx`
 
@@ -1214,9 +1214,9 @@ export default function TelecomDashboardLoading() {
 
 # 16. Como evoluir esse esqueleto
 
-Esse módulo já nasce pronto para as próximas camadas.
+Esse mÃ³dulo jÃ¡ nasce pronto para as prÃ³ximas camadas.
 
-## Próxima troca
+## PrÃ³xima troca
 
 Substituir mocks por banco real:
 
@@ -1241,32 +1241,32 @@ Amarrar com o restante do sistema:
 * moradores
 * encomendas
 * visitantes
-* abertura de portão
+* abertura de portÃ£o
 * incidentes
 
 ---
 
-# 17. O que eu recomendo como próximo passo
+# 17. O que eu recomendo como prÃ³ximo passo
 
-Agora o passo mais lógico é montar a **fase seguinte de backend real**, com:
+Agora o passo mais lÃ³gico Ã© montar a **fase seguinte de backend real**, com:
 
-* schema SQL do módulo Telecom
+* schema SQL do mÃ³dulo Telecom
 * tabela de ramais
-* tabela de presença
+* tabela de presenÃ§a
 * tabela de chamadas
 * tabela de eventos do porteiro
-* tabela de automações
+* tabela de automaÃ§Ãµes
 * mapeamento com moradores e apartamentos
 
-Esse é o ponto em que o projeto deixa de ser só interface e passa a virar módulo de produção.
+Esse Ã© o ponto em que o projeto deixa de ser sÃ³ interface e passa a virar mÃ³dulo de produÃ§Ã£o.
 
-Na próxima etapa, eu posso te entregar o **schema SQL consolidado do módulo Telecom + relações com residentes, apartamentos, entregas e visitantes**.
+Na prÃ³xima etapa, eu posso te entregar o **schema SQL consolidado do mÃ³dulo Telecom + relaÃ§Ãµes com residentes, apartamentos, entregas e visitantes**.
 
-Perfeito. Então vamos encerrar este chat deixando tudo **consolidado e pronto para retomada** no próximo, sem perder o contexto.
+Perfeito. EntÃ£o vamos encerrar este chat deixando tudo **consolidado e pronto para retomada** no prÃ³ximo, sem perder o contexto.
 
 ## Fechamento do que foi definido
 
-Você estruturou um projeto em que o sistema de gestão da propriedade, já hospedado em VPS estável, ganhará um **módulo de softphone WebRTC** integrado ao app em **Next.js + TypeScript**, conectado a uma infraestrutura local com:
+VocÃª estruturou um projeto em que o sistema de gestÃ£o da propriedade, jÃ¡ hospedado em VPS estÃ¡vel, ganharÃ¡ um **mÃ³dulo de softphone WebRTC** integrado ao app em **Next.js + TypeScript**, conectado a uma infraestrutura local com:
 
 * **Proxmox** como hypervisor
 * **pfSense** para internet, DHCP, DNS e controle por MAC
@@ -1279,30 +1279,37 @@ O softphone foi projetado para:
 * permitir chamadas internas
 * receber chamadas
 * suportar mute, hold, transfer e DTMF
-* integrar diretório interno, portaria, lavanderia, recebimento e porteiro eletrônico
+* integrar diretÃ³rio interno, portaria, lavanderia, recebimento e porteiro eletrÃ´nico
 
-Também definimos que o navegador deve se registrar **diretamente no PBX**, enquanto o sistema Next.js entrega:
+TambÃ©m definimos que o navegador deve se registrar **diretamente no PBX**, enquanto o sistema Next.js entrega:
 
-* credenciais/configuração SIP do usuário
+* credenciais/configuraÃ§Ã£o SIP do usuÃ¡rio
 * lista de ramais
-* permissões
+* permissÃµes
 * contexto operacional
+
+Tambem fica definido como regra de produto que o acesso do residente ao app e ao softphone depende de um unico campo mestre no cadastro, `habilitado`.
+
+* `habilitado = true`: o residente pode usar o app do morador e o softphone
+* `habilitado = false`: o residente perde acesso ao app e ao softphone
+* esse campo deve ser desligado quando o residente sair da casa ou ficar inadimplente
+* o modulo de softphone deve respeitar essa elegibilidade, e nao apenas `softphone_enabled`
 
 ## O que ficou desenhado
 
 ### 1. Softphone
 
-Foi definido o módulo frontend com:
+Foi definido o mÃ³dulo frontend com:
 
-* serviço SIP em TypeScript
-* integração via **SIP.js**
-* componentes React para display, dialpad, controles, diretório e chamadas
-* store de estado para conexão SIP e chamada ativa
+* serviÃ§o SIP em TypeScript
+* integraÃ§Ã£o via **SIP.js**
+* componentes React para display, dialpad, controles, diretÃ³rio e chamadas
+* store de estado para conexÃ£o SIP e chamada ativa
 * estrutura de pastas organizada para crescer
 
 ### 2. PBX / Asterisk / FreePBX
 
-Foi consolidado que o Asterisk deverá ter:
+Foi consolidado que o Asterisk deverÃ¡ ter:
 
 * **HTTPS/TLS**
 * **WebSocket seguro**
@@ -1311,55 +1318,55 @@ Foi consolidado que o Asterisk deverá ter:
 * codecs como **Opus** e **uLaw**
 * portas adequadas liberadas, especialmente **8089/TCP** e RTP
 
-Também ficou sugerido um plano de ramais:
+TambÃ©m ficou sugerido um plano de ramais:
 
 * `100` portaria / porteiro
-* `101` administração
+* `101` administraÃ§Ã£o
 * `102` lavanderia
 * `103` recebimento
 * `2xx` residentes
 * `3xx` equipe
 * `6xx` grupos
 
-### 3. Integração com porteiro
+### 3. IntegraÃ§Ã£o com porteiro
 
-Definimos três cenários possíveis:
+Definimos trÃªs cenÃ¡rios possÃ­veis:
 
 * porteiro SIP nativo
 * porteiro via gateway/ATA
-* porteiro com ações por DTMF
+* porteiro com aÃ§Ãµes por DTMF
 
-A recomendação principal foi tratar o porteiro como uma entidade operacional do sistema, não apenas como uma chamada telefônica.
+A recomendaÃ§Ã£o principal foi tratar o porteiro como uma entidade operacional do sistema, nÃ£o apenas como uma chamada telefÃ´nica.
 
 ### 4. ARI
 
-Foi dado o passo além do PBX comum e desenhada a integração com **Asterisk ARI** para transformar a telefonia em motor de automação.
+Foi dado o passo alÃ©m do PBX comum e desenhada a integraÃ§Ã£o com **Asterisk ARI** para transformar a telefonia em motor de automaÃ§Ã£o.
 
-Com isso, o sistema poderá:
+Com isso, o sistema poderÃ¡:
 
 * detectar chamadas em tempo real
 * consultar banco de moradores
 * exibir popups com contexto
 * registrar eventos de visitantes e entregas
-* disparar automações
-* controlar abertura de portão
-* gerar logs e estatísticas
+* disparar automaÃ§Ãµes
+* controlar abertura de portÃ£o
+* gerar logs e estatÃ­sticas
 
 ### 5. Dashboard Telecom
 
-Foi projetado um painel administrativo de telefonia dentro do sistema Next.js, com áreas para:
+Foi projetado um painel administrativo de telefonia dentro do sistema Next.js, com Ã¡reas para:
 
-* visão geral operacional
+* visÃ£o geral operacional
 * mapa de ramais
 * chamadas em tempo real
 * eventos do porteiro
-* controle de portão
+* controle de portÃ£o
 * logs
-* automações
+* automaÃ§Ãµes
 
-Também foi montado o **esqueleto real do módulo Telecom** em Next.js, com:
+TambÃ©m foi montado o **esqueleto real do mÃ³dulo Telecom** em Next.js, com:
 
-* estrutura de páginas
+* estrutura de pÃ¡ginas
 * componentes
 * hooks
 * services
@@ -1370,24 +1377,24 @@ Também foi montado o **esqueleto real do módulo Telecom** em Next.js, com:
 
 ## O ponto exato onde paramos
 
-O próximo passo natural é criar o **backend real do módulo Telecom**, substituindo os mocks pelo modelo de produção.
+O prÃ³ximo passo natural Ã© criar o **backend real do mÃ³dulo Telecom**, substituindo os mocks pelo modelo de produÃ§Ã£o.
 
 Isso significa montar:
 
 * schema SQL consolidado
 * tabelas de ramais
-* presença
+* presenÃ§a
 * chamadas
 * eventos do porteiro
-* automações
-* vínculos com moradores, apartamentos, visitantes e entregas
+* automaÃ§Ãµes
+* vÃ­nculos com moradores, apartamentos, visitantes e entregas
 
-## Melhor próximo chat
+## Melhor prÃ³ximo chat
 
-Quando abrir o próximo, você pode colar este texto:
+Quando abrir o prÃ³ximo, vocÃª pode colar este texto:
 
 ```text
-Estamos retomando o projeto do módulo Telecom/Softphone integrado ao sistema de gestão da propriedade.
+Estamos retomando o projeto do mÃ³dulo Telecom/Softphone integrado ao sistema de gestÃ£o da propriedade.
 
 Contexto consolidado:
 
@@ -1398,8 +1405,8 @@ Contexto consolidado:
   - FreePBX / Asterisk para telefonia interna
 
 - Sistema principal:
-  - app em Next.js hospedado em VPS estável
-  - módulo Softphone WebRTC integrado ao sistema
+  - app em Next.js hospedado em VPS estÃ¡vel
+  - mÃ³dulo Softphone WebRTC integrado ao sistema
 
 - Softphone:
   - navegador via WebRTC
@@ -1409,8 +1416,8 @@ Contexto consolidado:
   - chamadas internas
   - chamadas recebidas
   - mute, hold, transfer, DTMF
-  - diretório de ramais
-  - integração com porteiro eletrônico
+  - diretÃ³rio de ramais
+  - integraÃ§Ã£o com porteiro eletrÃ´nico
 
 - PBX:
   - HTTPS/TLS
@@ -1418,7 +1425,7 @@ Contexto consolidado:
   - ramais WebRTC
   - plano de ramais:
     - 100 portaria
-    - 101 administração
+    - 101 administraÃ§Ã£o
     - 102 lavanderia
     - 103 recebimento
     - 2xx residentes
@@ -1426,19 +1433,19 @@ Contexto consolidado:
     - 6xx grupos
 
 - ARI:
-  - planejado como ponte para automações e eventos em tempo real
-  - permitirá registrar chamadas, eventos do porteiro, visitantes, entregas e abertura de portão
+  - planejado como ponte para automaÃ§Ãµes e eventos em tempo real
+  - permitirÃ¡ registrar chamadas, eventos do porteiro, visitantes, entregas e abertura de portÃ£o
 
 - Dashboard Telecom:
-  - visão geral
+  - visÃ£o geral
   - mapa de ramais
   - chamadas em tempo real
   - eventos do porteiro
   - gate control
   - logs
-  - automações
+  - automaÃ§Ãµes
 
-- Já foi montado o esqueleto frontend do módulo Telecom em Next.js com:
+- JÃ¡ foi montado o esqueleto frontend do mÃ³dulo Telecom em Next.js com:
   - pages
   - components
   - hooks
@@ -1447,49 +1454,49 @@ Contexto consolidado:
   - types
   - rotas API mockadas
 
-Quero agora seguir para a próxima fase:
-criar o schema SQL consolidado do módulo Telecom em produção, com relações entre ramais, presença, chamadas, eventos do porteiro, automações, moradores, apartamentos, visitantes e entregas.
+Quero agora seguir para a prÃ³xima fase:
+criar o schema SQL consolidado do mÃ³dulo Telecom em produÃ§Ã£o, com relaÃ§Ãµes entre ramais, presenÃ§a, chamadas, eventos do porteiro, automaÃ§Ãµes, moradores, apartamentos, visitantes e entregas.
 ```
 
-## Recomendação final
+## RecomendaÃ§Ã£o final
 
-No próximo chat, vale começar direto por:
+No prÃ³ximo chat, vale comeÃ§ar direto por:
 
 1. **modelo relacional completo**
 2. **schema SQL**
 3. **APIs reais**
-4. depois **ligação com ARI e PBX**
+4. depois **ligaÃ§Ã£o com ARI e PBX**
 
-Assim você fecha a base de produção antes de avançar para integração ao vivo.
+Assim vocÃª fecha a base de produÃ§Ã£o antes de avanÃ§ar para integraÃ§Ã£o ao vivo.
 
-Perfeito. Vamos fechar esta etapa com uma base de backend realmente utilizável.
+Perfeito. Vamos fechar esta etapa com uma base de backend realmente utilizÃ¡vel.
 
-Vou assumir a arquitetura mais segura para esse cenário:
+Vou assumir a arquitetura mais segura para esse cenÃ¡rio:
 
 * **Next.js** como app principal
-* **banco próprio do módulo Softphone** para regras de negócio, logs, presença, filas internas e vínculo com cadastro
+* **banco prÃ³prio do mÃ³dulo Softphone** para regras de negÃ³cio, logs, presenÃ§a, filas internas e vÃ­nculo com cadastro
 * **FreePBX como camada de provisionamento de ramais**
 * **Asterisk ARI** para controle de chamadas em tempo real
 * **PJSIP/WebRTC** para registrar o softphone no PBX
 
-Essa separação é a mais saudável porque o **ARI foi feito para controle de recursos/chamadas via REST + WebSocket + Stasis**, enquanto a configuração SIP no Asterisk/PJSIP gira em torno de objetos como **endpoint, auth e aor**. Para FreePBX, o caminho mais limpo para provisionamento moderno é tratar a central como sistema de telefonia e usar o app para orquestração e sincronismo. ([Asterisk Docs][1])
+Essa separaÃ§Ã£o Ã© a mais saudÃ¡vel porque o **ARI foi feito para controle de recursos/chamadas via REST + WebSocket + Stasis**, enquanto a configuraÃ§Ã£o SIP no Asterisk/PJSIP gira em torno de objetos como **endpoint, auth e aor**. Para FreePBX, o caminho mais limpo para provisionamento moderno Ã© tratar a central como sistema de telefonia e usar o app para orquestraÃ§Ã£o e sincronismo. ([Asterisk Docs][1])
 
 ---
 
 # 1) Modelo relacional completo
 
-## 1.1 Princípio de modelagem
+## 1.1 PrincÃ­pio de modelagem
 
-Eu recomendo **não usar o banco do FreePBX como banco principal do seu módulo**.
+Eu recomendo **nÃ£o usar o banco do FreePBX como banco principal do seu mÃ³dulo**.
 
-Use 3 camadas lógicas:
+Use 3 camadas lÃ³gicas:
 
 1. **Cadastro interno**
 
-   * moradores, funcionários, portaria, lavanderia, administração etc.
-2. **Módulo Softphone**
+   * moradores, funcionÃ¡rios, portaria, lavanderia, administraÃ§Ã£o etc.
+2. **MÃ³dulo Softphone**
 
-   * usuários telefônicos, ramais, dispositivos web, contatos internos, filas, logs, chamadas
+   * usuÃ¡rios telefÃ´nicos, ramais, dispositivos web, contatos internos, filas, logs, chamadas
 3. **PBX/Asterisk**
 
    * provisionamento de ramais, registro SIP, eventos ARI, rotas de discagem
@@ -1498,7 +1505,7 @@ Use 3 camadas lógicas:
 
 ## 1.2 Entidades principais
 
-## A. Núcleo de identidade
+## A. NÃºcleo de identidade
 
 ### `people`
 
@@ -1515,7 +1522,7 @@ Campos principais:
 
 ### `system_users`
 
-Usuário autenticável do Next.js.
+UsuÃ¡rio autenticÃ¡vel do Next.js.
 
 Campos:
 
@@ -1527,17 +1534,17 @@ Campos:
 * is_active
 * last_login_at
 
-Relação:
+RelaÃ§Ã£o:
 
 * `people 1:1 system_users`
 
 ---
 
-## B. Núcleo telefônico
+## B. NÃºcleo telefÃ´nico
 
 ### `pbx_extensions`
 
-Representa o ramal lógico do usuário.
+Representa o ramal lÃ³gico do usuÃ¡rio.
 
 Campos:
 
@@ -1558,7 +1565,7 @@ Campos:
 * freepbx_extension_id
 * notes
 
-Relações:
+RelaÃ§Ãµes:
 
 * `people 1:N pbx_extensions`
 
@@ -1569,9 +1576,9 @@ Dispositivos que usam o ramal.
 Exemplo:
 
 * navegador Chrome do morador
-* telefone IP físico
+* telefone IP fÃ­sico
 * tablet da portaria
-* porteiro eletrônico SIP
+* porteiro eletrÃ´nico SIP
 
 Campos:
 
@@ -1587,7 +1594,7 @@ Campos:
 * registered_at
 * registration_status
 
-Relação:
+RelaÃ§Ã£o:
 
 * `pbx_extensions 1:N pbx_extension_devices`
 
@@ -1607,7 +1614,7 @@ Campos:
 
 ---
 
-## C. Diretório e agenda interna
+## C. DiretÃ³rio e agenda interna
 
 ### `internal_contacts`
 
@@ -1629,7 +1636,7 @@ Campos:
 
 ### `user_contact_preferences`
 
-Preferências individuais do usuário.
+PreferÃªncias individuais do usuÃ¡rio.
 
 Campos:
 
@@ -1646,7 +1653,7 @@ Campos:
 
 ### `call_sessions`
 
-Sessão principal de chamada.
+SessÃ£o principal de chamada.
 
 Campos:
 
@@ -1671,7 +1678,7 @@ Campos:
 
 ### `call_participants`
 
-Participantes da sessão.
+Participantes da sessÃ£o.
 
 Campos:
 
@@ -1704,7 +1711,7 @@ Campos:
 
 ### `call_transfers`
 
-Transferências.
+TransferÃªncias.
 
 Campos:
 
@@ -1733,7 +1740,7 @@ Campos:
 
 ### `call_hold_states`
 
-Histórico de hold.
+HistÃ³rico de hold.
 
 Campos:
 
@@ -1746,7 +1753,7 @@ Campos:
 
 ---
 
-## F. Porteiro eletrônico
+## F. Porteiro eletrÃ´nico
 
 ### `doorphone_units`
 
@@ -1784,11 +1791,11 @@ Campos:
 
 ---
 
-## G. Integração e sincronismo
+## G. IntegraÃ§Ã£o e sincronismo
 
 ### `pbx_sync_jobs`
 
-Sincronização com FreePBX/Asterisk.
+SincronizaÃ§Ã£o com FreePBX/Asterisk.
 
 Campos:
 
@@ -1846,7 +1853,7 @@ ARI/Asterisk events --- ari_event_queue
 
 # 2) Schema SQL
 
-Vou entregar em **MySQL 8 / MariaDB style**, porque combina bem com o ecossistema FreePBX e é simples de adaptar.
+Vou entregar em **MySQL 8 / MariaDB style**, porque combina bem com o ecossistema FreePBX e Ã© simples de adaptar.
 
 ## 2.1 Tabelas principais
 
@@ -2162,7 +2169,7 @@ CREATE TABLE ari_event_queue (
 );
 ```
 
-## 2.2 Índices recomendados
+## 2.2 Ãndices recomendados
 
 ```sql
 CREATE INDEX idx_pbx_extensions_person_id ON pbx_extensions(person_id);
@@ -2182,11 +2189,11 @@ CREATE INDEX idx_sync_jobs_status ON pbx_sync_jobs(status, created_at);
 
 # 3) APIs reais
 
-Aqui vou estruturar APIs REST do próprio módulo em **Next.js App Router**.
+Aqui vou estruturar APIs REST do prÃ³prio mÃ³dulo em **Next.js App Router**.
 
-## 3.1 Módulos de API
+## 3.1 MÃ³dulos de API
 
-### Extensões
+### ExtensÃµes
 
 * `GET /api/softphone/extensions`
 * `POST /api/softphone/extensions`
@@ -2196,7 +2203,7 @@ Aqui vou estruturar APIs REST do próprio módulo em **Next.js App Router**.
 * `POST /api/softphone/extensions/:id/block`
 * `POST /api/softphone/extensions/:id/unblock`
 
-### Contatos e diretório
+### Contatos e diretÃ³rio
 
 * `GET /api/softphone/contacts`
 * `GET /api/softphone/directory`
@@ -2214,7 +2221,7 @@ Aqui vou estruturar APIs REST do próprio módulo em **Next.js App Router**.
 * `POST /api/softphone/calls/:id/dtmf`
 * `POST /api/softphone/calls/:id/transfer`
 
-### Presença
+### PresenÃ§a
 
 * `GET /api/softphone/presence`
 * `GET /api/softphone/presence/:extension`
@@ -2273,7 +2280,7 @@ Resposta:
 
 Fluxo:
 
-1. lê ramal local
+1. lÃª ramal local
 2. gera credenciais SIP
 3. envia para FreePBX
 4. atualiza `freepbx_extension_id`
@@ -2341,7 +2348,7 @@ Resposta:
 
 ---
 
-## F. Transferência
+## F. TransferÃªncia
 
 `POST /api/softphone/calls/:id/transfer`
 
@@ -2354,7 +2361,7 @@ Resposta:
 
 ---
 
-## 3.3 Estrutura prática no Next.js
+## 3.3 Estrutura prÃ¡tica no Next.js
 
 ```text
 app/
@@ -2401,7 +2408,7 @@ export async function POST(req: NextRequest) {
 
     if (!fromExtension || !toExtension) {
       return NextResponse.json(
-        { error: "fromExtension e toExtension são obrigatórios" },
+        { error: "fromExtension e toExtension sÃ£o obrigatÃ³rios" },
         { status: 400 }
       );
     }
@@ -2418,7 +2425,7 @@ export async function POST(req: NextRequest) {
 
     if (!source || !target) {
       return NextResponse.json(
-        { error: "Ramal de origem ou destino inválido" },
+        { error: "Ramal de origem ou destino invÃ¡lido" },
         { status: 404 }
       );
     }
@@ -2564,51 +2571,51 @@ export const ariClient = {
 
 ---
 
-# 4) Integração com ARI e PBX
+# 4) IntegraÃ§Ã£o com ARI e PBX
 
-Aqui está a parte mais importante.
+Aqui estÃ¡ a parte mais importante.
 
 ## 4.1 O papel de cada componente
 
 ### FreePBX
 
-Responsável por:
+ResponsÃ¡vel por:
 
-* criar e manter extensões
+* criar e manter extensÃµes
 * dialplan principal
 * troncos, rotas, ring groups, queues
-* certificados e configuração SIP/WebRTC
-* administração da PBX
+* certificados e configuraÃ§Ã£o SIP/WebRTC
+* administraÃ§Ã£o da PBX
 
 ### Asterisk ARI
 
-Responsável por:
+ResponsÃ¡vel por:
 
 * receber eventos em tempo real
-* controlar chamada após entrar no `Stasis`
+* controlar chamada apÃ³s entrar no `Stasis`
 * bridge
 * hold/unhold
 * mute/unmute
 * DTMF
-* transferências controladas pelo app
+* transferÃªncias controladas pelo app
 * telemetria de chamadas
 
 ### Next.js Softphone Backend
 
-Responsável por:
+ResponsÃ¡vel por:
 
-* autenticação do usuário web
-* autorização de quem pode ligar para quem
-* vincular usuário ↔ ramal ↔ apartamento ↔ porteiro
-* manter diretório interno
+* autenticaÃ§Ã£o do usuÃ¡rio web
+* autorizaÃ§Ã£o de quem pode ligar para quem
+* vincular usuÃ¡rio â†” ramal â†” apartamento â†” porteiro
+* manter diretÃ³rio interno
 * gravar logs e estados
 * integrar com ARI e com API/provisionamento do PBX
 
 ---
 
-## 4.2 Estratégia de integração correta
+## 4.2 EstratÃ©gia de integraÃ§Ã£o correta
 
-## Estratégia recomendada
+## EstratÃ©gia recomendada
 
 **FreePBX provisiona**
 +
@@ -2616,53 +2623,53 @@ Responsável por:
 +
 **Next.js orquestra tudo**
 
-### Não recomendo:
+### NÃ£o recomendo:
 
-* editar direto tabelas internas do FreePBX como estratégia principal
-* colocar toda a lógica do softphone apenas no frontend
-* depender só de CDR para estado da chamada
+* editar direto tabelas internas do FreePBX como estratÃ©gia principal
+* colocar toda a lÃ³gica do softphone apenas no frontend
+* depender sÃ³ de CDR para estado da chamada
 
 ---
 
 ## 4.3 Provisionamento de ramais
 
-No PJSIP, a relação entre objetos como **endpoint**, **auth** e **aor** é central para o funcionamento do registro SIP, e o ambiente ARI assume que o canal é entregue ao app via **Stasis**. ([Asterisk Docs][2])
+No PJSIP, a relaÃ§Ã£o entre objetos como **endpoint**, **auth** e **aor** Ã© central para o funcionamento do registro SIP, e o ambiente ARI assume que o canal Ã© entregue ao app via **Stasis**. ([Asterisk Docs][2])
 
 ### Fluxo sugerido
 
-1. usuário/admin cria ramal no módulo
-2. módulo salva em `pbx_extensions`
-3. módulo chama camada de provisionamento
-4. camada de provisionamento cria/atualiza extensão no FreePBX
+1. usuÃ¡rio/admin cria ramal no mÃ³dulo
+2. mÃ³dulo salva em `pbx_extensions`
+3. mÃ³dulo chama camada de provisionamento
+4. camada de provisionamento cria/atualiza extensÃ£o no FreePBX
 5. FreePBX aplica config
 6. frontend recebe credenciais SIP/WebRTC
-7. JsSIP ou SIP.js registra o usuário via WSS
+7. JsSIP ou SIP.js registra o usuÃ¡rio via WSS
 
 ### Para FreePBX
 
-Hoje eu sugiro duas opções:
+Hoje eu sugiro duas opÃ§Ãµes:
 
-#### Opção A — ideal
+#### OpÃ§Ã£o A â€” ideal
 
-Usar **APIs GraphQL de provisionamento do FreePBX**, quando disponíveis no ambiente. Há material oficial e tutoriais mostrando consulta/criação de extensões por GraphQL. ([FreePBX - Let Freedom Ring][3])
+Usar **APIs GraphQL de provisionamento do FreePBX**, quando disponÃ­veis no ambiente. HÃ¡ material oficial e tutoriais mostrando consulta/criaÃ§Ã£o de extensÃµes por GraphQL. ([FreePBX - Let Freedom Ring][3])
 
-#### Opção B — fallback controlado
+#### OpÃ§Ã£o B â€” fallback controlado
 
-Criar um **serviço PBX local** no mesmo host da central, que:
+Criar um **serviÃ§o PBX local** no mesmo host da central, que:
 
-* recebe requisições autenticadas do app
+* recebe requisiÃ§Ãµes autenticadas do app
 * executa provisionamento interno
-* força reload/apply config
+* forÃ§a reload/apply config
 * devolve status ao Next.js
 
 ---
 
 ## 4.4 Fluxo de chamada com ARI
 
-### Exemplo: chamada interna 2201 → 2100
+### Exemplo: chamada interna 2201 â†’ 2100
 
 1. frontend chama `POST /api/softphone/calls/dial`
-2. backend valida permissão
+2. backend valida permissÃ£o
 3. backend cria `call_sessions`
 4. backend dispara `originate` no ARI
 5. canal entra em `Stasis`
@@ -2672,9 +2679,9 @@ Criar um **serviço PBX local** no mesmo host da central, que:
    * `call_sessions`
    * `call_events`
    * `pbx_extension_presence`
-8. frontend recebe atualização em tempo real
+8. frontend recebe atualizaÃ§Ã£o em tempo real
 
-Como a documentação do Asterisk explica, o ARI opera com:
+Como a documentaÃ§Ã£o do Asterisk explica, o ARI opera com:
 
 * REST para comandos
 * WebSocket para eventos
@@ -2682,7 +2689,7 @@ Como a documentação do Asterisk explica, o ARI opera com:
 
 ---
 
-## 4.5 Eventos ARI que você deve tratar
+## 4.5 Eventos ARI que vocÃª deve tratar
 
 No seu worker ARI, trate pelo menos:
 
@@ -2707,53 +2714,53 @@ Fluxo do worker:
 
 ---
 
-## 4.6 Integração com porteiro eletrônico
+## 4.6 IntegraÃ§Ã£o com porteiro eletrÃ´nico
 
 ### Modelo recomendado
 
 Cada porteiro vira um `pbx_extensions.extension_type = 'doorphone'`.
 
-Além disso:
+AlÃ©m disso:
 
 * cadastra em `doorphone_units`
 * define destino autorizado:
 
   * portaria
-  * apartamento específico
+  * apartamento especÃ­fico
   * ring group
 * loga tudo em `doorphone_access_logs`
 
 ### Fluxo
 
-1. botão pressionado
+1. botÃ£o pressionado
 2. porteiro chama ramal/grupo
 3. ARI cria `call_session.direction = 'doorphone'`
 4. morador/portaria atende no softphone web
-5. usuário pode acionar `POST /doorphones/:id/unlock`
-6. backend dispara relé HTTP/MQTT/GPIO
+5. usuÃ¡rio pode acionar `POST /doorphones/:id/unlock`
+6. backend dispara relÃ© HTTP/MQTT/GPIO
 7. log de abertura fica salvo
 
 ---
 
-## 4.7 Integração com cadastro interno
+## 4.7 IntegraÃ§Ã£o com cadastro interno
 
-Essa parte precisa ser nativa desde já.
+Essa parte precisa ser nativa desde jÃ¡.
 
-### Exemplo de vínculos
+### Exemplo de vÃ­nculos
 
 * `people.type = resident`
 * um morador pode ter 1 ou mais ramais
-* portaria pode ter ramal físico + softphone web
+* portaria pode ter ramal fÃ­sico + softphone web
 * unidade habitacional pode ser ligada futuramente a:
 
   * apartamento
   * bloco
   * contrato
   * status de pagamento
-  * permissões de internet
-  * permissões de telefonia
+  * permissÃµes de internet
+  * permissÃµes de telefonia
 
-Assim o módulo softphone já nasce preparado para cruzar com o restante do sistema.
+Assim o mÃ³dulo softphone jÃ¡ nasce preparado para cruzar com o restante do sistema.
 
 ---
 
@@ -2762,32 +2769,32 @@ Assim o módulo softphone já nasce preparado para cruzar com o restante do sist
 ```text
 [ Next.js Frontend ]
    -> SIP.js / JsSIP via WSS para registrar no PBX
-   -> chamadas REST para backend do módulo
+   -> chamadas REST para backend do mÃ³dulo
 
 [ Next.js Backend / Softphone Module ]
-   -> MySQL/MariaDB do módulo
+   -> MySQL/MariaDB do mÃ³dulo
    -> worker ARI websocket
    -> APIs REST
-   -> auth / ACL / diretório / logs / presença
-   -> serviço de provisionamento PBX
+   -> auth / ACL / diretÃ³rio / logs / presenÃ§a
+   -> serviÃ§o de provisionamento PBX
 
 [ FreePBX / Asterisk ]
    -> PJSIP / WebRTC
    -> ramais e dialplan
    -> ARI
    -> bridges / channels / stasis
-   -> integrações de porteiro
+   -> integraÃ§Ãµes de porteiro
 ```
 
 ---
 
-# Decisões que eu considero fechadas para a próxima fase
+# DecisÃµes que eu considero fechadas para a prÃ³xima fase
 
 Eu fecharia assim:
 
 ### Banco
 
-* banco próprio do módulo softphone
+* banco prÃ³prio do mÃ³dulo softphone
 
 ### Fonte da verdade
 
@@ -2798,7 +2805,7 @@ Eu fecharia assim:
 ### Provisionamento
 
 * preferencialmente via **FreePBX GraphQL/provisioning**
-* fallback com serviço local de provisionamento
+* fallback com serviÃ§o local de provisionamento
 
 ### Controle de chamada
 
@@ -2810,26 +2817,26 @@ Eu fecharia assim:
 
 ---
 
-# Próximo passo ideal
+# PrÃ³ximo passo ideal
 
-A próxima resposta já pode ser a continuação prática, com:
+A prÃ³xima resposta jÃ¡ pode ser a continuaÃ§Ã£o prÃ¡tica, com:
 
 * **estrutura de pastas do backend**
 * **models/repositories/services**
 * **worker ARI completo**
 * **rotas reais de provisionamento**
 * **exemplo de dialplan/Stasis no Asterisk**
-* **modelo de integração com SIP.js no frontend**
+* **modelo de integraÃ§Ã£o com SIP.js no frontend**
 
-Se você quiser, no próximo passo eu já escrevo a **fase 2 inteira em formato de implementação**, com código-base do módulo.
+Se vocÃª quiser, no prÃ³ximo passo eu jÃ¡ escrevo a **fase 2 inteira em formato de implementaÃ§Ã£o**, com cÃ³digo-base do mÃ³dulo.
 
 [1]: https://docs.asterisk.org/Configuration/Interfaces/Asterisk-REST-Interface-ARI/?utm_source=chatgpt.com "Overview - Asterisk Documentation"
 [2]: https://docs.asterisk.org/Configuration/Channel-Drivers/SIP/Configuring-res_pjsip/PJSIP-Configuration-Sections-and-Relationships/?utm_source=chatgpt.com "PJSIP Configuration Sections and Relationships"
 [3]: https://www.freepbx.org/freepbx-graphql-provisioning-tutorial/?utm_source=chatgpt.com "FreePBX GraphQL Provisioning Tutorial"
 
-Perfeito. Vamos entrar na **fase de implementação** e deixar isso em formato de backend real.
+Perfeito. Vamos entrar na **fase de implementaÃ§Ã£o** e deixar isso em formato de backend real.
 
-A base técnica continua correta: para WebRTC no Asterisk você precisa de **HTTPS/TLS**, **WebSocket para PJSIP**, e objetos **endpoint/auth/aor** para cada cliente; no lado de controle de chamadas, o **ARI** usa **REST para comandos**, **WebSocket para eventos**, e a aplicação recebe o canal via **Stasis**. O endpoint `POST /channels` do ARI cria uma chamada e, quando você informa `app`, o canal já fica inscrito na aplicação ARI para eventos subsequentes. Já no FreePBX, existe um caminho oficial documentado para provisionamento automatizado de extensões via **GraphQL**. No frontend, o SIP.js foi feito exatamente para esse fluxo: criar um User Agent, registrar no servidor SIP via WebSocket e receber `INVITE` para chamadas entrantes. ([Asterisk Docs][1])
+A base tÃ©cnica continua correta: para WebRTC no Asterisk vocÃª precisa de **HTTPS/TLS**, **WebSocket para PJSIP**, e objetos **endpoint/auth/aor** para cada cliente; no lado de controle de chamadas, o **ARI** usa **REST para comandos**, **WebSocket para eventos**, e a aplicaÃ§Ã£o recebe o canal via **Stasis**. O endpoint `POST /channels` do ARI cria uma chamada e, quando vocÃª informa `app`, o canal jÃ¡ fica inscrito na aplicaÃ§Ã£o ARI para eventos subsequentes. JÃ¡ no FreePBX, existe um caminho oficial documentado para provisionamento automatizado de extensÃµes via **GraphQL**. No frontend, o SIP.js foi feito exatamente para esse fluxo: criar um User Agent, registrar no servidor SIP via WebSocket e receber `INVITE` para chamadas entrantes. ([Asterisk Docs][1])
 
 # 1. Estrutura real do backend
 
@@ -2969,9 +2976,9 @@ export interface CreateExtensionInput {
 
 ---
 
-# 3. Repositórios
+# 3. RepositÃ³rios
 
-## 3.1 Repositório de extensões
+## 3.1 RepositÃ³rio de extensÃµes
 
 ```ts
 // src/lib/softphone/extensions/extension-repository.ts
@@ -3053,9 +3060,9 @@ export const extensionRepository = {
 
 ---
 
-# 4. Serviço de provisionamento PBX
+# 4. ServiÃ§o de provisionamento PBX
 
-Como o FreePBX tem fluxo documentado para provisionamento por GraphQL, eu montaria o módulo com um client dedicado. Isso deixa seu sistema livre para, no futuro, trocar GraphQL por um provisionador local sem mexer nas rotas de negócio. ([FreePBX - Let Freedom Ring][2])
+Como o FreePBX tem fluxo documentado para provisionamento por GraphQL, eu montaria o mÃ³dulo com um client dedicado. Isso deixa seu sistema livre para, no futuro, trocar GraphQL por um provisionador local sem mexer nas rotas de negÃ³cio. ([FreePBX - Let Freedom Ring][2])
 
 ## 4.1 Client do FreePBX
 
@@ -3095,7 +3102,7 @@ export const freepbxClient = {
     secret: string;
     outboundCid?: string;
   }) {
-    // O shape real exato depende da versão/módulos do FreePBX.
+    // O shape real exato depende da versÃ£o/mÃ³dulos do FreePBX.
     // Aqui deixamos encapsulado para ajuste fino no seu ambiente.
     const mutation = `
       mutation CreateExtension($input: GenericExtensionInput!) {
@@ -3136,7 +3143,7 @@ export const freepbxClient = {
 };
 ```
 
-## 4.2 Serviço de provisionamento
+## 4.2 ServiÃ§o de provisionamento
 
 ```ts
 // src/lib/softphone/pbx/provision-service.ts
@@ -3152,7 +3159,7 @@ function generateSipSecret() {
 export const provisionService = {
   async provisionExtension(extensionId: number) {
     const extension = await extensionRepository.findById(extensionId);
-    if (!extension) throw new Error("Ramal não encontrado");
+    if (!extension) throw new Error("Ramal nÃ£o encontrado");
 
     const sipSecret = generateSipSecret();
 
@@ -3193,9 +3200,9 @@ export const provisionService = {
 
 ---
 
-# 5. Serviço de chamadas
+# 5. ServiÃ§o de chamadas
 
-O ARI foi desenhado para isso: criar canais, acompanhar o estado deles e controlá-los após entrada em `Stasis`. Na prática, sua aplicação deve usar REST para comandar e WebSocket para acompanhar. ([Asterisk Docs][3])
+O ARI foi desenhado para isso: criar canais, acompanhar o estado deles e controlÃ¡-los apÃ³s entrada em `Stasis`. Na prÃ¡tica, sua aplicaÃ§Ã£o deve usar REST para comandar e WebSocket para acompanhar. ([Asterisk Docs][3])
 
 ## 5.1 Cliente ARI
 
@@ -3296,7 +3303,7 @@ export const ariClient = {
 };
 ```
 
-## 5.2 Serviço de chamada
+## 5.2 ServiÃ§o de chamada
 
 ```ts
 // src/lib/softphone/calls/call-service.ts
@@ -3312,7 +3319,7 @@ export const callService = {
     const target = await extensionRepository.findByExtensionNumber(input.toExtension);
 
     if (!source || !target) {
-      throw new Error("Ramal de origem ou destino não encontrado");
+      throw new Error("Ramal de origem ou destino nÃ£o encontrado");
     }
 
     if (source.status !== "active" || target.status !== "active") {
@@ -3373,7 +3380,7 @@ export const callService = {
 
 # 6. Worker ARI real
 
-O mínimo que você deve processar no listener é `StasisStart`, `ChannelStateChange`, `StasisEnd` e DTMF; isso está alinhado com a própria documentação do ARI, que usa exatamente esses eventos como base para acompanhar o ciclo de vida do canal. ([Asterisk Docs][4])
+O mÃ­nimo que vocÃª deve processar no listener Ã© `StasisStart`, `ChannelStateChange`, `StasisEnd` e DTMF; isso estÃ¡ alinhado com a prÃ³pria documentaÃ§Ã£o do ARI, que usa exatamente esses eventos como base para acompanhar o ciclo de vida do canal. ([Asterisk Docs][4])
 
 ## 6.1 Listener
 
@@ -3549,7 +3556,7 @@ export async function handleAriEvent(event: any) {
 
 # 7. APIs reais
 
-## 7.1 Criar extensão
+## 7.1 Criar extensÃ£o
 
 ```ts
 // src/app/api/softphone/extensions/route.ts
@@ -3582,7 +3589,7 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-## 7.2 Provisionar extensão
+## 7.2 Provisionar extensÃ£o
 
 ```ts
 // src/app/api/softphone/extensions/[id]/provision/route.ts
@@ -3653,7 +3660,7 @@ export async function POST(
   );
   const call = rows?.[0];
   if (!call?.ari_channel_id) {
-    return NextResponse.json({ error: "Canal não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Canal nÃ£o encontrado" }, { status: 404 });
   }
 
   for (const digit of String(digits)) {
@@ -3664,15 +3671,15 @@ export async function POST(
 }
 ```
 
-O mesmo padrão vale para `hold`, `unhold`, `mute`, `unmute`, `hangup` e `transfer`.
+O mesmo padrÃ£o vale para `hold`, `unhold`, `mute`, `unmute`, `hangup` e `transfer`.
 
 ---
 
-# 8. Dialplan mínimo para entrar no ARI
+# 8. Dialplan mÃ­nimo para entrar no ARI
 
-Como o ARI trabalha com `Stasis`, você precisa de um contexto do dialplan que entregue a chamada à aplicação externa. Isso é parte oficial da configuração do ARI no Asterisk. ([Asterisk Docs][5])
+Como o ARI trabalha com `Stasis`, vocÃª precisa de um contexto do dialplan que entregue a chamada Ã  aplicaÃ§Ã£o externa. Isso Ã© parte oficial da configuraÃ§Ã£o do ARI no Asterisk. ([Asterisk Docs][5])
 
-Exemplo mínimo:
+Exemplo mÃ­nimo:
 
 ```ini
 ; extensions_custom.conf
@@ -3684,13 +3691,13 @@ exten => _X.,1,NoOp(Softphone Stasis entry ${EXTEN})
  same => n,Hangup()
 ```
 
-Agora, quando sua aplicação originar uma chamada, ela pode mandar o canal para `softphone-app`.
+Agora, quando sua aplicaÃ§Ã£o originar uma chamada, ela pode mandar o canal para `softphone-app`.
 
 ---
 
-# 9. PJSIP / WebRTC mínimo
+# 9. PJSIP / WebRTC mÃ­nimo
 
-Para clientes WebRTC, a documentação do Asterisk deixa claro que você precisa de **HTTPS/TLS**, **PJSIP WebSocket transport**, e objetos do cliente em PJSIP. ([Asterisk Docs][1])
+Para clientes WebRTC, a documentaÃ§Ã£o do Asterisk deixa claro que vocÃª precisa de **HTTPS/TLS**, **PJSIP WebSocket transport**, e objetos do cliente em PJSIP. ([Asterisk Docs][1])
 
 Exemplo conceitual:
 
@@ -3730,9 +3737,9 @@ remove_existing=yes
 
 ---
 
-# 10. Integração frontend com SIP.js
+# 10. IntegraÃ§Ã£o frontend com SIP.js
 
-O SIP.js mantém o WebSocket de sinalização, registra o agente SIP e recebe chamadas entrantes por delegate/invite. Isso casa perfeitamente com o seu módulo: o navegador fala SIP/WebRTC com o PBX, e o backend fala ARI/REST com o Asterisk para orquestração e estado. ([sipjs.com][6])
+O SIP.js mantÃ©m o WebSocket de sinalizaÃ§Ã£o, registra o agente SIP e recebe chamadas entrantes por delegate/invite. Isso casa perfeitamente com o seu mÃ³dulo: o navegador fala SIP/WebRTC com o PBX, e o backend fala ARI/REST com o Asterisk para orquestraÃ§Ã£o e estado. ([sipjs.com][6])
 
 Exemplo base:
 
@@ -3755,7 +3762,7 @@ export async function createSipClient(params: {
   onInvite?: (invitation: Invitation) => void;
 }) {
   const uri = UserAgent.makeURI(`sip:${params.extension}@${params.domain}`);
-  if (!uri) throw new Error("URI SIP inválida");
+  if (!uri) throw new Error("URI SIP invÃ¡lida");
 
   const userAgent = new UserAgent({
     uri,
@@ -3782,7 +3789,7 @@ export async function createSipClient(params: {
 
     async makeCall(targetExtension: string) {
       const target = UserAgent.makeURI(`sip:${targetExtension}@${params.domain}`);
-      if (!target) throw new Error("Destino inválido");
+      if (!target) throw new Error("Destino invÃ¡lido");
 
       const inviter = new Inviter(userAgent, target, {
         sessionDescriptionHandlerOptions: {
@@ -3818,7 +3825,7 @@ export async function createSipClient(params: {
 
 1. `POST /api/softphone/extensions`
 2. `POST /api/softphone/extensions/:id/provision`
-3. FreePBX cria extensão
+3. FreePBX cria extensÃ£o
 4. FreePBX aplica config
 5. frontend recebe `extension + password + wsServer`
 
@@ -3826,7 +3833,7 @@ export async function createSipClient(params: {
 
 1. frontend inicializa `UserAgent`
 2. faz `register()`
-3. backend atualiza `pbx_extension_devices` e presença
+3. backend atualiza `pbx_extension_devices` e presenÃ§a
 
 ## Fazer chamada
 
@@ -3840,31 +3847,31 @@ export async function createSipClient(params: {
 
 1. PBX envia `INVITE` ao navegador
 2. SIP.js dispara `onInvite`
-3. usuário atende
+3. usuÃ¡rio atende
 4. backend reflete o estado via ARI
 
-## Porteiro eletrônico
+## Porteiro eletrÃ´nico
 
-1. porteiro é um ramal SIP do tipo `doorphone`
+1. porteiro Ã© um ramal SIP do tipo `doorphone`
 2. chama um grupo ou apartamento
-3. o módulo registra tudo em `doorphone_access_logs`
-4. `POST /doorphones/:id/unlock` aciona relé HTTP/MQTT/GPIO
+3. o mÃ³dulo registra tudo em `doorphone_access_logs`
+4. `POST /doorphones/:id/unlock` aciona relÃ© HTTP/MQTT/GPIO
 
 ---
 
-# 12. O que eu fecharia como próxima entrega
+# 12. O que eu fecharia como prÃ³xima entrega
 
-A próxima etapa ideal já é completamente prática:
+A prÃ³xima etapa ideal jÃ¡ Ã© completamente prÃ¡tica:
 
 * `DDL final v1`
 * `seed inicial`
-* `worker ARI executável`
+* `worker ARI executÃ¡vel`
 * `rotas completas de hold, mute, transfer`
 * `SSE/WebSocket interno do Next.js para refletir estado da chamada`
 * `provisionador FreePBX ajustado ao schema GraphQL real da sua central`
 * `componente React do discador`
 
-Na próxima resposta eu posso seguir direto com o **pacote completo da fase 3**, já entregando:
+Na prÃ³xima resposta eu posso seguir direto com o **pacote completo da fase 3**, jÃ¡ entregando:
 **DDL consolidado + seeds + rotas completas + worker ARI + componente React do softphone**.
 
 [1]: https://docs.asterisk.org/Configuration/WebRTC/Configuring-Asterisk-for-WebRTC-Clients/?utm_source=chatgpt.com "Configuring Asterisk for WebRTC Clients"
@@ -3874,22 +3881,22 @@ Na próxima resposta eu posso seguir direto com o **pacote completo da fase 3**,
 [5]: https://docs.asterisk.org/Configuration/Interfaces/Asterisk-REST-Interface-ARI/Asterisk-Configuration-for-ARI/?utm_source=chatgpt.com "Asterisk Configuration for ARI"
 [6]: https://sipjs.com/?utm_source=chatgpt.com "SIP.js: SIP Signaling JavaScript Library for WebRTC Developers"
 
-Perfeito. Vou seguir já com a **entrega prática da fase 3**:
+Perfeito. Vou seguir jÃ¡ com a **entrega prÃ¡tica da fase 3**:
 
 1. **DDL consolidado v1**
 2. **seeds iniciais**
-3. **rotas completas de operação**
-4. **worker ARI executável**
+3. **rotas completas de operaÃ§Ã£o**
+4. **worker ARI executÃ¡vel**
 5. **componente React do softphone**
-6. **pontos de ligação com FreePBX / Asterisk**
+6. **pontos de ligaÃ§Ã£o com FreePBX / Asterisk**
 
-A base técnica continua correta: para cliente WebRTC no Asterisk você precisa de **HTTPS/TLS**, **PJSIP WebSocket transport** e objetos **endpoint/auth/aor**; para controle de chamada, o **ARI** expõe canais, bridges e mídia via API assíncrona, e o `POST /channels` origina chamadas, podendo já inscrever o canal numa app **Stasis**. No frontend, o SIP.js usa `UserAgent`, registro e tratamento de `INVITE` para chamadas entrantes. O FreePBX também documenta um caminho de provisionamento automatizado por **GraphQL**. ([Asterisk Docs][1])
+A base tÃ©cnica continua correta: para cliente WebRTC no Asterisk vocÃª precisa de **HTTPS/TLS**, **PJSIP WebSocket transport** e objetos **endpoint/auth/aor**; para controle de chamada, o **ARI** expÃµe canais, bridges e mÃ­dia via API assÃ­ncrona, e o `POST /channels` origina chamadas, podendo jÃ¡ inscrever o canal numa app **Stasis**. No frontend, o SIP.js usa `UserAgent`, registro e tratamento de `INVITE` para chamadas entrantes. O FreePBX tambÃ©m documenta um caminho de provisionamento automatizado por **GraphQL**. ([Asterisk Docs][1])
 
 ---
 
 ## 1) DDL consolidado v1
 
-Use este schema como **base oficial do módulo Softphone**.
+Use este schema como **base oficial do mÃ³dulo Softphone**.
 
 ```sql
 CREATE TABLE people (
@@ -4219,7 +4226,7 @@ CREATE INDEX idx_sync_jobs_status ON pbx_sync_jobs(status, created_at);
 
 ## 2) Seeds iniciais
 
-Estes seeds já deixam o ambiente utilizável para teste.
+Estes seeds jÃ¡ deixam o ambiente utilizÃ¡vel para teste.
 
 ```sql
 INSERT INTO people (type, full_name, email, phone_mobile, status) VALUES
@@ -4324,7 +4331,7 @@ export async function POST(
 
   const call = rows?.[0];
   if (!call?.ari_channel_id) {
-    return NextResponse.json({ error: "Canal não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Canal nÃ£o encontrado" }, { status: 404 });
   }
 
   await ariClient.hangup(call.ari_channel_id);
@@ -4354,7 +4361,7 @@ export async function POST(
 
   const call = rows?.[0];
   if (!call?.ari_channel_id) {
-    return NextResponse.json({ error: "Canal não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Canal nÃ£o encontrado" }, { status: 404 });
   }
 
   await ariClient.hold(call.ari_channel_id);
@@ -4396,7 +4403,7 @@ export async function POST(
 
   const call = rows?.[0];
   if (!call?.ari_channel_id) {
-    return NextResponse.json({ error: "Canal não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Canal nÃ£o encontrado" }, { status: 404 });
   }
 
   await ariClient.unhold(call.ari_channel_id);
@@ -4442,7 +4449,7 @@ export async function POST(
 
   const call = rows?.[0];
   if (!call?.ari_channel_id) {
-    return NextResponse.json({ error: "Canal não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Canal nÃ£o encontrado" }, { status: 404 });
   }
 
   await ariClient.mute(call.ari_channel_id, direction);
@@ -4479,7 +4486,7 @@ export async function POST(
 
   const call = rows?.[0];
   if (!call?.ari_channel_id) {
-    return NextResponse.json({ error: "Canal não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Canal nÃ£o encontrado" }, { status: 404 });
   }
 
   await ariClient.unmute(call.ari_channel_id, direction);
@@ -4494,7 +4501,7 @@ export async function POST(
 }
 ```
 
-### Transferência cega
+### TransferÃªncia cega
 
 ```ts
 // src/app/api/softphone/calls/[id]/transfer/route.ts
@@ -4522,10 +4529,10 @@ export async function POST(
   const target = targetRows?.[0];
 
   if (!call?.ari_channel_id) {
-    return NextResponse.json({ error: "Canal não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Canal nÃ£o encontrado" }, { status: 404 });
   }
   if (!target) {
-    return NextResponse.json({ error: "Destino inválido" }, { status: 404 });
+    return NextResponse.json({ error: "Destino invÃ¡lido" }, { status: 404 });
   }
   if (type !== "blind") {
     return NextResponse.json({ error: "Somente blind transfer nesta v1" }, { status: 400 });
@@ -4657,11 +4664,11 @@ export async function POST(
   const unit = rows?.[0];
 
   if (!unit) {
-    return NextResponse.json({ error: "Porteiro não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Porteiro nÃ£o encontrado" }, { status: 404 });
   }
 
   if (unit.unlock_relay_type !== "http" || !unit.unlock_relay_target) {
-    return NextResponse.json({ error: "Relé não configurado para HTTP" }, { status: 400 });
+    return NextResponse.json({ error: "RelÃ© nÃ£o configurado para HTTP" }, { status: 400 });
   }
 
   try {
@@ -4696,9 +4703,9 @@ export async function POST(
 
 ---
 
-## 5) Worker ARI executável
+## 5) Worker ARI executÃ¡vel
 
-O ARI é assíncrono por natureza e foi desenhado para apps externas controlarem **channels**, **bridges** e eventos em tempo real; o worker abaixo segue esse desenho oficial. ([Asterisk Docs][2])
+O ARI Ã© assÃ­ncrono por natureza e foi desenhado para apps externas controlarem **channels**, **bridges** e eventos em tempo real; o worker abaixo segue esse desenho oficial. ([Asterisk Docs][2])
 
 ```ts
 // src/lib/softphone/ari/ws-listener.ts
@@ -4887,7 +4894,7 @@ No `package.json`:
 
 ---
 
-## 6) SSE interno para atualização em tempo real
+## 6) SSE interno para atualizaÃ§Ã£o em tempo real
 
 ```ts
 // src/app/api/softphone/events/sse/route.ts
@@ -4919,9 +4926,9 @@ export async function GET(_req: NextRequest) {
 
 Para v1, eu usaria SSE para refletir:
 
-* presença
+* presenÃ§a
 * chamadas ativas
-* mudanças de estado
+* mudanÃ§as de estado
 
 ---
 
@@ -5093,7 +5100,7 @@ export default function SoftphonePanel({
         <div>
           <div className="text-lg font-semibold">Softphone</div>
           <div className="text-sm opacity-70">
-            Ramal {extension} · {registered ? "registrado" : "não registrado"}
+            Ramal {extension} Â· {registered ? "registrado" : "nÃ£o registrado"}
           </div>
         </div>
         <div className="text-sm font-medium">{status}</div>
@@ -5128,7 +5135,7 @@ export default function SoftphonePanel({
 
 ---
 
-## 8) Ligação prática com Asterisk / FreePBX
+## 8) LigaÃ§Ã£o prÃ¡tica com Asterisk / FreePBX
 
 ### Asterisk WebRTC / PJSIP
 
@@ -5144,11 +5151,11 @@ O ARI trabalha com:
 
 * REST para comandar canais
 * WebSocket para eventos
-* Stasis para entregar o canal à sua aplicação. ([Asterisk Docs][4])
+* Stasis para entregar o canal Ã  sua aplicaÃ§Ã£o. ([Asterisk Docs][4])
 
 ### FreePBX
 
-Para provisionamento automatizado, o caminho mais consistente é encapsular tudo num serviço que fale com o FreePBX via GraphQL e só depois aplique `reload`, exatamente como o tutorial oficial demonstra. ([FreePBX - Let Freedom Ring][5])
+Para provisionamento automatizado, o caminho mais consistente Ã© encapsular tudo num serviÃ§o que fale com o FreePBX via GraphQL e sÃ³ depois aplique `reload`, exatamente como o tutorial oficial demonstra. ([FreePBX - Let Freedom Ring][5])
 
 ---
 
@@ -5176,9 +5183,9 @@ NEXT_PUBLIC_SIP_WS_SERVER=wss://pbx.seudominio.local:8089/ws
 
 ---
 
-## 10) O que está fechado nesta fase
+## 10) O que estÃ¡ fechado nesta fase
 
-Com o que entreguei agora, você já tem:
+Com o que entreguei agora, vocÃª jÃ¡ tem:
 
 * **modelo relacional consolidado**
 * **DDL pronto**
@@ -5186,22 +5193,22 @@ Com o que entreguei agora, você já tem:
 * **rotas reais do backend**
 * **worker ARI**
 * **componente React do discador**
-* **estrutura certa para integração com FreePBX e Asterisk**
+* **estrutura certa para integraÃ§Ã£o com FreePBX e Asterisk**
 
 ---
 
-## 11) Próxima etapa ideal
+## 11) PrÃ³xima etapa ideal
 
-Agora o passo mais lógico é eu seguir com o bloco final de implantação prática:
+Agora o passo mais lÃ³gico Ã© eu seguir com o bloco final de implantaÃ§Ã£o prÃ¡tica:
 
 * **`pjsip.conf` / `http.conf` / `extensions_custom.conf`**
 * **dialplan Stasis completo**
 * **cliente `freepbx-client.ts` ajustado para mutation real**
-* **serviço de provisionamento completo**
-* **presença em tempo real**
+* **serviÃ§o de provisionamento completo**
+* **presenÃ§a em tempo real**
 * **painel visual do ramal no Next.js**
 
-Na próxima resposta eu posso entrar direto nessa etapa final e fechar a integração prática com o PBX.
+Na prÃ³xima resposta eu posso entrar direto nessa etapa final e fechar a integraÃ§Ã£o prÃ¡tica com o PBX.
 
 [1]: https://docs.asterisk.org/Configuration/WebRTC/Configuring-Asterisk-for-WebRTC-Clients/?utm_source=chatgpt.com "Configuring Asterisk for WebRTC Clients"
 [2]: https://docs.asterisk.org/Configuration/Interfaces/Asterisk-REST-Interface-ARI/?utm_source=chatgpt.com "Overview - Asterisk Documentation"
@@ -5211,29 +5218,29 @@ Na próxima resposta eu posso entrar direto nessa etapa final e fechar a integra
 
 Fechado.
 
-O módulo Softphone ficou estruturado com:
+O mÃ³dulo Softphone ficou estruturado com:
 
 * modelo relacional completo
 * schema SQL consolidado
 * seeds iniciais
-* APIs reais para extensões, chamadas, presença, contatos e porteiro
-* worker ARI para eventos e atualização de chamadas
+* APIs reais para extensÃµes, chamadas, presenÃ§a, contatos e porteiro
+* worker ARI para eventos e atualizaÃ§Ã£o de chamadas
 * componente React base do softphone
-* arquitetura de integração com Next.js + Asterisk/FreePBX + WebRTC
+* arquitetura de integraÃ§Ã£o com Next.js + Asterisk/FreePBX + WebRTC
 
 A linha-mestra ficou assim:
 
-* **Next.js** controla autenticação, regras, diretório e UI
-* **banco próprio do módulo** guarda estado, logs, presença e histórico
+* **Next.js** controla autenticaÃ§Ã£o, regras, diretÃ³rio e UI
+* **banco prÃ³prio do mÃ³dulo** guarda estado, logs, presenÃ§a e histÃ³rico
 * **FreePBX/Asterisk** cuida de ramais, SIP/PJSIP e telefonia
 * **ARI** controla chamadas em tempo real
 * **SIP.js** registra o navegador como ramal WebRTC
 
-Quando voltarmos a esse módulo, o próximo bloco natural é:
+Quando voltarmos a esse mÃ³dulo, o prÃ³ximo bloco natural Ã©:
 
 * fechar os arquivos do Asterisk (`pjsip`, `http`, `extensions_custom`)
 * amarrar o provisionamento real no FreePBX
-* finalizar presença em tempo real
+* finalizar presenÃ§a em tempo real
 * montar a tela operacional completa do ramal
 
-Agora podemos voltar ao **Servidor Mikrotik**. Me passe de qual ponto você quer retomar e eu sigo direto dali.
+Agora podemos voltar ao **Servidor Mikrotik**. Me passe de qual ponto vocÃª quer retomar e eu sigo direto dali.

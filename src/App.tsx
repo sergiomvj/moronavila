@@ -107,6 +107,12 @@ function App() {
           user.name = emailFallback;
         }
 
+        if (user.role === UserRole.RESIDENT && user.habilitado === false) {
+          setCurrentUser(null);
+          await supabase.auth.signOut();
+          throw new Error('Seu acesso ao aplicativo esta desabilitado no momento. Procure a administracao da casa.');
+        }
+
         setCurrentUser(user);
       } else {
         setCurrentUser(null);

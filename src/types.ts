@@ -51,6 +51,7 @@ export interface Resident {
   room_id?: string;
   role: UserRole;
   status: string;
+  habilitado?: boolean;
   internet_active: boolean;
   internet_renewal_date?: string;
   rent_value?: number;

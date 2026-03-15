@@ -66,6 +66,8 @@ Estas variaveis foram adicionadas para permitir que o softphone fique preparado 
 ## Comportamento atual
 
 - O shell do softphone agora aparece para moradores autenticados no app.
+- O acesso real do morador deve respeitar um campo mestre `habilitado` no cadastro do residente.
+- Se `habilitado = false`, o morador deve perder acesso ao app e ao softphone, inclusive quando a sessao ja estiver aberta.
 - Se o PBX ainda nao estiver provisionado, a interface entra em modo `Aguardando PBX`.
 - Quando as variaveis do PBX forem preenchidas, a aplicacao ja passa a refletir o estado `Pronto` e `Ativo` no fluxo local.
 - O dock tenta se reidratar automaticamente quando a aba volta a ficar visivel ou quando a conexao do navegador retorna.
@@ -99,11 +101,12 @@ O projeto ja tem uma trilha operacional visivel para residentes e administradore
 
 Antes de ativar o PBX em producao, vale deixar cada morador com o cadastro minimamente pronto:
 
-1. `softphone_enabled = true`
-2. `softphone_extension` preenchido
-3. `internet_active = true`
-4. `mac_address` principal cadastrado, se a rede continuar exigindo autorizacao por MAC
-5. `softphone_display_name` com um nome facil para a portaria reconhecer
+1. `habilitado = true`
+2. `softphone_enabled = true`
+3. `softphone_extension` preenchido
+4. `internet_active = true`
+5. `mac_address` principal cadastrado, se a rede continuar exigindo autorizacao por MAC
+6. `softphone_display_name` com um nome facil para a portaria reconhecer
 
 No produto, isso ja pode ser acompanhado por tres pontos:
 
@@ -114,10 +117,13 @@ No produto, isso ja pode ser acompanhado por tres pontos:
 
 Um morador e considerado pronto para rollout quando:
 
+- `habilitado = true`
 - o softphone estiver habilitado
 - existir ramal definido
 - a internet estiver ativa
 - o MAC principal estiver cadastrado, quando a rede depender de autenticacao por MAC
+
+Se o residente sair da casa ou ficar inadimplente, a regra esperada do produto e desligar `habilitado`, o que deve bloquear app e softphone automaticamente.
 
 ## Porta / interfone
 

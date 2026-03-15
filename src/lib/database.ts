@@ -28,7 +28,7 @@ export async function updateResident(id: string, updates: Partial<Resident>): Pr
         'name', 'phone', 'photo_url', 'instagram', 'role', 'status',
         'entry_date', 'birth_date', 'cpf', 'document_number',
         'origin_address', 'work_address', 'room_id', 'mac_address',
-        'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email',
+        'mac_address_pc', 'internet_active', 'internet_renewal_date', 'auth_id', 'email', 'habilitado',
         'rent_value', 'cleaning_fee', 'extras_value', 'bed_identifier',
         'softphone_extension', 'softphone_enabled', 'softphone_display_name'
     ];
@@ -435,6 +435,7 @@ export async function signUpResident(email: string, password: string, name: stri
             role: UserRole.RESIDENT,
             status: 'Ativo',
             entry_date: new Date().toISOString().split('T')[0],
+            habilitado: true,
             internet_active: false
         });
     }
