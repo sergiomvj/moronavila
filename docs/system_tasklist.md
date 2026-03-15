@@ -218,6 +218,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - readiness de navegador, microfone e rollout
 - endpoint de porta placeholder
 - endpoint de rollout consolidado
+- rollout consolidado com `motivo_bloqueio` e agregacao dos principais motivos
 - inbox inicial em estruturacao
 
 ### Softphone - backlog imediato

@@ -108,7 +108,12 @@ export interface SoftphoneRolloutResponse {
     internetInactive: number;
     disabled: number;
     residentDisabled?: number;
+    blockedWithReason?: number;
     missingMac: number;
+    topBlockedReasons?: Array<{
+      reason: string;
+      count: number;
+    }>;
   };
   items: SoftphoneRolloutItem[];
 }

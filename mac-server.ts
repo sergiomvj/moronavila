@@ -528,6 +528,16 @@ app.get('/api/softphone/rollout', async (req, res) => {
                     blockers,
                 };
             });
+            const blockedReasons = Object.entries(
+                items.reduce<Record<string, number>>((accumulator, item) => {
+                    const reason = item.motivoBloqueio?.trim();
+                    if (!reason) return accumulator;
+                    accumulator[reason] = (accumulator[reason] || 0) + 1;
+                    return accumulator;
+                }, {})
+            )
+                .sort((left, right) => right[1] - left[1])
+                .map(([reason, count]) => ({ reason, count }));
             const summary = {
                 totalResidents: items.length,
                 ready: items.filter((item) => item.ready).length,
@@ -536,7 +546,9 @@ app.get('/api/softphone/rollout', async (req, res) => {
                 internetInactive: items.filter((item) => item.blockers.includes('Internet inativa')).length,
                 disabled: items.filter((item) => item.blockers.includes('Softphone desativado')).length,
                 residentDisabled: items.filter((item) => item.blockers.includes('Residente desabilitado')).length,
+                blockedWithReason: items.filter((item) => item.blockers.includes('Residente desabilitado') && item.motivoBloqueio).length,
                 missingMac: items.filter((item) => item.blockers.includes('Sem MAC principal')).length,
+                topBlockedReasons: blockedReasons.slice(0, 5),
             };
             return res.json({
                 generatedAt: new Date().toISOString(),

@@ -129,6 +129,7 @@ export function DashboardView({
         blockedByInternet: softphoneRollout?.summary.internetInactive ?? stats.softphoneBlockedByInternet,
         disabled: softphoneRollout?.summary.disabled ?? stats.softphoneDisabled,
         residentBlocked: softphoneRollout?.summary.residentDisabled ?? stats.residentBlocked,
+        blockedWithReason: softphoneRollout?.summary.blockedWithReason ?? 0,
         missingMac: softphoneRollout?.summary.missingMac ?? residents.filter(
             (resident) => resident.role === UserRole.RESIDENT && resident.habilitado !== false && !resident.mac_address
         ).length,
@@ -136,17 +137,19 @@ export function DashboardView({
     const softphoneStatsSourceLabel = softphoneRollout?.generatedAt
         ? `Resumo consolidado em ${new Date(softphoneRollout.generatedAt).toLocaleString('pt-BR')}`
         : 'Resumo em fallback local';
-    const topBlockedReasons = softphoneRollout?.items
-        ? Object.entries(
-            softphoneRollout.items.reduce<Record<string, number>>((accumulator, item) => {
-                if (!item.motivoBloqueio) return accumulator;
-                accumulator[item.motivoBloqueio] = (accumulator[item.motivoBloqueio] || 0) + 1;
-                return accumulator;
-            }, {})
-        )
-            .sort((left, right) => right[1] - left[1])
-            .slice(0, 3)
-        : [];
+    const topBlockedReasons = softphoneRollout?.summary.topBlockedReasons?.length
+        ? softphoneRollout.summary.topBlockedReasons.slice(0, 3).map((item) => [item.reason, item.count] as const)
+        : softphoneRollout?.items
+            ? Object.entries(
+                softphoneRollout.items.reduce<Record<string, number>>((accumulator, item) => {
+                    if (!item.motivoBloqueio) return accumulator;
+                    accumulator[item.motivoBloqueio] = (accumulator[item.motivoBloqueio] || 0) + 1;
+                    return accumulator;
+                }, {})
+            )
+                .sort((left, right) => right[1] - left[1])
+                .slice(0, 3)
+            : [];
 
     const handleCreateRepair = async (e: React.FormEvent) => {
         e.preventDefault();

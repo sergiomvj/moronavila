@@ -27,7 +27,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
     const [softphoneRollout, setSoftphoneRollout] = useState<SoftphoneRolloutResponse | null>(null);
     const [softphoneRolloutSearch, setSoftphoneRolloutSearch] = useState('');
     const [softphoneRolloutFilter, setSoftphoneRolloutFilter] = useState<
-        'all' | 'ready' | 'missing-extension' | 'internet-inactive' | 'disabled' | 'resident-disabled' | 'missing-mac'
+        'all' | 'ready' | 'missing-extension' | 'internet-inactive' | 'disabled' | 'resident-disabled' | 'blocked-with-reason' | 'missing-mac'
     >('all');
 
     // View state
@@ -80,7 +80,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
         internetInactive: softphoneBlockedByInternet.length,
         disabled: softphoneDisabledResidents.length,
         residentDisabled: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Residente desabilitado')).length,
+        blockedWithReason: softphoneRolloutQueue.filter(({ resident, blockers }) => blockers.includes('Residente desabilitado') && Boolean(resident.motivo_bloqueio?.trim())).length,
         missingMac: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Sem MAC principal')).length,
+        topBlockedReasons: [],
     };
     const rolloutItems = softphoneRollout?.items
         ? softphoneRollout.items.map((item) => ({
@@ -122,12 +124,26 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 return blockers.includes('Softphone desativado');
             case 'resident-disabled':
                 return blockers.includes('Residente desabilitado');
+            case 'blocked-with-reason':
+                return blockers.includes('Residente desabilitado') && Boolean(resident.motivo_bloqueio?.trim());
             case 'missing-mac':
                 return blockers.includes('Sem MAC principal');
             default:
                 return true;
         }
     });
+    const rolloutBlockedReasons = rolloutSummary.topBlockedReasons?.length
+        ? rolloutSummary.topBlockedReasons.map((item) => [item.reason, item.count] as const)
+        : Object.entries(
+            rolloutItems.reduce<Record<string, number>>((accumulator, { resident }) => {
+                const reason = resident.motivo_bloqueio?.trim();
+                if (!reason) return accumulator;
+                accumulator[reason] = (accumulator[reason] || 0) + 1;
+                return accumulator;
+            }, {})
+        )
+            .sort((left, right) => right[1] - left[1])
+            .slice(0, 4);
     const rolloutSourceLabel = softphoneRollout?.generatedAt
         ? `Backend consolidado em ${new Date(softphoneRollout.generatedAt).toLocaleString('pt-BR')}`
         : 'Fallback local';
@@ -733,6 +749,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <option value="internet-inactive">Internet inativa</option>
                         <option value="disabled">Desativados</option>
                         <option value="resident-disabled">Morador bloqueado</option>
+                        <option value="blocked-with-reason">Bloqueado com motivo</option>
                         <option value="missing-mac">Sem MAC</option>
                     </select>
                 </div>
@@ -769,6 +786,27 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="mt-1 text-xs text-slate-600">Moradores com softphone desligado</div>
                     </div>
                 </div>
+
+                {rolloutBlockedReasons.length > 0 && (
+                    <div className="mb-6 rounded-2xl border border-rose-100 bg-rose-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-rose-700">
+                            Motivos de bloqueio mais comuns
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {rolloutBlockedReasons.map(([reason, count]) => (
+                                <span
+                                    key={reason}
+                                    className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-bold text-rose-700"
+                                >
+                                    <span>{reason}</span>
+                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] uppercase">
+                                        {count}
+                                    </span>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="overflow-hidden rounded-2xl border border-slate-100">
                     <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-slate-100 bg-slate-50">
