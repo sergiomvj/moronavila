@@ -109,6 +109,7 @@ export interface SoftphoneRolloutResponse {
     disabled: number;
     residentDisabled?: number;
     blockedWithReason?: number;
+    blockedWithoutReason?: number;
     missingMac: number;
     topBlockedReasons?: Array<{
       reason: string;

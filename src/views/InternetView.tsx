@@ -81,6 +81,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
         disabled: softphoneDisabledResidents.length,
         residentDisabled: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Residente desabilitado')).length,
         blockedWithReason: softphoneRolloutQueue.filter(({ resident, blockers }) => blockers.includes('Residente desabilitado') && Boolean(resident.motivo_bloqueio?.trim())).length,
+        blockedWithoutReason: softphoneRolloutQueue.filter(({ resident, blockers }) => blockers.includes('Residente desabilitado') && !resident.motivo_bloqueio?.trim()).length,
         missingMac: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Sem MAC principal')).length,
         topBlockedReasons: [],
     };
@@ -720,6 +721,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     <span className="rounded-full bg-fuchsia-50 px-3 py-1 font-bold text-fuchsia-700">
                         Com motivo: {rolloutSummary.blockedWithReason ?? 0}
                     </span>
+                    <span className="rounded-full bg-orange-50 px-3 py-1 font-bold text-orange-700">
+                        Sem motivo: {rolloutSummary.blockedWithoutReason ?? 0}
+                    </span>
                     <span className="rounded-full bg-indigo-50 px-3 py-1 font-bold text-indigo-700">
                         Mostrando {Math.min(filteredSoftphoneRolloutQueue.length, 12)} de {rolloutItems.length}
                     </span>
@@ -757,7 +761,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-4 mb-6">
                     <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
                         <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-700">Moradores</div>
                         <div className="mt-2 text-3xl font-bold text-indigo-900">{rolloutSummary.totalResidents}</div>
@@ -792,6 +796,11 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-700">Com Motivo</div>
                         <div className="mt-2 text-3xl font-bold text-fuchsia-900">{rolloutSummary.blockedWithReason ?? 0}</div>
                         <div className="mt-1 text-xs text-fuchsia-700">Bloqueios com justificativa registrada</div>
+                    </div>
+                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-orange-700">Sem Motivo</div>
+                        <div className="mt-2 text-3xl font-bold text-orange-900">{rolloutSummary.blockedWithoutReason ?? 0}</div>
+                        <div className="mt-1 text-xs text-orange-700">Bloqueios que ainda precisam de justificativa</div>
                     </div>
                 </div>
 

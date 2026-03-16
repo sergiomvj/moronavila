@@ -225,9 +225,10 @@ export function RoomsView({ rooms, maintenance, isAdmin, currentUser, onRefresh 
                                                 setEditRoomData(room);
                                                 setIsEditingRoom(true);
                                             }}
-                                            className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-rose-500 opacity-0 group-hover/title:opacity-100 transition-all"
+                                            className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-rose-500 transition-all border border-slate-700 hover:border-rose-500/50 flex items-center gap-2 group"
                                         >
                                             <Edit2 size={18} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest pr-2 hidden group-hover:inline">Editar Configurações</span>
                                         </button>
                                     )}
                                 </div>
@@ -812,16 +813,29 @@ export function RoomsView({ rooms, maintenance, isAdmin, currentUser, onRefresh 
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-[60px] -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-colors"></div>
                                 
                                 <div className="relative z-10 flex flex-col h-full">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <span className="bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-indigo-500/20">
-                                            {room.type}
-                                        </span>
-                                        {room.is_blocked_for_repairs && (
-                                            <span className="bg-amber-500/10 text-amber-500 p-1.5 rounded-lg border border-amber-500/20">
-                                                <Lock size={12} />
+                                        <div className="flex gap-2">
+                                            <span className="bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-indigo-500/20">
+                                                {room.type}
                                             </span>
+                                            {room.is_blocked_for_repairs && (
+                                                <span className="bg-amber-500/10 text-amber-500 px-2 py-1 rounded-lg border border-amber-500/20 text-[8px] font-black uppercase flex items-center gap-1">
+                                                    <Lock size={10} /> REPARO
+                                                </span>
+                                            )}
+                                        </div>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditRoomData(room);
+                                                    setIsEditingRoom(true);
+                                                }}
+                                                className="p-2 bg-slate-900/80 backdrop-blur-md rounded-xl text-slate-400 hover:text-indigo-400 border border-slate-800 hover:border-indigo-500/30 transition-all"
+                                                title="Editar Área Comum"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
                                         )}
-                                    </div>
                                     
                                     <h4 className="text-xl font-black text-white uppercase tracking-tighter group-hover:text-indigo-400 transition-colors mb-2">{room.name}</h4>
                                     <p className="text-[10px] text-slate-500 font-medium line-clamp-2 mb-6 flex-1">{room.description || 'Sem descrição técnica.'}</p>
@@ -853,6 +867,22 @@ export function RoomsView({ rooms, maintenance, isAdmin, currentUser, onRefresh 
                                 className={`group bento-card hover:border-rose-500/30 transition-all cursor-pointer relative overflow-hidden h-full flex flex-col ${room.is_blocked_for_repairs ? 'border-amber-500/20' : ''}`}
                             >
                                 <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] -mr-16 -mt-16 group-hover:opacity-100 transition-opacity ${room.is_blocked_for_repairs ? 'bg-amber-600/5' : 'bg-rose-600/5'}`}></div>
+                                
+                                {isAdmin && (
+                                    <div className="absolute top-4 right-4 z-20 flex gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditRoomData(room);
+                                                setIsEditingRoom(true);
+                                            }}
+                                            className="p-2 bg-slate-900/80 backdrop-blur-md rounded-xl text-slate-400 hover:text-rose-500 border border-slate-800 hover:border-rose-500/30 transition-all"
+                                            title="Editar Quarto"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+                                    </div>
+                                )}
                                 
                                 <div className="relative z-10 flex flex-col h-full">
                                     <div className="flex justify-between items-start mb-4">

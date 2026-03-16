@@ -547,6 +547,7 @@ app.get('/api/softphone/rollout', async (req, res) => {
                 disabled: items.filter((item) => item.blockers.includes('Softphone desativado')).length,
                 residentDisabled: items.filter((item) => item.blockers.includes('Residente desabilitado')).length,
                 blockedWithReason: items.filter((item) => item.blockers.includes('Residente desabilitado') && item.motivoBloqueio).length,
+                blockedWithoutReason: items.filter((item) => item.blockers.includes('Residente desabilitado') && !item.motivoBloqueio).length,
                 missingMac: items.filter((item) => item.blockers.includes('Sem MAC principal')).length,
                 topBlockedReasons: blockedReasons.slice(0, 5),
             };

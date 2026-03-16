@@ -114,6 +114,10 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
     async function handleSave(event: React.FormEvent) {
         event.preventDefault();
         if (!editingResident) return;
+        if (editingResident.habilitado === false && !editingResident.motivo_bloqueio?.trim()) {
+            alert('Informe o motivo do bloqueio antes de salvar o morador desabilitado.');
+            return;
+        }
         setIsSubmitting(true);
         try {
             await updateResident(editingResident.id, {
@@ -131,6 +135,10 @@ export function ResidentsView({ residents, isAdmin, currentUser, onRefresh, init
 
     async function handleCreateResident(event: React.FormEvent) {
         event.preventDefault();
+        if (!newHabilitado && !newMotivoBloqueio.trim()) {
+            alert('Informe o motivo do bloqueio antes de cadastrar um morador desabilitado.');
+            return;
+        }
         setIsSubmitting(true);
         try {
             const authData = await signUpResident(newEmail, newPassword, newName, newPhone, { habilitado: newHabilitado });
