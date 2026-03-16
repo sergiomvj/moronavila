@@ -161,7 +161,20 @@ export async function deleteFurniture(id: string): Promise<void> {
 }
 
 export async function createRoom(room: Partial<Room>): Promise<Room> {
-    const payload = toSnake(room);
+    const rawPayload = toSnake(room);
+    const allowedColumns = [
+        'name', 'type', 'capacity', 'description',
+        'rent_value', 'cleaning_fee', 'extras_value',
+        'is_common_area', 'is_blocked_for_repairs', 'availability_status'
+    ];
+
+    const payload: Record<string, any> = {};
+    allowedColumns.forEach(col => {
+        if (col in rawPayload) {
+            payload[col] = rawPayload[col];
+        }
+    });
+
     if ('rent_value' in room) payload.rent_value = Number(room.rent_value) || 0;
     if ('cleaning_fee' in room) payload.cleaning_fee = Number(room.cleaning_fee) || 0;
     if ('extras_value' in room) payload.extras_value = Number(room.extras_value) || 0;
@@ -172,7 +185,20 @@ export async function createRoom(room: Partial<Room>): Promise<Room> {
 }
 
 export async function updateRoom(id: string, updates: Partial<Room>): Promise<Room> {
-    const payload = toSnake(updates);
+    const rawPayload = toSnake(updates);
+    const allowedColumns = [
+        'name', 'type', 'capacity', 'description',
+        'rent_value', 'cleaning_fee', 'extras_value',
+        'is_common_area', 'is_blocked_for_repairs', 'availability_status'
+    ];
+
+    const payload: Record<string, any> = {};
+    allowedColumns.forEach(col => {
+        if (col in rawPayload) {
+            payload[col] = rawPayload[col];
+        }
+    });
+
     if ('rent_value' in updates) payload.rent_value = Number(updates.rent_value) || 0;
     if ('cleaning_fee' in updates) payload.cleaning_fee = Number(updates.cleaning_fee) || 0;
     if ('extras_value' in updates) payload.extras_value = Number(updates.extras_value) || 0;
