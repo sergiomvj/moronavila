@@ -501,17 +501,48 @@ app.get('/api/softphone/health', async (req, res) => {
 app.get('/api/softphone/rollout', async (req, res) => {
     return requireAuthenticatedResident(req as AuthenticatedRequest, res, async () => {
         return requireAdminRole(req as AuthenticatedRequest, res, async () => {
-            const result = await supabase
-                .from('residents')
-                .select('id, name, email, phone, role, mac_address, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active, habilitado, motivo_bloqueio')
-                .order('name', { ascending: true });
-            if (result.error) {
+            const [result, paymentsResult] = await Promise.all([
+                supabase
+                    .from('residents')
+                    .select('id, name, email, phone, role, status, mac_address, bed_identifier, softphone_extension, softphone_display_name, softphone_enabled, internet_active, habilitado, motivo_bloqueio')
+                    .order('name', { ascending: true }),
+                supabase
+                    .from('payments')
+                    .select('resident_id, status, due_date')
+                    .in('status', ['Pendente', 'Atrasado'])
+            ]);
+            if (result.error || paymentsResult.error) {
                 return res.status(500).json({ error: 'Nao foi possivel carregar o rollout do softphone.' });
             }
+            const paymentsByResident = (paymentsResult.data || []).reduce<Record<string, any[]>>((accumulator, payment) => {
+                if (!payment?.resident_id) return accumulator;
+                if (!accumulator[payment.resident_id]) accumulator[payment.resident_id] = [];
+                accumulator[payment.resident_id].push(payment);
+                return accumulator;
+            }, {});
             const residents = (result.data || []).filter((resident: any) => resident.role === 'Morador');
             const items = residents.map((resident: any) => {
                 const suggestedExtension = buildSuggestedResidentExtension(resident);
                 const blockers = getResidentSoftphoneBlockers(resident);
+                const pendingPayments = paymentsByResident[resident.id] || [];
+                const policyWarnings: string[] = [];
+                const now = new Date();
+                if (resident.habilitado !== false && resident.status && resident.status !== 'Ativo') {
+                    policyWarnings.push(`Morador habilitado com status ${resident.status}`);
+                }
+                if (resident.habilitado !== false && pendingPayments.some((payment: any) => payment.status === 'Atrasado')) {
+                    policyWarnings.push('Morador habilitado com pagamento atrasado');
+                }
+                if (
+                    resident.habilitado !== false &&
+                    pendingPayments.some((payment: any) => {
+                        if (payment.status !== 'Pendente' || !payment.due_date) return false;
+                        const dueDate = new Date(`${payment.due_date}T23:59:59`);
+                        return !Number.isNaN(dueDate.getTime()) && dueDate < now;
+                    })
+                ) {
+                    policyWarnings.push('Morador habilitado com pagamento pendente vencido');
+                }
                 return {
                     id: resident.id,
                     name: resident.name,
@@ -525,6 +556,7 @@ app.get('/api/softphone/rollout', async (req, res) => {
                     softphoneEnabled: resident.softphone_enabled !== false,
                     macAddress: resident.mac_address || null,
                     ready: blockers.length === 0,
+                    policyWarnings,
                     blockers,
                 };
             });
@@ -538,6 +570,16 @@ app.get('/api/softphone/rollout', async (req, res) => {
             )
                 .sort((left, right) => right[1] - left[1])
                 .map(([reason, count]) => ({ reason, count }));
+            const policyWarnings = Object.entries(
+                items.reduce<Record<string, number>>((accumulator, item) => {
+                    item.policyWarnings.forEach((warning: string) => {
+                        accumulator[warning] = (accumulator[warning] || 0) + 1;
+                    });
+                    return accumulator;
+                }, {})
+            )
+                .sort((left, right) => right[1] - left[1])
+                .map(([warning, count]) => ({ warning, count }));
             const summary = {
                 totalResidents: items.length,
                 ready: items.filter((item) => item.ready).length,
@@ -549,7 +591,9 @@ app.get('/api/softphone/rollout', async (req, res) => {
                 blockedWithReason: items.filter((item) => item.blockers.includes('Residente desabilitado') && item.motivoBloqueio).length,
                 blockedWithoutReason: items.filter((item) => item.blockers.includes('Residente desabilitado') && !item.motivoBloqueio).length,
                 missingMac: items.filter((item) => item.blockers.includes('Sem MAC principal')).length,
+                eligibilityReview: items.filter((item) => item.policyWarnings.length > 0).length,
                 topBlockedReasons: blockedReasons.slice(0, 5),
+                topPolicyWarnings: policyWarnings.slice(0, 5),
             };
             return res.json({
                 generatedAt: new Date().toISOString(),

@@ -131,6 +131,7 @@ export function DashboardView({
         residentBlocked: softphoneRollout?.summary.residentDisabled ?? stats.residentBlocked,
         blockedWithReason: softphoneRollout?.summary.blockedWithReason ?? 0,
         blockedWithoutReason: softphoneRollout?.summary.blockedWithoutReason ?? 0,
+        eligibilityReview: softphoneRollout?.summary.eligibilityReview ?? 0,
         missingMac: softphoneRollout?.summary.missingMac ?? residents.filter(
             (resident) => resident.role === UserRole.RESIDENT && resident.habilitado !== false && !resident.mac_address
         ).length,
@@ -145,6 +146,20 @@ export function DashboardView({
                 softphoneRollout.items.reduce<Record<string, number>>((accumulator, item) => {
                     if (!item.motivoBloqueio) return accumulator;
                     accumulator[item.motivoBloqueio] = (accumulator[item.motivoBloqueio] || 0) + 1;
+                    return accumulator;
+                }, {})
+            )
+                .sort((left, right) => right[1] - left[1])
+                .slice(0, 3)
+            : [];
+    const topPolicyWarnings = softphoneRollout?.summary.topPolicyWarnings?.length
+        ? softphoneRollout.summary.topPolicyWarnings.slice(0, 3).map((item) => [item.warning, item.count] as const)
+        : softphoneRollout?.items
+            ? Object.entries(
+                softphoneRollout.items.reduce<Record<string, number>>((accumulator, item) => {
+                    item.policyWarnings?.forEach((warning) => {
+                        accumulator[warning] = (accumulator[warning] || 0) + 1;
+                    });
                     return accumulator;
                 }, {})
             )
@@ -444,7 +459,7 @@ export function DashboardView({
                                             : softphoneHealth.door.label
                                         : 'Aguardando configuracao'}
                                 </div>
-                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-7">
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-8">
                                     <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-amber-300">Sem Ramal</div>
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.missingExtension}</div>
@@ -469,6 +484,10 @@ export function DashboardView({
                                         <div className="text-[9px] font-black uppercase tracking-widest text-orange-300">Sem Motivo</div>
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.blockedWithoutReason}</div>
                                     </div>
+                                    <div className="rounded-2xl border border-cyan-500/10 bg-cyan-500/5 p-3">
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-cyan-300">Revisao</div>
+                                        <div className="mt-2 text-xl font-black text-white">{softphoneStats.eligibilityReview}</div>
+                                    </div>
                                     <div className="rounded-2xl border border-violet-500/10 bg-violet-500/5 p-3">
                                         <div className="text-[9px] font-black uppercase tracking-widest text-violet-300">Sem MAC</div>
                                         <div className="mt-2 text-xl font-black text-white">{softphoneStats.missingMac}</div>
@@ -484,6 +503,23 @@ export function DashboardView({
                                                 <div key={reason} className="flex items-center justify-between gap-3">
                                                     <span className="truncate text-rose-50">{reason}</span>
                                                     <span className="rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-rose-200">
+                                                        {count}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {topPolicyWarnings.length > 0 && (
+                                    <div className="rounded-2xl border border-cyan-500/10 bg-cyan-500/5 p-4 text-sm text-cyan-100">
+                                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+                                            Alertas de elegibilidade
+                                        </div>
+                                        <div className="mt-3 space-y-2">
+                                            {topPolicyWarnings.map(([warning, count]) => (
+                                                <div key={warning} className="flex items-center justify-between gap-3">
+                                                    <span className="truncate text-cyan-50">{warning}</span>
+                                                    <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-200">
                                                         {count}
                                                     </span>
                                                 </div>

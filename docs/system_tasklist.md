@@ -1,6 +1,6 @@
 # Tasklist Geral do Sistema
 
-Atualizado em: 2026-03-13
+Atualizado em: 2026-03-19
 
 ## Objetivo
 
@@ -49,6 +49,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - manter autenticacao e carregamento inicial estaveis
 - transformar `habilitado` na chave mestra de elegibilidade do residente
 - automatizar a origem desse campo a partir de permanencia e adimplencia
+- manter auditoria consultiva de elegibilidade para destacar moradores ainda habilitados com status inconsistente ou pagamento vencido
 - garantir consistencia dos dados entre Supabase, frontend e `mac-server`
 - revisar falhas silenciosas nas cargas parciais do `refreshData`
 - garantir que os modulos criticos tenham mensagens de erro claras para admin
@@ -136,6 +137,7 @@ Esta tasklist consolida o trabalho do sistema inteiro do hostel, tratando o soft
 - definir quando inadimplencia deve desligar `habilitado`
 - automatizar desligamento de `habilitado` por inadimplencia conforme regra operacional
 - definir se o religamento de `habilitado` sera automatico ou manual apos regularizacao
+- manter um painel consultivo de revisao para moradores ainda habilitados com pagamento pendente vencido ou status fora de `Ativo`
 - revisar ligacao entre pagamento confirmado e internet ativa
 - criar trilha de recados automativos para lembretes de pagamento
 - avaliar eventos financeiros que devem alimentar avisos do morador

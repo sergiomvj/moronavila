@@ -94,6 +94,7 @@ export interface SoftphoneRolloutItem {
   softphoneEnabled: boolean;
   macAddress: string | null;
   ready: boolean;
+  policyWarnings?: string[];
   blockers: string[];
 }
 
@@ -111,8 +112,13 @@ export interface SoftphoneRolloutResponse {
     blockedWithReason?: number;
     blockedWithoutReason?: number;
     missingMac: number;
+    eligibilityReview?: number;
     topBlockedReasons?: Array<{
       reason: string;
+      count: number;
+    }>;
+    topPolicyWarnings?: Array<{
+      warning: string;
       count: number;
     }>;
   };

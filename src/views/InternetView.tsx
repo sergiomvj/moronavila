@@ -27,7 +27,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
     const [softphoneRollout, setSoftphoneRollout] = useState<SoftphoneRolloutResponse | null>(null);
     const [softphoneRolloutSearch, setSoftphoneRolloutSearch] = useState('');
     const [softphoneRolloutFilter, setSoftphoneRolloutFilter] = useState<
-        'all' | 'ready' | 'missing-extension' | 'internet-inactive' | 'disabled' | 'resident-disabled' | 'blocked-with-reason' | 'missing-mac'
+        'all' | 'ready' | 'missing-extension' | 'internet-inactive' | 'disabled' | 'resident-disabled' | 'blocked-with-reason' | 'eligibility-review' | 'missing-mac'
     >('all');
 
     // View state
@@ -65,6 +65,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
             return {
                 resident,
                 ready: blockers.length === 0,
+                policyWarnings: [],
                 blockers,
             };
         })
@@ -83,7 +84,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
         blockedWithReason: softphoneRolloutQueue.filter(({ resident, blockers }) => blockers.includes('Residente desabilitado') && Boolean(resident.motivo_bloqueio?.trim())).length,
         blockedWithoutReason: softphoneRolloutQueue.filter(({ resident, blockers }) => blockers.includes('Residente desabilitado') && !resident.motivo_bloqueio?.trim()).length,
         missingMac: softphoneRolloutQueue.filter(({ blockers }) => blockers.includes('Sem MAC principal')).length,
+        eligibilityReview: 0,
         topBlockedReasons: [],
+        topPolicyWarnings: [],
     };
     const rolloutItems = softphoneRollout?.items
         ? softphoneRollout.items.map((item) => ({
@@ -104,10 +107,11 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 mac_address: item.macAddress || undefined,
             } as Resident,
             ready: item.ready,
+            policyWarnings: item.policyWarnings || [],
             blockers: item.blockers,
         }))
         : softphoneRolloutQueue;
-    const filteredSoftphoneRolloutQueue = rolloutItems.filter(({ resident, ready, blockers }) => {
+    const filteredSoftphoneRolloutQueue = rolloutItems.filter(({ resident, ready, blockers, policyWarnings }) => {
         const matchesSearch =
             resident.name.toLowerCase().includes(softphoneRolloutSearch.toLowerCase()) ||
             resident.email.toLowerCase().includes(softphoneRolloutSearch.toLowerCase());
@@ -127,6 +131,8 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 return blockers.includes('Residente desabilitado');
             case 'blocked-with-reason':
                 return blockers.includes('Residente desabilitado') && Boolean(resident.motivo_bloqueio?.trim());
+            case 'eligibility-review':
+                return (policyWarnings?.length || 0) > 0;
             case 'missing-mac':
                 return blockers.includes('Sem MAC principal');
             default:
@@ -140,6 +146,18 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 const reason = resident.motivo_bloqueio?.trim();
                 if (!reason) return accumulator;
                 accumulator[reason] = (accumulator[reason] || 0) + 1;
+                return accumulator;
+            }, {})
+        )
+            .sort((left, right) => right[1] - left[1])
+            .slice(0, 4);
+    const rolloutPolicyWarnings = rolloutSummary.topPolicyWarnings?.length
+        ? rolloutSummary.topPolicyWarnings.map((item) => [item.warning, item.count] as const)
+        : Object.entries(
+            rolloutItems.reduce<Record<string, number>>((accumulator, item) => {
+                item.policyWarnings?.forEach((warning) => {
+                    accumulator[warning] = (accumulator[warning] || 0) + 1;
+                });
                 return accumulator;
             }, {})
         )
@@ -186,8 +204,8 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
 
     const handleExportSoftphoneRollout = () => {
         const rows = [
-            ['nome', 'email', 'telefone', 'ramal', 'nome_exibicao', 'morador_habilitado', 'motivo_bloqueio', 'internet_ativa', 'softphone_habilitado', 'mac_principal', 'status_mac', 'bloqueios'].join(','),
-            ...rolloutItems.map(({ resident, blockers }) => [
+            ['nome', 'email', 'telefone', 'ramal', 'nome_exibicao', 'morador_habilitado', 'motivo_bloqueio', 'internet_ativa', 'softphone_habilitado', 'mac_principal', 'status_mac', 'alertas_elegibilidade', 'bloqueios'].join(','),
+            ...rolloutItems.map(({ resident, blockers, policyWarnings }) => [
                 resident.name,
                 resident.email,
                 resident.phone,
@@ -199,6 +217,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                 resident.softphone_enabled === false ? 'nao' : 'sim',
                 resident.mac_address || '',
                 resident.mac_address ? 'ok' : 'pendente',
+                (policyWarnings || []).join(' | '),
                 blockers.join(' | ') || 'pronto para rollout',
             ].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')),
         ];
@@ -724,6 +743,9 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                     <span className="rounded-full bg-orange-50 px-3 py-1 font-bold text-orange-700">
                         Sem motivo: {rolloutSummary.blockedWithoutReason ?? 0}
                     </span>
+                    <span className="rounded-full bg-cyan-50 px-3 py-1 font-bold text-cyan-700">
+                        Em revisao: {rolloutSummary.eligibilityReview ?? 0}
+                    </span>
                     <span className="rounded-full bg-indigo-50 px-3 py-1 font-bold text-indigo-700">
                         Mostrando {Math.min(filteredSoftphoneRolloutQueue.length, 12)} de {rolloutItems.length}
                     </span>
@@ -757,11 +779,12 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <option value="disabled">Desativados</option>
                         <option value="resident-disabled">Morador bloqueado</option>
                         <option value="blocked-with-reason">Bloqueado com motivo</option>
+                        <option value="eligibility-review">Em revisao</option>
                         <option value="missing-mac">Sem MAC</option>
                     </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-9 gap-4 mb-6">
                     <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
                         <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-700">Moradores</div>
                         <div className="mt-2 text-3xl font-bold text-indigo-900">{rolloutSummary.totalResidents}</div>
@@ -802,6 +825,11 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="mt-2 text-3xl font-bold text-orange-900">{rolloutSummary.blockedWithoutReason ?? 0}</div>
                         <div className="mt-1 text-xs text-orange-700">Bloqueios que ainda precisam de justificativa</div>
                     </div>
+                    <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-700">Em Revisao</div>
+                        <div className="mt-2 text-3xl font-bold text-cyan-900">{rolloutSummary.eligibilityReview ?? 0}</div>
+                        <div className="mt-1 text-xs text-cyan-700">Moradores habilitados que merecem auditoria</div>
+                    </div>
                 </div>
 
                 {rolloutBlockedReasons.length > 0 && (
@@ -824,6 +852,26 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         </div>
                     </div>
                 )}
+                {rolloutPolicyWarnings.length > 0 && (
+                    <div className="mb-6 rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-700">
+                            Alertas de elegibilidade mais comuns
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {rolloutPolicyWarnings.map(([warning, count]) => (
+                                <span
+                                    key={warning}
+                                    className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs font-bold text-cyan-700"
+                                >
+                                    <span>{warning}</span>
+                                    <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] uppercase">
+                                        {count}
+                                    </span>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="overflow-hidden rounded-2xl border border-slate-100">
                     <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-slate-100 bg-slate-50">
@@ -831,7 +879,7 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                         <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Bloqueios</div>
                     </div>
                     <div className="divide-y divide-slate-100">
-                        {filteredSoftphoneRolloutQueue.slice(0, 12).map(({ resident, ready, blockers }) => (
+                        {filteredSoftphoneRolloutQueue.slice(0, 12).map(({ resident, ready, blockers, policyWarnings }) => (
                             <div key={resident.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                                 <div className="px-4 py-4">
                                     <div className="font-bold text-slate-900">{resident.name}</div>
@@ -865,6 +913,14 @@ export function InternetView({ residents, devices, currentUser, onUpdate }: Inte
                                         >
                                             {resident.mac_address ? 'MAC ok' : 'Sem MAC principal'}
                                         </span>
+                                        {(policyWarnings || []).map((warning) => (
+                                            <span
+                                                key={`${resident.id}-${warning}`}
+                                                className="rounded-full bg-cyan-50 px-2 py-1 font-medium text-cyan-700"
+                                            >
+                                                {warning}
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
                                 <div className="px-4 py-4">
